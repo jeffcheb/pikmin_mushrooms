@@ -142,21 +142,20 @@ function setupPinFeature() {
     });
 }
 
-// 🎯 ==========================================
-// 📝 新增功能：卡片快速編輯更新模式
-// ==========================================
+// 🎯 ===================================================
+// 📝 核心優化：編輯模式全新支援修改【小時、分鐘、秒數】
+// ===================================================
 function setupQuickEditFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('quick-edit-btn')) {
             const currentCard = e.target.closest('.card');
             const firebaseId = currentCard.getAttribute('data-id');
             
-            // 先抓取雲端這朵菇的舊資料
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val();
                 if (!currentData) return;
 
-                const editChoice = prompt("📝 想要快速更新什麼？\n輸入 1 更改：目前參戰人數\n輸入 2 更改：剩餘倒數時間");
+                const editChoice = prompt("📝 想要快速更新什麼？\n輸入 1 更改：目前參戰人數\n輸入 2 更改：剩餘倒數時間（時/分/秒）");
 
                 if (editChoice === "1") {
                     const maxLimit = getCountLimit(currentData.size);
@@ -171,26 +170,29 @@ function setupQuickEditFeature() {
                         }
                     }
                 } else if (editChoice === "2") {
-                    const newHoursInput = prompt("⌛ 請輸入最新看到的剩餘【小時】:", currentData.hours);
-                    const newMinutesInput = prompt("⌛ 請輸入最新看到的剩餘【分鐘】:", currentData.minutes);
+                    // 🎯 依序詢問最新看到的時、分、秒
+                    const newHoursInput = prompt("⏳ 請輸入最新看到的剩餘【小時】:", currentData.hours);
+                    const newMinutesInput = prompt("⏳ 請輸入最新看到的剩餘【分鐘】:", currentData.minutes);
+                    const newSecondsInput = prompt("⏳ 請輸入最新看到的剩餘【秒數】:", currentData.seconds || 0);
                     
-                    if (newHoursInput !== null && newMinutesInput !== null) {
+                    if (newHoursInput !== null && newMinutesInput !== null && newSecondsInput !== null) {
                         const h = parseInt(newHoursInput);
                         const m = parseInt(newMinutesInput);
+                        const s = parseInt(newSecondsInput);
 
-                        if (isNaN(h) || isNaN(m) || h < 0 || m < 0 || m > 59) {
-                            alert("❌ 時間格式輸入錯誤！");
+                        if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || m > 59 || s < 0 || s > 59) {
+                            alert("❌ 時間格式輸入錯誤！小時/分鐘/秒數 必須為正整數，且分、秒不可大於 59。");
                         } else {
                             const now = new Date();
                             const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
                             
-                            // 更新剩餘時間與同步錨點時間
+                            // 一鍵打包更新回 Firebase 雲端
                             dbRef.child(firebaseId).update({
                                 hours: h,
                                 minutes: m,
-                                seconds: 0,
+                                seconds: s,
                                 reportTime: newReportTime
-                            }).then(() => alert("✅ 蘑菇剩餘倒數時間已校正完畢！"));
+                            }).then(() => alert("✅ 蘑菇剩餘【時:分:秒】倒數時間已校正完畢！"));
                         }
                     }
                 }
