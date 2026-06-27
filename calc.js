@@ -26,13 +26,15 @@ function calculatePower() {
     // 2. ② 皮皮頭上的花
     let flower = parseInt(flowerSelect.value) || 0;
     
-    // 3. ③ 是否有飾品
+    // 3. ③ 是否有飾品 (基本分)
     let decor = parseInt(decorSelect.value) || 0;
     
     // 4. ④ 友好度分數
     let hearts = parseInt(heartsSelect.value) || 0;
     
     let match = 0;
+    let extraDecorBonus = 0; // 🎯 用來存放活動飾品在非活動菇下的額外 +15 戰力
+    
     const selectedMushroom = mushroomTypeSelect.value;
     totalScoreDisplay.style.color = "#2e7d32"; 
 
@@ -45,10 +47,10 @@ function calculatePower() {
         if (selectedMushroom === 'event_special') {
             if (decor === 300) {
                 match = 300; 
-                decor = 0; 
+                decor = 0; // 匹配大加成已包含一切，將基礎飾品分歸零不重複算
             } else if (decor === 100) {
                 match = 100;
-                decor = 0; 
+                decor = 0; // 匹配大加成已包含一切，將基礎飾品分歸零不重複算
             } else {
                 match = 0; 
             }
@@ -62,26 +64,38 @@ function calculatePower() {
                 totalScoreDisplay.style.color = "#d32f2f"; 
                 return; 
             } else {
-                if (decor === 300 || decor === 100) { decor = 15; }
+                // 活動飾品打元素菇：保有常駐飾品分 (+4) + 活動特殊加成 (+15)
+                if (decor === 300 || decor === 100) { 
+                    decor = 4; 
+                    extraDecorBonus = 15; 
+                }
                 match = 100; 
             }
         } 
         
         // 情況 C：選了「普通蘑菇 / 冰藍蘑菇」
         else {
-            if (decor === 300 || decor === 100) { decor = 15; }
+            // 活動飾品打普通菇：保有常駐飾品分 (+4) + 活動特殊加成 (+15)
+            if (decor === 300 || decor === 100) { 
+                decor = 4; 
+                extraDecorBonus = 15; 
+            }
             
-            // 精準匹配：顏色或種類與蘑菇完全相同才有 +12
+            // 精準匹配：顏色或種類與蘑菇完全相同
             if (colorName === selectedMushroom) {
                 match = 12; 
             }
         }
     } else {
-        if (decor === 300 || decor === 100) { decor = 15; }
+        // 未選擇蘑菇時（空閒看戰力），活動皮克敏也享有常駐飾品分 (+4) + 活動特殊加成 (+15)
+        if (decor === 300 || decor === 100) { 
+            decor = 4; 
+            extraDecorBonus = 15; 
+        }
     }
 
-    // 最終總戰力 = 基礎戰力 + 頭花分 + 飾品分 + 友好度 + 蘑菇額外匹配
-    totalScoreDisplay.innerText = base + flower + decor + hearts + match;
+    // 最終總戰力 = 種類 + 頭花 + 飾品基本分 + 活動額外分 + 友好度 + 蘑菇匹配
+    totalScoreDisplay.innerText = base + flower + decor + extraDecorBonus + hearts + match;
 }
 
 // 監聽所有下拉選單與按鈕的切換事件
