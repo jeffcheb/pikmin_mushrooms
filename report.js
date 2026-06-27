@@ -101,20 +101,16 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
     }
 }
 
-// 🎯 ==========================================
-// 🍄 核心修正：依照最新參戰上限人數調整
-// ==========================================
-function getCountLimit() {
-    const size = formSizeSelect.value;
+function getCountLimit(size) {
     if (size === '小') return 25;
     if (size === '普通') return 30;
     if (size === '大') return 35;
     if (size === '巨型') return 40;
-    return 30; // 預設防呆
+    return 30; 
 }
 
 function updateCountLimitConstraint() {
-    const limit = getCountLimit();
+    const limit = getCountLimit(formSizeSelect.value);
     formCountInput.max = limit;
     formCountInput.placeholder = `0-${limit}`;
     countHint.innerText = `上限: ${limit}人`;
@@ -142,6 +138,63 @@ function setupPinFeature() {
             e.target.classList.toggle('active');
             if (e.target.classList.contains('active')) { mushroomContainer.prepend(currentCard); }
             else { mushroomContainer.appendChild(currentCard); }
+        }
+    });
+}
+
+// 🎯 ==========================================
+// 📝 新增功能：卡片快速編輯更新模式
+// ==========================================
+function setupQuickEditFeature() {
+    mushroomContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('quick-edit-btn')) {
+            const currentCard = e.target.closest('.card');
+            const firebaseId = currentCard.getAttribute('data-id');
+            
+            // 先抓取雲端這朵菇的舊資料
+            dbRef.child(firebaseId).once('value', (snapshot) => {
+                const currentData = snapshot.val();
+                if (!currentData) return;
+
+                const editChoice = prompt("📝 想要快速更新什麼？\n輸入 1 更改：目前參戰人數\n輸入 2 更改：剩餘倒數時間");
+
+                if (editChoice === "1") {
+                    const maxLimit = getCountLimit(currentData.size);
+                    const newCountInput = prompt(`👥 請輸入最新在場人數 (目前為 ${currentData.pCount} 人，上限為 ${maxLimit} 人)：`);
+                    if (newCountInput !== null) {
+                        const newCount = parseInt(newCountInput);
+                        if (isNaN(newCount) || newCount < 0 || newCount > maxLimit) {
+                            alert(`❌ 請輸入正確的人數範圍 (0-${maxLimit})！`);
+                        } else {
+                            dbRef.child(firebaseId).child('pCount').set(newCount)
+                                .then(() => alert("✅ 參戰人數已成功連線更新！"));
+                        }
+                    }
+                } else if (editChoice === "2") {
+                    const newHoursInput = prompt("⌛ 請輸入最新看到的剩餘【小時】:", currentData.hours);
+                    const newMinutesInput = prompt("⌛ 請輸入最新看到的剩餘【分鐘】:", currentData.minutes);
+                    
+                    if (newHoursInput !== null && newMinutesInput !== null) {
+                        const h = parseInt(newHoursInput);
+                        const m = parseInt(newMinutesInput);
+
+                        if (isNaN(h) || isNaN(m) || h < 0 || m < 0 || m > 59) {
+                            alert("❌ 時間格式輸入錯誤！");
+                        } else {
+                            const now = new Date();
+                            const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+                            
+                            // 更新剩餘時間與同步錨點時間
+                            dbRef.child(firebaseId).update({
+                                hours: h,
+                                minutes: m,
+                                seconds: 0,
+                                reportTime: newReportTime
+                            }).then(() => alert("✅ 蘑菇剩餘倒數時間已校正完畢！"));
+                        }
+                    }
+                }
+            });
         }
     });
 }
@@ -187,6 +240,7 @@ function renderMushroomCard(id, data) {
     newCard.setAttribute('data-district', data.district);
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
+        <button class="quick-edit-btn" title="快速原地更新資料">📝 更新</button>
         <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
         <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
         <h3>[${data.size}] ${data.title}</h3>
@@ -205,7 +259,8 @@ function renderMushroomCard(id, data) {
 function setupReportForm() {
     mushroomForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const limit = getCountLimit();
+        const size = formSizeSelect.value;
+        const limit = getCountLimit(size);
         const pCount = parseInt(formCountInput.value) || 0;
 
         if (pCount < 0 || pCount > limit) {
@@ -216,7 +271,6 @@ function setupReportForm() {
         const district = formDistrictSelect.value;
         const name = document.getElementById('form-name').value.trim();
         const type = formTypeSelect.value;
-        const size = formSizeSelect.value;
         const hours = parseInt(document.getElementById('form-hours').value) || 0;
         const minutes = parseInt(document.getElementById('form-minutes').value) || 0;
         const seconds = parseInt(document.getElementById('form-seconds').value) || 0; 
@@ -365,5 +419,5 @@ formTypeSelect.addEventListener('change', updateCountLimitConstraint);
 formSizeSelect.addEventListener('change', updateCountLimitConstraint);
 
 // 初始化執行
-initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); updateCountLimitConstraint(); listenToCloudDatabase();
+initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); setupQuickEditFeature(); updateCountLimitConstraint(); listenToCloudDatabase();
 setInterval(updateCountdowns, 1000); updateCountdowns();
