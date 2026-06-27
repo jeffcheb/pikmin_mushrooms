@@ -33,7 +33,7 @@ function calculatePower() {
     let hearts = parseInt(heartsSelect.value) || 0;
     
     let match = 0;
-    let extraDecorBonus = 0; // 🎯 用來存放活動飾品在非活動菇下的額外 +15 戰力
+    let extraDecorBonus = 0; // 用來存放活動飾品額外的 +15 戰力
     
     const selectedMushroom = mushroomTypeSelect.value;
     totalScoreDisplay.style.color = "#2e7d32"; 
@@ -43,58 +43,59 @@ function calculatePower() {
     // ==========================================
     if (selectedMushroom !== 'none') {
         
-        // 情況 A：選了「本月限定活動蘑菇」
+        // 【第一類】：攻打當季活動/神秘蘑菇
         if (selectedMushroom === 'event_special') {
             if (decor === 300) {
                 match = 300; 
-                decor = 0; // 匹配大加成已包含一切，將基礎飾品分歸零不重複算
+                decor = 4; // 🎯 修正：即使觸發大加成，依然保留有飾品基本分 +4！
             } else if (decor === 100) {
                 match = 100;
-                decor = 0; // 匹配大加成已包含一切，將基礎飾品分歸零不重複算
+                decor = 4; // 🎯 修正：即使觸發大加成，依然保留有飾品基本分 +4！
             } else {
                 match = 0; 
             }
         } 
         
-        // 情況 B：選了「特殊/元素蘑菇」
+        // 【第二類】：攻打特殊屬性元素蘑菇
         else if (selectedMushroom.includes('_')) {
             const requiredColor = selectedMushroom.split('_')[0];
+            // 屬性顏色如果不相符，嚴格禁止參戰
             if (colorName !== requiredColor) {
                 totalScoreDisplay.innerText = "❌ 禁止參戰";
                 totalScoreDisplay.style.color = "#d32f2f"; 
                 return; 
             } else {
-                // 活動飾品打元素菇：保有常駐飾品分 (+4) + 活動特殊加成 (+15)
+                // 屬性正確！若是活動飾品，一律加上基本飾品分(+4)與活動基礎分(+15)
                 if (decor === 300 || decor === 100) { 
                     decor = 4; 
                     extraDecorBonus = 15; 
                 }
-                match = 100; 
+                match = 100; // 元素菇屬性匹配分
             }
         } 
         
-        // 情況 C：選了「普通蘑菇 / 冰藍蘑菇」
+        // 【第三類】：攻打普通蘑菇 / 冰藍蘑菇
         else {
-            // 活動飾品打普通菇：保有常駐飾品分 (+4) + 活動特殊加成 (+15)
+            // 若是活動飾品，一律加上基本飾品分(+4)與活動基礎分(+15)
             if (decor === 300 || decor === 100) { 
                 decor = 4; 
                 extraDecorBonus = 15; 
             }
             
-            // 精準匹配：顏色或種類與蘑菇完全相同
+            // 顏色或種類相符匹配分
             if (colorName === selectedMushroom) {
                 match = 12; 
             }
         }
     } else {
-        // 未選擇蘑菇時（空閒看戰力），活動皮克敏也享有常駐飾品分 (+4) + 活動特殊加成 (+15)
+        // 【第四類】：未選擇蘑菇時（空閒狀態），活動飾品也完美享有 4 + 15 戰力
         if (decor === 300 || decor === 100) { 
             decor = 4; 
             extraDecorBonus = 15; 
         }
     }
 
-    // 最終總戰力 = 種類 + 頭花 + 飾品基本分 + 活動額外分 + 友好度 + 蘑菇匹配
+    // 最終總戰力相加公式
     totalScoreDisplay.innerText = base + flower + decor + extraDecorBonus + hearts + match;
 }
 
