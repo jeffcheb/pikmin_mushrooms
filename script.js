@@ -8,7 +8,7 @@ const mushroomContainer = document.getElementById('mushroom-container');
 const geoBtn = document.getElementById('geo-btn');
 const mushroomForm = document.getElementById('mushroom-form');
 
-// 雙層連動相關選單元素
+// 雙層連動選單元素
 const formCitySelect = document.getElementById('form-city');
 const formDistrictSelect = document.getElementById('form-district');
 const filterCitySelect = document.getElementById('filter-city');
@@ -29,19 +29,71 @@ const colorBaseValues = {
     red: 4, blue: 3, yellow: 3, purple: 6, white: 2, rock: 5, wing: 2
 };
 
-// 🗺️ 南部完整的「縣市行政區資料庫」
-const southernDistricts = {
-    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山", "林園", "大寮", "大樹", "大社區", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "茂林", "桃源", "那瑪夏"],
-    "臺南市": ["新營", "鹽水", "白河", "柳營", "後壁", "東山", "麻豆", "下營", "六甲", "官田", "大內", "佳里", "學甲", "西港", "七股", "將軍", "北門", "新化", "善化", "新市", "安定", "山上", "玉井", "楠西", "南化", "左鎮", "仁德", "歸仁", "關廟", "龍崎", "永康", "東區", "南區", "北區", "安南", "安平", "中西"],
-    "嘉義市": ["東區", "西區"],
-    "嘉義縣": ["太保", "朴子", "布袋", "大林", "民雄", "溪口", "新港", "六腳", "東石", "義竹", "鹿草", "水上", "中埔", "竹崎", "梅山", "番路", "大埔", "阿里山"],
-    "屏東縣": ["屏東", "潮州", "東港", "恆春", "萬丹", "長治", "麟洛", "九如", "里港", "高樹", "萬巒", "內埔", "竹田", "新埤", "枋寮", "新園", "崁頂", "林邊", "南州", "佳冬", "琉球", "車城", "滿州", "枋山", "三地門", "霧臺", "瑪家", "泰武", "來義", "春日", "獅子", "牡丹"]
-};
+// 🗺️ 全台灣行政區資料庫（改為動態載入）
+let allTaiwanDistricts = {};
 
-// 🔄 函數：根據選擇的縣市，更新行政區下拉選單
+// 📥 非同步函式：下載全台行政區 JSON 資料並初始化選單
+async function loadTaiwanDistricts() {
+    try {
+        // 使用 GitHub 上公開常見的台灣郵遞區號/行政區開源 JSON 
+        const response = await fetch('https://raw.githubusercontent.com/donma/taiwan-zipcode-data/master/data/data.json');
+        const data = await response.json();
+        
+        // 將資料格式化為物件，例如：{"高雄市": ["前鎮區", "鳳山區"...]}
+        allTaiwanDistricts = {};
+        data.forEach(item => {
+            const cityName = item.name; // 縣市名
+            allTaiwanDistricts[cityName] = [];
+            item.districts.forEach(dist => {
+                // 只保留前兩個字（如 "前鎮"、"鳳山"），方便與原本的定位及 value 邏輯對齊
+                allTaiwanDistricts[cityName].push(dist.name.substring(0, 2));
+            });
+        });
+
+        // 重新動態初始化 HTML 中的縣市下拉選單（包含回報與篩選）
+        initCityDropdowns();
+
+    } catch (error) {
+        console.error("無法載入全台行政區資料，改用備用南部資料庫:", error);
+        // 備用防呆方案（萬一對方網路斷線）
+        allTaiwanDistricts = {
+            "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山"],
+            "臺南市": ["永康", "安南", "東區", "南區", "北區", "中西", "新營"]
+        };
+        initCityDropdowns();
+    }
+}
+
+// 初始化縣市選單內容
+function initCityDropdowns() {
+    const cities = Object.keys(allTaiwanDistricts);
+    
+    // 1. 更新回報選單的縣市
+    formCitySelect.innerHTML = '';
+    cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.innerText = city;
+        formCitySelect.appendChild(opt);
+    });
+    // 預設選高雄市
+    if (cities.includes("高雄市")) formCitySelect.value = "高雄市";
+    updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
+
+    // 2. 更新篩選選單的縣市
+    filterCitySelect.innerHTML = '<option value="all">顯示所有縣市</option>';
+    cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.innerText = city;
+        filterCitySelect.appendChild(opt);
+    });
+}
+
+// 更新行政區選單
 function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = false) {
     const selectedCity = citySelect.value;
-    districtSelect.innerHTML = ''; // 清空舊選項
+    districtSelect.innerHTML = ''; 
 
     if (includeAllOption) {
         const defaultOpt = document.createElement('option');
@@ -50,17 +102,18 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
         districtSelect.appendChild(defaultOpt);
     }
 
-    if (southernDistricts[selectedCity]) {
-        southernDistricts[selectedCity].forEach(dist => {
+    if (allTaiwanDistricts[selectedCity]) {
+        allTaiwanDistricts[selectedCity].forEach(dist => {
             const opt = document.createElement('option');
             opt.value = dist;
+            // 自動補上 區/鄉/鎮/市 結尾文字以便閱讀
             opt.innerText = dist + (selectedCity === '嘉義市' ? '區' : (selectedCity.endsWith('縣') && !['太保','朴子','布袋','大林','潮州','東港','恆春'].includes(dist) ? '鄉' : (['太保','朴子','布袋','大林','潮州','東港','恆春'].includes(dist) ? '鎮' : '區')));
             districtSelect.appendChild(opt);
         });
     }
 }
 
-// 根據種類與大小動態計算人數上限值
+// 人數限制計算
 function getCountLimit() {
     const type = formTypeSelect.value;
     const size = formSizeSelect.value;
@@ -79,7 +132,7 @@ function updateCountLimitConstraint() {
     }
 }
 
-// 1. 戰力計算邏輯
+// 1. 戰力計算
 function calculatePower() {
     const selectedColorRadio = document.querySelector('input[name="color"]:checked');
     const colorName = selectedColorRadio ? selectedColorRadio.value : 'red';
@@ -114,7 +167,7 @@ function calculatePower() {
     totalScoreDisplay.innerText = base + hearts + flower + decor + match;
 }
 
-// 2. 地區雙層篩選控制邏輯
+// 2. 地區雙層篩選邏輯
 function filterLocation() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
@@ -182,7 +235,7 @@ function setupDeveloperMode() {
     });
 }
 
-// 5. 手動回報表單控制組件
+// 5. 手動回報表單控制
 function setupReportForm() {
     mushroomForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -241,7 +294,6 @@ function setupReportForm() {
         initSingleCountdown(newCard.querySelector('.countdown'));
         mushroomContainer.prepend(newCard);
         
-        // 自動同步切換下方篩選器至該回報縣市與行政區
         filterCitySelect.value = city;
         updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
         filterDistrictSelect.value = district;
@@ -255,7 +307,7 @@ function setupReportForm() {
     });
 }
 
-// 6. GPS 自動定位模組 (自動連動雙層下拉選單)
+// 6. GPS 自動定位模組 (已擴充支援全台灣所有縣市自動比對)
 function setupGeolocation() {
     if (!navigator.geolocation) return;
 
@@ -278,11 +330,11 @@ function setupGeolocation() {
                     let foundCity = null;
                     let foundDistrict = null;
 
-                    // 檢查比對目前所在的南部縣市與行政區
-                    for (let city in southernDistricts) {
+                    // 遍歷全台資料庫
+                    for (let city in allTaiwanDistricts) {
                         if (normalizedAddress.includes(city.replace(/臺/g, "台"))) {
                             foundCity = city;
-                            for (let dist of southernDistricts[city]) {
+                            for (let dist of allTaiwanDistricts[city]) {
                                 if (normalizedAddress.includes(dist)) {
                                     foundDistrict = dist;
                                     break;
@@ -313,7 +365,7 @@ function setupGeolocation() {
                 }
             },
             () => {
-                alert("定位失敗，請確保在安全 HTTPS 或 Live Server 環境下開啟 GPS 授權。");
+                alert("定位失敗，請授權瀏覽器位置權限。");
                 geoBtn.innerText = "🎯 自動定位";
                 geoBtn.disabled = false;
             },
@@ -368,7 +420,7 @@ function updateCountdowns() {
     });
 }
 
-// 8. 綁定雙層下拉選單連動事件
+// 8. 綁定事件
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
     if (filterCitySelect.value === 'all') {
@@ -382,17 +434,17 @@ filterCitySelect.addEventListener('change', () => {
 filterDistrictSelect.addEventListener('change', filterLocation);
 
 // 全面初始化啟動
-calculatePower();
-updateDistrictDropdown(formCitySelect, formDistrictSelect, false); // 初始化表單行政區
 setupPinFeature();
 setupGeolocation();
 setupDeveloperMode();
 setupReportForm();
-updateCountLimitConstraint(); 
 
 document.querySelectorAll('input[name="color"]').forEach(r => r.addEventListener('change', calculatePower));
 [heartsSelect, flowerSelect, decorSelect, mushroomTypeSelect].forEach(e => e.addEventListener('change', calculatePower));
 document.querySelectorAll('.countdown').forEach(initSingleCountdown);
+
+// 🎬 核心：動態下載全台資料庫並連動初始化
+loadTaiwanDistricts();
 
 setInterval(updateCountdowns, 1000); 
 updateCountdowns(); 
