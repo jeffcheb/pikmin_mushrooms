@@ -101,12 +101,16 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
     }
 }
 
+// 🎯 ==========================================
+// 🍄 核心修正：依照最新參戰上限人數調整
+// ==========================================
 function getCountLimit() {
-    const type = formTypeSelect.value;
     const size = formSizeSelect.value;
-    if (type === 'event' || size === '巨型') return 30;
-    if (size === '大') return 20;
-    return 5;
+    if (size === '小') return 25;
+    if (size === '普通') return 30;
+    if (size === '大') return 35;
+    if (size === '巨型') return 40;
+    return 30; // 預設防呆
 }
 
 function updateCountLimitConstraint() {
@@ -342,7 +346,6 @@ function updateCountdowns() {
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
             } else {
-                // 🎯 倒數皆結束後，將狀態改為「待更新」而不是直接隱藏
                 el.innerText = `⌛ 狀態：新蘑菇待更新...`;
                 el.style.color = "#c62828";
                 el.style.fontWeight = "bold";
