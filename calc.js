@@ -4,7 +4,7 @@ const decorSelect = document.getElementById('decor');
 const mushroomTypeSelect = document.getElementById('mushroom-type');
 const totalScoreDisplay = document.getElementById('total-score');
 
-// 🎨 ① 皮皮的種類：基礎戰力設定
+// 🎨 ① 皮皮的種類：基礎戰力設定（已新增冰皮克敏 = 2）
 const colorBaseValues = {
     purple: 6, // 紫皮
     rock: 5,   // 岩皮
@@ -13,7 +13,7 @@ const colorBaseValues = {
     blue: 3,   // 藍皮
     white: 2,  // 白皮
     wing: 2,   // 羽皮
-    ice: 2     // 冰皮
+    ice: 2     // 🧊 冰皮
 };
 
 function calculatePower() {
@@ -23,7 +23,7 @@ function calculatePower() {
     // 1. 種類基礎戰力
     let base = colorBaseValues[colorName] || 0;
     
-    // 2. ② 皮皮頭上的花
+    // 2. ② 皮皮頭上的花 (禿頭=0, 葉子=1, 花苞=2, 普花=3, 特殊=4, 主花=5)
     let flower = parseInt(flowerSelect.value) || 0;
     
     // 3. ③ 是否有飾品 (基本分)
@@ -47,10 +47,10 @@ function calculatePower() {
         if (selectedMushroom === 'event_special') {
             if (decor === 300) {
                 match = 300; 
-                decor = 4; // 🎯 修正：即使觸發大加成，依然保留有飾品基本分 +4！
+                decor = 4; // 即使觸發大加成，依然保留有飾品基本分 +4！
             } else if (decor === 100) {
                 match = 100;
-                decor = 4; // 🎯 修正：即使觸發大加成，依然保留有飾品基本分 +4！
+                decor = 4; // 即使觸發大加成，依然保留有飾品基本分 +4！
             } else {
                 match = 0; 
             }
@@ -82,7 +82,7 @@ function calculatePower() {
                 extraDecorBonus = 15; 
             }
             
-            // 顏色或種類相符匹配分
+            // 精準匹配：顏色或種類與蘑菇完全相同（包含冰皮配冰藍菇）
             if (colorName === selectedMushroom) {
                 match = 12; 
             }
