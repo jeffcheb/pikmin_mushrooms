@@ -448,3 +448,24 @@ footer {
     font-size: 0.8rem;
     margin-top: 40px;
 }
+/* 📝 快速編輯按鈕樣式 */
+.quick-edit-btn {
+    position: absolute;
+    top: 8px;
+    right: 45px; /* 剛好排在📌按鈕的左邊 */
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.quick-edit-btn:hover {
+    opacity: 1;
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #1e88e5;
+}
