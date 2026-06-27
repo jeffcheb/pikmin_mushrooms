@@ -31,7 +31,7 @@ let isDevMode = false;
 const firebaseConfig = {
     apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
     authDomain: "pikmin-mushroom.firebaseapp.com",
-    databaseURL: "https://pikmin-mushroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+    databaseURL: "https://pikmin-mushroom-default-rtdb.firebasedatabase.app",
     projectId: "pikmin-mushroom",
     storageBucket: "pikmin-mushroom.appspot.com",
     messagingSenderId: "94609307791",
