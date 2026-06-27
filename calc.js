@@ -23,17 +23,19 @@ function calculatePower() {
     if (selectedMushroom !== 'none') {
         if (selectedMushroom === 'event_special') {
             match = 300;
-        } else if (selectedMushroom.includes('_') && selectedMushroom !== 'blue_ice') {
+        } else if (selectedMushroom.includes('_')) {
+            // 處理元素與特殊蘑菇的嚴格禁止限制
             const requiredColor = selectedMushroom.split('_')[0];
             if (colorName !== requiredColor) {
                 totalScoreDisplay.innerText = "❌ 禁止參戰";
                 totalScoreDisplay.style.color = "#d32f2f"; 
                 return; 
             } else {
-                match = 100; 
+                match = 100; // 元素蘑菇匹配加成
             }
         } else {
-            const targetColor = (selectedMushroom === 'blue_ice') ? 'blue' : selectedMushroom;
+            // 普通蘑菇與冰藍蘑菇
+            const targetColor = (selectedMushroom === 'ice') ? 'blue' : selectedMushroom;
             if (colorName === targetColor) {
                 match = 12;
             }
