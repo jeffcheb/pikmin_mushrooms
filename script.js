@@ -26,12 +26,12 @@ const devStatusText = document.getElementById('dev-status');
 let isDevMode = false;
 
 // ==========================================
-// 🔥 已經為你完整填入的 Firebase 設定資料
+// 🔥 已經為你完整填入的 Firebase 設定資料（已修正為美國伺服器網址）
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
     authDomain: "pikmin-mushroom.firebaseapp.com",
-    databaseURL: "https://pikmin-mushroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+    databaseURL: "https://pikmin-mushroom-default-rtdb.firebaseio.com",
     projectId: "pikmin-mushroom",
     storageBucket: "pikmin-mushroom.appspot.com",
     messagingSenderId: "94609307791",
