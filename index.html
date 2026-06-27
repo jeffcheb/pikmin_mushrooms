@@ -3,109 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皮克敏高階戰力模擬器</title>
+    <title>皮克敏蘑菇戰力模擬器</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
         <div class="logo-area">
-            <img src="picture/logo.png" alt="網站 Logo" class="logo">
-            <h1>皮克敏高階戰力精算站</h1>
+            <img src="picture/pikmin_logo.png" alt="Pikmin" class="logo" onerror="this.style.display='none'">
+            <h1>皮克敏高階工具站</h1>
         </div>
         <nav>
-            <a href="index.html" class="active">戰力計算</a>
-            <a href="report.html">最新回報系統</a>
+            <a href="index.html" class="active">🧮 戰力模擬器</a>
+            <a href="report.html">🍄 雲端回報系統</a>
         </nav>
     </header>
 
     <main>
-        <section id="calculator" class="section-box">
-            <h2>🧮 高階戰力模擬器</h2>
+        <section class="section-box">
+            <h2>🧮 單隻皮克敏戰力精算器</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">依照社群最新攻略圖精算：全部欄位數據相加即為官方最終真實戰力值！</p>
+            
             <div class="calc-flex">
                 <div class="form-group">
-                    <label>1. 選擇皮克敏顏色：</label>
+                    <label>1. 選擇皮克敏種類 (基礎戰力)：</label>
                     <div class="pikmin-select">
-                        <label><input type="radio" name="color" value="red" checked><img src="picture/pikmin_red.png" alt="紅">紅 (4)</label>
-                        <label><input type="radio" name="color" value="blue"><img src="picture/pikmin_blue.png" alt="藍">藍 (3)</label>
-                        <label><input type="radio" name="color" value="yellow"><img src="picture/pikmin_yellow.png" alt="黃">黃 (3)</label>
-                        <label><input type="radio" name="color" value="purple"><img src="picture/pikmin_purple.png" alt="紫">紫 (6)</label>
-                        <label><input type="radio" name="color" value="white"><img src="picture/pikmin_white.png" alt="白">白 (2)</label>
-                        <label><input type="radio" name="color" value="rock"><img src="picture/pikmin_rock.png" alt="岩">岩 (5)</label>
-                        <label><input type="radio" name="color" value="wing"><img src="picture/pikmin_wing.png" alt="羽">羽 (2)</label>
+                        <label><input type="radio" name="color" value="red" checked><img src="picture/pikmin_red.png" alt="紅" onerror="this.style.opacity='0.5'">紅 (4)</label>
+                        <label><input type="radio" name="color" value="blue"><img src="picture/pikmin_blue.png" alt="藍" onerror="this.style.opacity='0.5'">藍 (3)</label>
+                        <label><input type="radio" name="color" value="yellow"><img src="picture/pikmin_yellow.png" alt="黃" onerror="this.style.opacity='0.5'">黃 (3)</label>
+                        <label><input type="radio" name="color" value="purple"><img src="picture/pikmin_purple.png" alt="紫" onerror="this.style.opacity='0.5'">紫 (6)</label>
+                        <label><input type="radio" name="color" value="white"><img src="picture/pikmin_white.png" alt="白" onerror="this.style.opacity='0.5'">白 (2)</label>
+                        <label><input type="radio" name="color" value="rock"><img src="picture/pikmin_rock.png" alt="岩" onerror="this.style.opacity='0.5'">岩 (5)</label>
+                        <label><input type="radio" name="color" value="wing"><img src="picture/pikmin_wing.png" alt="羽" onerror="this.style.opacity='0.5'">羽 (2)</label>
+                        <label><input type="radio" name="color" value="ice"><img src="picture/pikmin_ice.png" alt="冰" onerror="this.style.opacity='0.5'">冰 (2)</label>
                     </div>
-                    <br>
 
-                    <label for="hearts">2. 好感度等級 (愛心)：</label>
+                    <label for="hearts">2. 友好度 (愛心層級)：</label>
                     <select id="hearts">
-                        <option value="0">0 心 (+0)</option>
-                        <option value="1">紅心 1 (+1)</option>
-                        <option value="2">紅心 2 (+2)</option>
-                        <option value="3">紅心 3 (+3)</option>
-                        <option value="4">紅心 4 (+4)</option>
-                        <option value="8">金心 1 (+8)</option>
-                        <option value="12">金心 2 (+12)</option>
-                        <option value="16">金心 3 (+16)</option>
-                        <option value="20">金心 4 (+20)</option>
+                        <option value="0">🖤 0 心 (+0)</option>
+                        <option value="1">❤️ 1 顆紅心 (+1)</option>
+                        <option value="2">❤️ 2 顆紅心 (+2)</option>
+                        <option value="3">❤️ 3 顆紅心 (+3)</option>
+                        <option value="4">❤️ 4 顆紅心 (+4)</option>
+                        <option value="5">💛 1 顆金心 (+5)</option>
+                        <option value="6">💛 2 顆金心 (+6)</option>
+                        <option value="7">💛 3 顆金心 (+7)</option>
+                        <option value="8">💛 4 顆金心 (+8)</option>
                     </select>
-                    <br><br>
 
                     <label for="flower">3. 頭部花朵狀態：</label>
-<select id="flower">
-    <option value="0">🦲 禿頭頭 (+0)</option>
-    <option value="1">🌱 葉子頭 (+1)</option>
-    <option value="2">🟢 花苞頭 (+2)</option>
-    <option value="3" selected>🌼 普12花頭 (+3)</option>
-    <option value="4">🌹 特殊花 / 當月副花 (+4)</option>
-    <option value="5">🌻 當月主花 (+5)</option>
-</select> 
-                    <br><br>
-
-                    <label for="decor">4. 飾品類型與當季活動加成：</label>
-                    <select id="decor">
-                        <option value="0">無飾品 (+0)</option>
-                        <option value="4">一般常駐飾品 (+4)</option>
-                        <option value="100">當季副活動飾品 (+100)</option>
-                        <option value="300">當季主活動飾品 (+300)</option>
+                    <select id="flower">
+                        <option value="0">🦲 禿頭頭 (+0)</option>
+                        <option value="1">🌱 葉子頭 (+1)</option>
+                        <option value="2">🟢 花苞頭 (+2)</option>
+                        <option value="3" selected>🌼 普花頭 (+3)</option>
+                        <option value="4">🌹 特殊花 / 當月副花 (+4)</option>
+                        <option value="5">🌻 當月主花 (+5)</option>
                     </select>
-                    <br><br>
 
-                    <label for="mushroom-type">5. 選擇對抗的蘑菇種類：</label>
+                    <label for="decor">4. 皮克敏飾品狀態：</label>
+                    <select id="decor">
+                        <option value="0">❌ 無飾品 (工作力 +0)</option>
+                        <option value="4" selected>🎀 已獲得一般飾品 (工作力 +4)</option>
+                        <option value="100">🌟 當季副活動/復刻飾品 (非活動菇常駐+4 / 活動菇大匹配+100)</option>
+                        <option value="300">🔥 當季主活動限定飾品 (非活動菇常駐+4 / 活動菇大匹配+300)</option>
+                    </select>
+
+                    <label for="mushroom-type">5. 擬攻打的蘑菇環境：</label>
                     <select id="mushroom-type">
-                        <option value="none">不指定（無匹配加成）</option>
-                        <optgroup label="—— 普通蘑菇 (匹配 +12) ——">
-                            <option value="red">紅色蘑菇（紅皮克敏）</option>
-                            <option value="blue">藍色蘑菇（藍皮克敏）</option>
-                            <option value="blue_ice">冰藍蘑菇（藍皮克敏）</option>
-                            <option value="yellow">黃色蘑菇（黃皮克敏）</option>
-                            <option value="purple">紫色蘑菇（紫皮克敏）</option>
-                            <option value="white">白色蘑菇（白皮克敏）</option>
-                            <option value="rock">灰色蘑菇（岩皮克敏）</option>
-                            <option value="wing">粉紅色蘑菇（羽皮克敏）</option>
-                        </optgroup>
-                        <optgroup label="—— 特殊/元素蘑菇 (不符則禁止參戰) ——">
-                            <option value="rock_crystal">水晶蘑菇（限岩皮克敏）</option>
-                            <option value="red_fire">火蘑菇（限紅皮克敏）</option>
-                            <option value="blue_water">水蘑菇（限藍皮克敏）</option>
-                            <option value="white_poison">毒蘑菇（限白皮克敏）</option>
-                            <option value="yellow_electric">電子蘑菇（限黃皮克敏）</option>
-                        </optgroup>
-                        <optgroup label="—— 本月特殊活動蘑菇 (任何顏色皆可/匹配 +300) ——">
-                            <option value="event_special">本月限定活動蘑菇（特殊裝飾全匹配）</option>
-                        </optgroup>
+                        <option value="none" selected>🏡 閒置狀態 (無蘑菇加成)</option>
+                        <option value="red">🔴 紅色蘑菇 (+12 同色匹配)</option>
+                        <option value="blue">🔵 藍色蘑菇 (+12 同色匹配)</option>
+                        <option value="yellow">🟡 黃色蘑菇 (+12 同色匹配)</option>
+                        <option value="purple">🟣 紫色蘑菇 (+12 同色匹配)</option>
+                        <option value="white">⚪ 白色蘑菇 (+12 同色匹配)</option>
+                        <option value="rock">⚫ 灰色蘑菇 (+12 同色匹配)</option>
+                        <option value="wing">💗 粉紅色蘑菇 (+12 同色匹配)</option>
+                        <option value="ice">🧊 冰藍蘑菇 (+12 同色匹配)</option>
+                        <option value="red_fire">🔥 元素火蘑菇 (限紅皮參戰 +100)</option>
+                        <option value="blue_water">💧 元素水蘑菇 (限藍皮參戰 +100)</option>
+                        <option value="white_poison">☠️ 元素毒蘑菇 (限白皮參戰 +100)</option>
+                        <option value="yellow_electric">⚡ 元素電子蘑菇 (限黃皮參戰 +100)</option>
+                        <option value="rock_crystal">💎 特特殊水晶蘑菇 (限岩皮參戰 +100)</option>
+                        <option value="event_special">🍄 本月神秘/限定活動蘑菇</option>
                     </select>
                 </div>
 
-                <div class="result-box" id="result-box-container">
-                    <h3>預估單體總破壞力</h3>
-                    <p id="total-score" class="score">0</p>
+                <div class="result-box">
+                    <h3>💡 單隻預估破壞力</h3>
+                    <div class="score" id="total-score">0</div>
+                    <p style="font-size: 0.85rem; color: #555; margin: 0;">將所有同打法的皮克敏加總<br>即為你的小隊總攻擊力！</p>
                 </div>
             </div>
         </section>
     </main>
 
     <footer>
-        <p>&copy; 2026 皮克敏蘑菇社群網站. 非官方粉絲製作.</p>
+        <p>© 2026 Pikmin Bloom 台灣高階社群工具站</p>
     </footer>
 
     <script src="calc.js"></script>
