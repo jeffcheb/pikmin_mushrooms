@@ -25,6 +25,24 @@ const devModeBtn = document.getElementById('dev-mode-btn');
 const devStatusText = document.getElementById('dev-status');
 let isDevMode = false;
 
+// ==========================================
+// 🔥 已經為你完整填入的 Firebase 設定資料
+// ==========================================
+const firebaseConfig = {
+    apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
+    authDomain: "pikmin-mushroom.firebaseapp.com",
+    databaseURL: "https://pikmin-mushroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "pikmin-mushroom",
+    storageBucket: "pikmin-mushroom.appspot.com",
+    messagingSenderId: "94609307791",
+    appId: "1:94609307791:web:86fb196fbfbc5d71c1b18d"
+};
+
+// 初始化 Firebase 連線
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const dbRef = database.ref('mushrooms');
+
 const colorBaseValues = {
     red: 4, blue: 3, yellow: 3, purple: 6, white: 2, rock: 5, wing: 2
 };
@@ -203,7 +221,7 @@ function setupDeveloperMode() {
                 isDevMode = true;
                 document.body.classList.add('dev-active');
                 devModeBtn.innerText = "🔒 關閉編輯模式";
-                devStatusText.innerText = "🔓 開發者編輯中 (點擊卡片左上角 ❌ 可刪除蘑菇)";
+                devStatusText.innerText = "🔓 開發者編輯中 (點擊卡片左上角 ❌ 可刪除雲端蘑菇)";
                 devStatusText.style.color = "#d32f2f";
             } else if (inputPassword !== null) {
                 alert("❌ 密碼錯誤！");
@@ -220,12 +238,40 @@ function setupDeveloperMode() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('delete-btn')) {
             const currentCard = e.target.closest('.card');
-            if (confirm("⚠️ 確定要刪除嗎？")) currentCard.remove();
+            const firebaseId = currentCard.getAttribute('data-id');
+            if (confirm("⚠️ 確定要從雲端同步刪除這朵蘑菇嗎？")) {
+                dbRef.child(firebaseId).remove()
+                    .then(() => alert("🗑️ 雲端蘑菇已成功下架！"))
+                    .catch(() => alert("❌ 刪除失敗，請檢查權限。"));
+            }
         }
     });
 }
 
-// 5. 手動回報表單控制（新增：重複判定與更新資料功能）
+function renderMushroomCard(id, data) {
+    const limit = data.limit;
+    const newCard = document.createElement('div');
+    newCard.className = "card";
+    newCard.setAttribute('data-id', id);
+    newCard.setAttribute('data-city', data.city);
+    newCard.setAttribute('data-district', data.district);
+    newCard.innerHTML = `
+        <button class="pin-btn" title="釘選此位置">📌</button>
+        <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
+        <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
+        <h3>[${data.size}] ${data.title}</h3>
+        <p>📍 地點：${data.city}${data.district} ${data.name}</p>
+        <p class="countdown" 
+           data-report-time="${data.reportTime}" 
+           data-initial-hours="${data.hours}" 
+           data-initial-minutes="${data.minutes}"
+           data-initial-seconds="${data.seconds}">⏳ 剩餘時間：計算中...</p>
+        <p>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${limit} 人</p>
+    `;
+    initSingleCountdown(newCard.querySelector('.countdown'));
+    mushroomContainer.prepend(newCard);
+}
+
 function setupReportForm() {
     mushroomForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -263,72 +309,62 @@ function setupReportForm() {
 
         const mInfo = typeMapping[type] || { title: "未知蘑菇", img: "mushroom_red.png" };
 
-        // 🔍 核心邏輯：檢查畫面上是否有同縣市、同行政區、且地點名稱完全相同的卡片
-        const cards = document.querySelectorAll('#mushroom-container .card');
-        let existingCard = null;
+        dbRef.once('value', (snapshot) => {
+            let existingKey = null;
+            snapshot.forEach((childSnapshot) => {
+                const val = childSnapshot.val();
+                if (val.city === city && val.district === district && val.name === name) {
+                    existingKey = childSnapshot.key;
+                }
+            });
 
-        cards.forEach(card => {
-            const cardCity = card.getAttribute('data-city');
-            const cardDistrict = card.getAttribute('data-district');
-            // 擷取卡片內純地點文字進行比對
-            const cardLocationText = card.querySelector('p:nth-of-type(1)').innerText.replace(`📍 地點：${cardCity}${cardDistrict} `, '').trim();
-            
-            if (cardCity === city && cardDistrict === district && cardLocationText === name) {
-                existingCard = card;
+            const targetData = {
+                city: city,
+                district: district,
+                name: name,
+                size: size,
+                title: mInfo.title,
+                img: mInfo.img,
+                reportTime: reportTimeString,
+                hours: hours,
+                minutes: minutes,
+                seconds: seconds,
+                pCount: pCount,
+                limit: limit
+            };
+
+            if (existingKey) {
+                dbRef.child(existingKey).set(targetData)
+                    .then(() => alert("🔄 雲端偵測到相同地點！已為全台玩家更新最新剩餘時間與參戰人數！"));
+            } else {
+                dbRef.push(targetData)
+                    .then(() => alert("🚀 蘑菇成功同步至雲端資料庫！全台玩家皆可看見。"));
             }
+
+            filterCitySelect.value = city;
+            updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
+            filterDistrictSelect.value = district;
+
+            mushroomForm.reset();
+            document.getElementById('form-seconds').value = "0"; 
+            updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
+            updateCountLimitConstraint(); 
         });
-
-        if (existingCard) {
-            // 🔄 發現重複！直接原地覆蓋更新數據
-            existingCard.querySelector('img').src = `picture/${mInfo.img}`;
-            existingCard.querySelector('h3').innerText = `[${size}] ${mInfo.title}`;
-            
-            const countdownEl = existingCard.querySelector('.countdown');
-            countdownEl.setAttribute('data-report-time', reportTimeString);
-            countdownEl.setAttribute('data-initial-hours', hours);
-            countdownEl.setAttribute('data-initial-minutes', minutes);
-            countdownEl.setAttribute('data-initial-seconds', seconds);
-            initSingleCountdown(countdownEl); // 重新初始化計時器目標
-
-            existingCard.querySelector('p:nth-of-type(3)').innerHTML = `👥 目前人數：<span class="p-count">${pCount}</span> / ${limit} 人`;
-            
-            alert("🔄 偵測到相同地點的蘑菇！已為您就地更新最新狀態與剩餘時間。");
-        } else {
-            // 🆕 無重複，正常建立全新卡片
-            const newCard = document.createElement('div');
-            newCard.className = "card";
-            newCard.setAttribute('data-city', city);
-            newCard.setAttribute('data-district', district);
-            newCard.innerHTML = `
-                <button class="pin-btn" title="釘選此位置">📌</button>
-                <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
-                <img src="picture/${mInfo.img}" alt="蘑菇" class="card-icon">
-                <h3>[${size}] ${mInfo.title}</h3>
-                <p>📍 地點：${city}${district} ${name}</p>
-                <p class="countdown" 
-                   data-report-time="${reportTimeString}" 
-                   data-initial-hours="${hours}" 
-                   data-initial-minutes="${minutes}"
-                   data-initial-seconds="${seconds}">⏳ 剩餘時間：計算中...</p>
-                <p>👥 目前人數：<span class="p-count">${pCount}</span> / ${limit} 人</p>
-            `;
-            initSingleCountdown(newCard.querySelector('.countdown'));
-            mushroomContainer.prepend(newCard);
-        }
-        
-        filterCitySelect.value = city;
-        updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
-        filterDistrictSelect.value = district;
-
-        filterLocation();
-        mushroomForm.reset();
-        document.getElementById('form-seconds').value = "0"; 
-        updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
-        updateCountLimitConstraint(); 
     });
 }
 
-// 6. GPS 自動定位模組
+function listenToCloudDatabase() {
+    dbRef.on('value', (snapshot) => {
+        mushroomContainer.innerHTML = ''; 
+        snapshot.forEach((childSnapshot) => {
+            const id = childSnapshot.key;
+            const data = childSnapshot.val();
+            renderMushroomCard(id, data);
+        });
+        filterLocation(); 
+    });
+}
+
 function setupGeolocation() {
     if (!navigator.geolocation) return;
 
@@ -393,7 +429,6 @@ function setupGeolocation() {
     });
 }
 
-// 7. 智慧倒數計時器
 const format = (num) => String(num).padStart(2, '0');
 
 function initSingleCountdown(el) {
@@ -431,14 +466,12 @@ function updateCountdowns() {
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
             } else {
-                el.innerText = `✨ 蘑菇已重新出現！`;
-                el.style.color = "#2e7d32";
+                el.closest('.card').style.display = 'none';
             }
         }
     });
 }
 
-// 8. 綁定選單連動事件
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
     if (filterCitySelect.value === 'all') {
@@ -451,7 +484,7 @@ filterCitySelect.addEventListener('change', () => {
 });
 filterDistrictSelect.addEventListener('change', filterLocation);
 
-// 🎬 全面離線啟動
+// 🎬 全面啟動
 initCityDropdowns(); 
 setupPinFeature();
 setupGeolocation();
@@ -463,6 +496,9 @@ calculatePower();
 document.querySelectorAll('input[name="color"]').forEach(r => r.addEventListener('change', calculatePower));
 [heartsSelect, flowerSelect, decorSelect, mushroomTypeSelect].forEach(e => e.addEventListener('change', calculatePower));
 document.querySelectorAll('.countdown').forEach(initSingleCountdown);
+
+// 🚀 啟動 Firebase 雲端監聽
+listenToCloudDatabase();
 
 setInterval(updateCountdowns, 1000); 
 updateCountdowns(); 
