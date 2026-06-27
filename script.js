@@ -29,45 +29,33 @@ const colorBaseValues = {
     red: 4, blue: 3, yellow: 3, purple: 6, white: 2, rock: 5, wing: 2
 };
 
-// 🗺️ 全台灣行政區資料庫
-let allTaiwanDistricts = {};
+// 🗺️ 內建全台灣 22 縣市完整行政區資料庫（100% 離線可用，不跳防呆）
+const allTaiwanDistricts = {
+    "基隆市": ["仁愛", "信義", "中正", "中山", "安樂", "暖暖", "七堵"],
+    "臺北市": ["中正", "大同", "中山", "松山", "大安", "萬華", "信義", "士林", "北投", "內湖", "南港", "文山"],
+    "新北市": ["板橋", "三重", "中和", "永和", "新莊", "新店", "樹林", "鶯歌", "三峽", "淡水", "汐止", "瑞芳", "土城", "蘆洲", "五股", "泰山", "林口", "深坑", "石碇", "坪林", "三芝", "石門", "八里", "平溪", "雙溪", "貢寮", "金山", "萬里", "烏來"],
+    "桃園市": ["桃園", "中壢", "大溪", "楊梅", "蘆竹", "大園", "龜山", "八德", "龍潭", "平鎮", "新屋", "觀音", "復興"],
+    "新竹市": ["東區", "北區", "香山"],
+    "新竹縣": ["竹北", "竹東", "新埔", "關西", "湖口", "新豐", "芎林", "橫山", "北埔", "寶山", "峨眉", "尖石", "五峰"],
+    "苗栗縣": ["苗栗", "苑裡", "通霄", "竹南", "頭份", "後龍", "卓蘭", "大湖", "公館", "銅鑼", "南庄", "頭屋", "三義", "西湖", "造橋", "三灣", "獅潭", "泰安"],
+    "臺中市": ["中區", "東區", "南區", "西區", "北區", "北屯", "西屯", "南屯", "太平", "大里", "霧峰", "烏日", "豐原", "后里", "石岡", "東勢", "和平", "新社", "潭子", "大雅", "神岡", "大肚", "沙鹿", "龍井", "梧棲", "清水", "大甲", "外埔", "大安"],
+    "彰化縣": ["彰化", "鹿港", "和美", "線西", "伸港", "福興", "秀水", "花壇", "芬園", "員林", "溪湖", "田中", "大村", "埔鹽", "埔心", "永靖", "社頭", "二水", "北斗", "二林", "田尾", "埤頭", "芳苑", "大城", "竹塘", "溪州"],
+    "南投縣": ["南投", "埔里", "草屯", "竹山", "集集", "名間", "鹿谷", "中寮", "魚池", "國姓", "水里", "信義", "仁愛"],
+    "雲林縣": ["斗六", "斗南", "虎尾", "西螺", "土庫", "北港", "古坑", "大埤", "莿桐", "林內", "二崙", "崙背", "麥寮", "東勢", "褒忠", "臺西", "元長", "四湖", "口湖", "水林"],
+    "嘉義市": ["東區", "西區"],
+    "嘉義縣": ["太保", "朴子", "布袋", "大林", "民雄", "溪口", "新港", "六腳", "東石", "義竹", "鹿草", "水上", "中埔", "竹崎", "梅山", "番路", "大埔", "阿里山"],
+    "臺南市": ["中西", "東區", "南區", "北區", "安平", "安南", "永康", "歸仁", "新化", "左鎮", "玉井", "楠西", "南化", "左鎮", "仁德", "關廟", "龍崎", "官田", "麻豆", "佳里", "西港", "七股", "將軍", "學甲", "北門", "新營", "後壁", "白河", "東山", "六甲", "下營", "柳營", "鹽水", "善化", "大內", "山上", "新市", "安定"],
+    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山", "林園", "大寮", "大樹", "大社區", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "茂林", "桃源", "那瑪夏"],
+    "屏東縣": ["屏東", "三地門", "霧臺", "瑪家", "九如", "里港", "高樹", "鹽埔", "長治", "麟洛", "萬丹", "內埔", "竹田", "萬巒", "泰武", "來義", "潮州", "新埤", "枋寮", "枋山", "春日", "獅子", "牡丹", "恆春", "滿州", "車城", "琉球", "佳冬", "林邊", "南州", "崁頂", "東港", "新園"],
+    "宜蘭縣": ["宜蘭", "羅東", "蘇澳", "頭城", "礁溪", "壯圍", "員山", "冬山", "五結", "三星", "大同", "南澳"],
+    "花蓮縣": ["花蓮", "鳳林", "玉里", "新城", "吉安", "壽豐", "光復", "豐濱", "瑞穗", "富里", "秀林", "萬榮", "卓溪"],
+    "臺東縣": ["臺東", "成功", "關山", "長濱", "海端", "池上", "東河", "鹿野", "延平", "卑南", "金峰", "大武", "達仁", "綠島", "蘭嶼", "太麻里"],
+    "澎湖縣": ["馬公", "湖西", "白沙", "西嶼", "望安", "七美"],
+    "金門縣": ["金城", "金沙", "金湖", "金寧", "烈嶼", "烏坵"],
+    "連江縣": ["南竿", "北竿", "莒光", "東引"]
+};
 
-// 📥 修正版非同步函式：下載全台 22 縣市完整行政區 JSON 資料
-async function loadTaiwanDistricts() {
-    try {
-        // 切換為結構最穩定、最完整的台灣行政區開源 API
-        const response = await fetch('https://raw.githubusercontent.com/thetwm/TaiwanPostalCodes/main/taiwan_postal_codes.json');
-        const data = await response.json();
-        
-        allTaiwanDistricts = {};
-        
-        // 解析結構並注入全台所有行政區
-        data.forEach(cityObj => {
-            const cityName = cityObj.name; // 例如 "高雄市"
-            allTaiwanDistricts[cityName] = [];
-            
-            cityObj.districts.forEach(distObj => {
-                // 抓取前兩個字（如 "前鎮"、"鳳山"），對齊原有的精簡判定邏輯
-                allTaiwanDistricts[cityName].push(distObj.name.substring(0, 2));
-            });
-        });
-
-        // 動態初始化網頁中的所有縣市下拉選單
-        initCityDropdowns();
-
-    } catch (error) {
-        console.error("網際網路請求失敗，啟用備用基礎資料庫:", error);
-        // 防呆備用資料
-        allTaiwanDistricts = {
-            "高雄市": ["前鎮", "鳳山", "三民", "苓雅", "左營", "鼓山"],
-            "臺南市": ["永康", "安南", "中西", "東區", "北區", "南區"],
-            "臺北市": ["大安", "中正", "信義", "中山", "士林", "內湖"]
-        };
-        initCityDropdowns();
-    }
-}
-
-// 初始化縣市選單內容
+// 初始化縣市與行政區選單內容
 function initCityDropdowns() {
     const cities = Object.keys(allTaiwanDistricts);
     
@@ -79,7 +67,7 @@ function initCityDropdowns() {
         opt.innerText = city;
         formCitySelect.appendChild(opt);
     });
-    if (cities.includes("高雄市")) formCitySelect.value = "高雄市";
+    formCitySelect.value = "高雄市"; // 預設高雄
     updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
 
     // 2. 更新篩選選單的縣市
@@ -92,7 +80,7 @@ function initCityDropdowns() {
     });
 }
 
-// 更新行政區選單
+// 更新行政區選單（自動判斷 鄉/鎮/市/區 結尾文字）
 function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = false) {
     const selectedCity = citySelect.value;
     districtSelect.innerHTML = ''; 
@@ -108,16 +96,18 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
         allTaiwanDistricts[selectedCity].forEach(dist => {
             const opt = document.createElement('option');
             opt.value = dist;
-            // 根據縣或市自動補齊名稱後綴
+            
             let suffix = '區';
             if (selectedCity.endsWith('縣')) {
-                if (['太保','朴子','布袋','大林','潮州','東港','恆春','員林','和美','鹿港','草屯','竹東','竹北','頭份','竹南','後龍','通霄','苑裡','頭屋','公館','西湖','三義','大湖','銅鑼'].includes(dist)) {
-                    suffix = '鎮';
-                } else if (['馬公','竹北','太保','朴子'].includes(dist)) {
-                    suffix = '市';
+                if (['太保','朴子','布袋','大林','潮州','東港','恆春','員林','和美','鹿港','草屯','竹東','竹北','頭份','竹南','後龍','通霄','苑裡','頭屋','公館','西湖','三義','大湖','銅鑼','礁溪','頭城','蘇澳','羅東','三星','冬山','五結','壯圍','員山','吉安','新城','壽豐','光復','瑞穗','富里','鳳林','玉里','成功','關山','池上','鹿野','卑南','大武','太麻里','城中','金沙','金湖','金寧','烈嶼'].includes(dist)) {
+                    suffix = (['太保','朴子','馬公','竹北','員林','頭份'].includes(dist)) ? '市' : (['布袋','大林','潮州','東港','恆春','和美','鹿港','草屯','竹東','關西','新埔','頭份','竹南','後龍','通霄','苑裡','礁溪','頭城','蘇澳','羅東','鳳林','玉里','成功','關山','金城','金沙','金湖'].includes(dist) ? '鎮' : '鄉');
                 } else {
                     suffix = '鄉';
                 }
+            } else if (selectedCity === '澎湖縣' && dist === '馬公') {
+                suffix = '市';
+            } else if (selectedCity === '澎湖縣') {
+                suffix = '鄉';
             }
             opt.innerText = dist + suffix;
             districtSelect.appendChild(opt);
@@ -319,7 +309,7 @@ function setupReportForm() {
     });
 }
 
-// 6. GPS 自動定位模組 (自動支援全台 22 縣市完美精確對應)
+// 6. GPS 自動定位模組
 function setupGeolocation() {
     if (!navigator.geolocation) return;
 
@@ -336,13 +326,11 @@ function setupGeolocation() {
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`);
                     const data = await response.json();
                     const address = data.display_name || "";
-                    
                     const normalizedAddress = address.toLowerCase().replace(/臺/g, "台");
                     
                     let foundCity = null;
                     let foundDistrict = null;
 
-                    // 遍歷下載完成的全台行政區結構進行模糊匹配
                     for (let city in allTaiwanDistricts) {
                         if (normalizedAddress.includes(city.replace(/臺/g, "台"))) {
                             foundCity = city;
@@ -418,10 +406,9 @@ function updateCountdowns() {
             el.innerText = `⏳ 剩餘時間：${format(hours)}:${format(minutes)}:${format(seconds)}`;
             el.style.color = "#333";
         } else {
-            let respawnLeft = respawnTime - now;
-            if (respawnLeft > 0) {
-                let rSeconds = Math.floor((respawnLeft / 1000) % 60);
-                let rMinutes = Math.floor((respawnLeft / (1000 * 60)) % 60);
+            let rSeconds = Math.floor(((respawnTime - now) / 1000) % 60);
+            let rMinutes = Math.floor(((respawnTime - now) / (1000 * 60)) % 60);
+            if (respawnTime - now > 0) {
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
             } else {
@@ -432,7 +419,7 @@ function updateCountdowns() {
     });
 }
 
-// 8. 綁定事件
+// 8. 綁定選單連動事件
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
     if (filterCitySelect.value === 'all') {
@@ -445,17 +432,18 @@ filterCitySelect.addEventListener('change', () => {
 });
 filterDistrictSelect.addEventListener('change', filterLocation);
 
-// 初始化
+// 🎬 全面離線啟動
+initCityDropdowns(); 
 setupPinFeature();
 setupGeolocation();
 setupDeveloperMode();
 setupReportForm();
+updateCountLimitConstraint(); 
+calculatePower();
 
 document.querySelectorAll('input[name="color"]').forEach(r => r.addEventListener('change', calculatePower));
 [heartsSelect, flowerSelect, decorSelect, mushroomTypeSelect].forEach(e => e.addEventListener('change', calculatePower));
-
-// 🎬 啟動：動態抓取全台灣 22 縣市完整行政區
-loadTaiwanDistricts();
+document.querySelectorAll('.countdown').forEach(initSingleCountdown);
 
 setInterval(updateCountdowns, 1000); 
 updateCountdowns(); 
