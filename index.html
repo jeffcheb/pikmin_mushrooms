@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>皮克敏高階戰力計算站</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -175,21 +177,7 @@
                 <button id="geo-btn" class="geo-btn">🎯 自動定位</button>
             </div>
 
-            <div class="grid-container" id="mushroom-container">
-                <div class="card" data-city="高雄市" data-district="前鎮">
-                    <button class="pin-btn" title="釘選此位置">📌</button>
-                    <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
-                    <img src="picture/mushroom_ice.png" alt="冰藍蘑菇" class="card-icon">
-                    <h3>[大] 普通冰藍蘑菇</h3>
-                    <p>📍 地點：高雄市前鎮區英德街 81 號</p>
-                    <p class="countdown" 
-                       data-report-time="2026-06-27 12:15:00" 
-                       data-initial-hours="0" 
-                       data-initial-minutes="20"
-                       data-initial-seconds="45">⏳ 剩餘時間：計算中...</p>
-                    <p>👥 目前人數：<span class="p-count">2</span> / 20 人</p>
-                </div>
-            </div>
+            <div class="grid-container" id="mushroom-container"></div>
         </section>
     </main>
 
