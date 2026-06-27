@@ -29,7 +29,7 @@ const colorBaseValues = {
     red: 4, blue: 3, yellow: 3, purple: 6, white: 2, rock: 5, wing: 2
 };
 
-// 🗺️ 內建全台灣 22 縣市完整行政區資料庫（100% 離線可用，不跳防呆）
+// 🗺️ 內建全台灣 22 縣市完整行政區資料庫
 const allTaiwanDistricts = {
     "基隆市": ["仁愛", "信義", "中正", "中山", "安樂", "暖暖", "七堵"],
     "臺北市": ["中正", "大同", "中山", "松山", "大安", "萬華", "信義", "士林", "北投", "內湖", "南港", "文山"],
@@ -55,11 +55,8 @@ const allTaiwanDistricts = {
     "連江縣": ["南竿", "北竿", "莒光", "東引"]
 };
 
-// 初始化縣市與行政區選單內容
 function initCityDropdowns() {
     const cities = Object.keys(allTaiwanDistricts);
-    
-    // 1. 更新回報選單的縣市
     formCitySelect.innerHTML = '';
     cities.forEach(city => {
         const opt = document.createElement('option');
@@ -67,10 +64,9 @@ function initCityDropdowns() {
         opt.innerText = city;
         formCitySelect.appendChild(opt);
     });
-    formCitySelect.value = "高雄市"; // 預設高雄
+    formCitySelect.value = "高雄市"; 
     updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
 
-    // 2. 更新篩選選單的縣市
     filterCitySelect.innerHTML = '<option value="all">顯示所有縣市</option>';
     cities.forEach(city => {
         const opt = document.createElement('option');
@@ -80,7 +76,6 @@ function initCityDropdowns() {
     });
 }
 
-// 更新行政區選單（自動判斷 鄉/鎮/市/區 結尾文字）
 function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = false) {
     const selectedCity = citySelect.value;
     districtSelect.innerHTML = ''; 
@@ -96,7 +91,6 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
         allTaiwanDistricts[selectedCity].forEach(dist => {
             const opt = document.createElement('option');
             opt.value = dist;
-            
             let suffix = '區';
             if (selectedCity.endsWith('縣')) {
                 if (['太保','朴子','布袋','大林','潮州','東港','恆春','員林','和美','鹿港','草屯','竹東','竹北','頭份','竹南','後龍','通霄','苑裡','頭屋','公館','西湖','三義','大湖','銅鑼','礁溪','頭城','蘇澳','羅東','三星','冬山','五結','壯圍','員山','吉安','新城','壽豐','光復','瑞穗','富里','鳳林','玉里','成功','關山','池上','鹿野','卑南','大武','太麻里','城中','金沙','金湖','金寧','烈嶼'].includes(dist)) {
@@ -115,7 +109,6 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
     }
 }
 
-// 人數限制計算
 function getCountLimit() {
     const type = formTypeSelect.value;
     const size = formSizeSelect.value;
@@ -134,7 +127,6 @@ function updateCountLimitConstraint() {
     }
 }
 
-// 1. 戰力計算
 function calculatePower() {
     const selectedColorRadio = document.querySelector('input[name="color"]:checked');
     const colorName = selectedColorRadio ? selectedColorRadio.value : 'red';
@@ -169,7 +161,6 @@ function calculatePower() {
     totalScoreDisplay.innerText = base + hearts + flower + decor + match;
 }
 
-// 2. 地區雙層篩選邏輯
 function filterLocation() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
@@ -178,7 +169,6 @@ function filterLocation() {
     cards.forEach(card => {
         const cardCity = card.getAttribute('data-city');
         const cardDistrict = card.getAttribute('data-district');
-
         const matchCity = (selectedCity === 'all' || cardCity === selectedCity);
         const matchDistrict = (selectedDistrict === 'all' || cardDistrict === selectedDistrict);
 
@@ -190,7 +180,6 @@ function filterLocation() {
     });
 }
 
-// 3. 釘選功能
 function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
@@ -205,7 +194,6 @@ function setupPinFeature() {
     });
 }
 
-// 4. 開發者編輯模式
 function setupDeveloperMode() {
     const CORRECT_PASSWORD = "admin123";
     devModeBtn.addEventListener('click', () => {
@@ -237,7 +225,7 @@ function setupDeveloperMode() {
     });
 }
 
-// 5. 手動回報表單控制
+// 5. 手動回報表單控制（新增：重複判定與更新資料功能）
 function setupReportForm() {
     mushroomForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -251,7 +239,7 @@ function setupReportForm() {
 
         const city = formCitySelect.value;
         const district = formDistrictSelect.value;
-        const name = document.getElementById('form-name').value;
+        const name = document.getElementById('form-name').value.trim();
         const type = formTypeSelect.value;
         const size = formSizeSelect.value;
         const hours = parseInt(document.getElementById('form-hours').value) || 0;
@@ -275,26 +263,58 @@ function setupReportForm() {
 
         const mInfo = typeMapping[type] || { title: "未知蘑菇", img: "mushroom_red.png" };
 
-        const newCard = document.createElement('div');
-        newCard.className = "card";
-        newCard.setAttribute('data-city', city);
-        newCard.setAttribute('data-district', district);
-        newCard.innerHTML = `
-            <button class="pin-btn" title="釘選此位置">📌</button>
-            <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
-            <img src="picture/${mInfo.img}" alt="蘑菇" class="card-icon">
-            <h3>[${size}] ${mInfo.title}</h3>
-            <p>📍 地點：${city}${district} ${name}</p>
-            <p class="countdown" 
-               data-report-time="${reportTimeString}" 
-               data-initial-hours="${hours}" 
-               data-initial-minutes="${minutes}"
-               data-initial-seconds="${seconds}">⏳ 剩餘時間：計算中...</p>
-            <p>👥 目前人數：<span class="p-count">${pCount}</span> / ${limit} 人</p>
-        `;
+        // 🔍 核心邏輯：檢查畫面上是否有同縣市、同行政區、且地點名稱完全相同的卡片
+        const cards = document.querySelectorAll('#mushroom-container .card');
+        let existingCard = null;
 
-        initSingleCountdown(newCard.querySelector('.countdown'));
-        mushroomContainer.prepend(newCard);
+        cards.forEach(card => {
+            const cardCity = card.getAttribute('data-city');
+            const cardDistrict = card.getAttribute('data-district');
+            // 擷取卡片內純地點文字進行比對
+            const cardLocationText = card.querySelector('p:nth-of-type(1)').innerText.replace(`📍 地點：${cardCity}${cardDistrict} `, '').trim();
+            
+            if (cardCity === city && cardDistrict === district && cardLocationText === name) {
+                existingCard = card;
+            }
+        });
+
+        if (existingCard) {
+            // 🔄 發現重複！直接原地覆蓋更新數據
+            existingCard.querySelector('img').src = `picture/${mInfo.img}`;
+            existingCard.querySelector('h3').innerText = `[${size}] ${mInfo.title}`;
+            
+            const countdownEl = existingCard.querySelector('.countdown');
+            countdownEl.setAttribute('data-report-time', reportTimeString);
+            countdownEl.setAttribute('data-initial-hours', hours);
+            countdownEl.setAttribute('data-initial-minutes', minutes);
+            countdownEl.setAttribute('data-initial-seconds', seconds);
+            initSingleCountdown(countdownEl); // 重新初始化計時器目標
+
+            existingCard.querySelector('p:nth-of-type(3)').innerHTML = `👥 目前人數：<span class="p-count">${pCount}</span> / ${limit} 人`;
+            
+            alert("🔄 偵測到相同地點的蘑菇！已為您就地更新最新狀態與剩餘時間。");
+        } else {
+            // 🆕 無重複，正常建立全新卡片
+            const newCard = document.createElement('div');
+            newCard.className = "card";
+            newCard.setAttribute('data-city', city);
+            newCard.setAttribute('data-district', district);
+            newCard.innerHTML = `
+                <button class="pin-btn" title="釘選此位置">📌</button>
+                <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
+                <img src="picture/${mInfo.img}" alt="蘑菇" class="card-icon">
+                <h3>[${size}] ${mInfo.title}</h3>
+                <p>📍 地點：${city}${district} ${name}</p>
+                <p class="countdown" 
+                   data-report-time="${reportTimeString}" 
+                   data-initial-hours="${hours}" 
+                   data-initial-minutes="${minutes}"
+                   data-initial-seconds="${seconds}">⏳ 剩餘時間：計算中...</p>
+                <p>👥 目前人數：<span class="p-count">${pCount}</span> / ${limit} 人</p>
+            `;
+            initSingleCountdown(newCard.querySelector('.countdown'));
+            mushroomContainer.prepend(newCard);
+        }
         
         filterCitySelect.value = city;
         updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
@@ -305,7 +325,6 @@ function setupReportForm() {
         document.getElementById('form-seconds').value = "0"; 
         updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
         updateCountLimitConstraint(); 
-        alert("🎉 蘑菇回報成功！");
     });
 }
 
