@@ -469,3 +469,62 @@ footer {
     border-color: #2196f3;
     color: #1e88e5;
 }
+/* 🌟 整合更新面板燈箱樣式 */
+.edit-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000;
+}
+.edit-modal-window {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    width: 90%; max-width: 420px;
+    padding: 24px;
+    box-sizing: border-box;
+    animation: modalFadeIn 0.3s ease;
+}
+@keyframes modalFadeIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.edit-modal-header {
+    font-size: 18px; font-weight: bold; color: #2e7d32;
+    margin-bottom: 16px; border-bottom: 2px solid #e8f5e9;
+    padding-bottom: 8px; display: flex; justify-content: space-between;
+}
+.edit-modal-close {
+    cursor: pointer; color: #999; font-size: 20px;
+}
+.edit-modal-close:hover { color: #d32f2f; }
+.edit-modal-body h4 {
+    margin: 12px 0 6px 0; color: #546e7a; font-size: 14px;
+}
+.edit-modal-input-group {
+    display: flex; gap: 8px; margin-bottom: 12px;
+}
+.edit-modal-input {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid #cfd8dc; border-radius: 8px;
+    font-size: 14px; box-sizing: border-box;
+}
+.edit-modal-input:focus {
+    border-color: #4caf50; outline: none; box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
+}
+.edit-modal-footer {
+    margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;
+}
+.edit-btn-cancel {
+    background: #eceff1; color: #37474f; border: none;
+    padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold;
+}
+.edit-btn-save {
+    background: #4caf50; color: white; border: none;
+    padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;
+    box-shadow: 0 4px 10px rgba(76,175,80,0.3);
+}
+.edit-btn-save:hover { background: #43a047; }
+.edit-btn-cancel:hover { background: #cfd8dc; }
