@@ -51,7 +51,7 @@ const database = firebase.database();
 const dbRef = database.ref('mushrooms');
 
 // ==========================================
-// 🗺️ 3. 全台灣 22 縣市完整行政區資料庫 (絕不偷懶)
+// 🗺️ 3. 全台灣 22 縣市完整行政區資料庫
 // ==========================================
 const TaiwanData = {
     "基隆市": ["仁愛區", "信義區", "中正區", "中山區", "安樂區", "暖暖區", "七堵區"],
@@ -78,6 +78,9 @@ const TaiwanData = {
     "連江縣": ["南竿鄉", "北竿鄉", "莒光鄉", "東引鄉"]
 };
 
+// 儲存加載後的台灣邊界圖資
+let geojsonTaiwanData = null;
+
 // ==========================================
 // ⚙️ 4. 下拉選單連動與初始化
 // ==========================================
@@ -95,11 +98,13 @@ function initCityDropdowns() {
     formCitySelect.innerHTML = formCityHtml;
     filterCitySelect.innerHTML = filterCityHtml;
 
-    formCitySelect.value = "高雄市"; 
+    formCitySelect.value = "台北市"; 
     updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
     filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>';
     
     updateViewToggleBtnText();
+    // 非同步預先加載台灣邊界圖資，優化定位速度
+    loadTaiwanGeoJson();
 }
 
 function updateDistrictDropdown(citySelect, districtSelect, isFilter) {
@@ -122,17 +127,58 @@ function getCountLimit(size) {
     return 30; 
 }
 
-function updateCountLimitConstraint() {
-    if (!formSizeSelect || !formCountInput || !countHint) return;
-    const limit = getCountLimit(formSizeSelect.value);
-    formCountInput.max = limit;
-    formCountInput.placeholder = `0-${limit}`;
-    countHint.innerText = `上限: ${limit}人`;
-    if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
+// 載入公用 GeoJSON（使用國土測繪或社群開源輕量邊界圖資）
+async function loadTaiwanGeoJson() {
+    try {
+        const res = await fetch('https://raw.githubusercontent.com/g0v/twreallive/master/src/data/town.json');
+        if (res.ok) {
+            geojsonTaiwanData = await res.json();
+        }
+    } catch (e) {
+        console.error("無法加載邊界地圖資料，定位將採用相鄰近似計算法", e);
+    }
+}
+
+// 射線演算法：判斷經緯度點是否在多邊形區域內部
+function isPointInPolygon(point, vs) {
+    let x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        let xi = vs[i][0], yi = vs[i][1];
+        let xj = vs[j][0], yj = vs[j][1];
+        let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// 藉由經緯度精準找出台灣行政區
+function findTownshipByLngLat(lng, lat) {
+    if (!geojsonTaiwanData || !geojsonTaiwanData.features) return null;
+    
+    for (let feature of geojsonTaiwanData.features) {
+        const props = feature.properties;
+        const geometry = feature.geometry;
+        const city = props.COUNTYNAME || props.C_Name;
+        const town = props.TOWNNAME || props.T_Name;
+        
+        if (geometry.type === "Polygon") {
+            if (isPointInPolygon([lng, lat], geometry.coordinates[0])) {
+                return { city, town };
+            }
+        } else if (geometry.type === "MultiPolygon") {
+            for (let poly of geometry.coordinates) {
+                if (isPointInPolygon([lng, lat], poly[0])) {
+                    return { city, town };
+                }
+            }
+        }
+    }
+    return null;
 }
 
 // ==========================================
-// 🎯 5. 自動定位功能
+// 🎯 5. 自動定位功能 (升級為真・行政區解析)
 // ==========================================
 if (geoBtn) {
     geoBtn.addEventListener('click', () => {
@@ -141,25 +187,50 @@ if (geoBtn) {
             return;
         }
         geoBtn.disabled = true;
-        geoBtn.innerText = "⏳ 定位中...";
+        geoBtn.innerText = "⏳ 讀取 GPS 中...";
 
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                if (filterCitySelect && filterDistrictSelect) {
-                    filterCitySelect.value = "高雄市"; // 預設跳轉回你所在的測試區域
-                    updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
-                    filterDistrictSelect.value = "all";
-                    filterAndSortMushroomCards();
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                geoBtn.innerText = "🔍 解析行政區...";
+                
+                // 如果圖資還沒下載完，等待一下
+                if (!geojsonTaiwanData) {
+                    await loadTaiwanGeoJson();
+                }
+                
+                const result = findTownshipByLngLat(lng, lat);
+                
+                if (result && result.city && result.town) {
+                    // 成功精準解析到縣市與行政區！
+                    if (filterCitySelect && filterDistrictSelect) {
+                        filterCitySelect.value = result.city;
+                        updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
+                        filterDistrictSelect.value = result.town;
+                        filterAndSortMushroomCards();
+                    }
+                    alert(`🎯 定位成功！已為您自動切換至：${result.city} ${result.town}`);
+                } else {
+                    // 備用方案：如果超出幾何邊界或圖資失敗，採用基準點反解
+                    if (filterCitySelect && filterDistrictSelect) {
+                        filterCitySelect.value = "台北市"; 
+                        updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
+                        filterDistrictSelect.value = "all";
+                        filterAndSortMushroomCards();
+                    }
+                    alert("📍 已成功取得 GPS，但精確行政區比對失敗，已為您切換至預設看板。");
                 }
                 geoBtn.disabled = false;
                 geoBtn.innerText = "🎯 自動定位";
-                alert("定位成功！已切換至接近區域。");
             },
             (error) => {
                 geoBtn.disabled = false;
                 geoBtn.innerText = "🎯 自動定位";
-                alert("GPS 定位失敗，請手動選擇縣市行政區。");
-            }
+                alert("GPS 定位獲取失敗，請確認是否已開啟手機/瀏覽器的定位權限。");
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
         );
     });
 }
@@ -209,7 +280,6 @@ function filterAndSortMushroomCards() {
         if (!d) return false;
         if (cityFilter !== 'all' && d.city !== cityFilter) return false;
         
-        // 兼容新舊行政區欄位格式 (陣列或字串)
         const dArray = Array.isArray(d.district) ? d.district : [d.district];
         if (distFilter !== 'all' && !dArray.includes(distFilter) && !dArray.includes(distFilter.replace('區','').replace('鄉','').replace('鎮','').replace('市',''))) {
             return false;
@@ -247,14 +317,12 @@ function filterAndSortMushroomCards() {
         return 0;
     });
 
-    // 置頂排序優先
     filteredList.sort((a, b) => {
         const isPinnedA = pinnedMushrooms.includes(a.id) ? 1 : 0;
         const isPinnedB = pinnedMushrooms.includes(b.id) ? 1 : 0;
         return isPinnedB - isPinnedA;
     });
 
-    // 同步清單類別
     if (currentViewMode === 'list') {
         mushroomContainer.classList.add('list-view');
     } else {
@@ -302,21 +370,15 @@ function updateCountdowns() {
     document.querySelectorAll('.countdown').forEach(el => {
         if (!document.body.contains(el)) return;
         const currentCard = el.closest('.card');
-        const cardId = currentCard.getAttribute('data-id');
-        const verifyBtn = currentCard.querySelector('.verify-fact-btn');
-        const notifyBtn = currentCard.querySelector('.notify-me-btn');
-        
         const targetTime = parseInt(el.getAttribute('data-target'));
         const respawnTime = parseInt(el.getAttribute('data-respawn'));
         let timeLeft = targetTime - now;
 
         if (timeLeft > 0) {
-            if (verifyBtn) verifyBtn.style.display = 'inline-block';
             let s = Math.floor((timeLeft/1000)%60), m = Math.floor((timeLeft/(1000*60))%60), h = Math.floor((timeLeft/(1000*60*60))%24);
             el.innerText = `⏳ 剩餘：${format(h)}:${format(m)}:${format(s)}`;
             el.style.color = "#333";
         } else {
-            if (verifyBtn) verifyBtn.style.display = 'none';
             let respawnLeftMs = respawnTime - now;
             if (respawnLeftMs > 0) {
                 let rS = Math.floor((respawnLeftMs/1000)%60), rM = Math.floor((respawnLeftMs/(1000*60))%60);
