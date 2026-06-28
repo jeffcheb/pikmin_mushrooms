@@ -6,32 +6,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const mushroomSize = document.getElementById("mushroom-size");
     const currentPlayers = document.getElementById("current-players");
     
-    // 切換視圖與篩選按鈕
+    // 看板控制與篩選元素
     const btnGridView = document.getElementById("btn-grid-view");
     const btnListView = document.getElementById("btn-list-view");
+    const searchKeyword = document.getElementById("search-keyword");
+    const filterCity = document.getElementById("filter-city");
+    const filterDistrict = document.getElementById("filter-district");
+    const btnAutoLocation = document.getElementById("btn-auto-location");
 
-    // 儲存目前從 Firebase 撈出來的所有蘑菇原始資料
     let localMushroomsData = {};
-    // 存放本機釘選清單 [id, id, ...]
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
 
     // --- F4: 參戰人數動態限制 ---
     if (mushroomSize && currentPlayers) {
         mushroomSize.addEventListener("change", () => {
             const size = mushroomSize.value;
-            // 巨大蘑菇上限可能為 5 或 20 (活動)，此處以常規大型/巨大作動態示範
-            if (size === "小型" || size === "普通") {
-                currentPlayers.max = 5;
-            } else {
-                currentPlayers.max = 5; // 基礎常規皆為 5 人
-            }
+            currentPlayers.max = 5; 
             if (parseInt(currentPlayers.value) > parseInt(currentPlayers.max)) {
                 currentPlayers.value = currentPlayers.max;
             }
         });
     }
 
-    // --- 偏好設定：網格/清單切換與持久化 ---
+    // --- 偏好設定：網格/清單切換 ---
     const savedView = localStorage.getItem("board_view_pref") || "grid";
     setViewMode(savedView);
 
@@ -54,16 +51,122 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("board_view_pref", mode);
     }
 
+    // ========================================================
+    // 🌍 核心新增一：即時看板「全台行政區篩選選單」初始化與連動
+    // ========================================================
+    function initFilterDistricts() {
+        if (!filterCity || !filterDistrict || !window.taiwanData) return;
+
+        // 將全台縣市塞入看板篩選器
+        Object.keys(window.taiwanData).forEach(city => {
+            const option = document.createElement("option");
+            option.value = city;
+            option.textContent = city;
+            filterCity.appendChild(option);
+        });
+
+        // 監聽看板篩選器的縣市切換
+        filterCity.addEventListener("change", () => {
+            const selectedCity = filterCity.value;
+            
+            filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+            
+            if (selectedCity === "all") {
+                filterDistrict.disabled = true;
+            } else {
+                filterDistrict.disabled = false;
+                const districts = window.taiwanData[selectedCity] || [];
+                districts.forEach(dist => {
+                    const option = document.createElement("option");
+                    option.value = dist;
+                    option.textContent = dist;
+                    filterDistrict.appendChild(option);
+                });
+            }
+            renderBoard(); // 切換篩選，即時重新渲染看板
+        });
+
+        filterDistrict.addEventListener("change", renderBoard);
+        searchKeyword?.addEventListener("input", renderBoard);
+    }
+
+    // ========================================================
+    // 🎯 核心新增二：地理位置自動定位功能 (GPS 經緯度逆查縣市行政區)
+    // ========================================================
+    if (btnAutoLocation) {
+        btnAutoLocation.addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                alert("您的瀏覽器不支援地理定位功能。");
+                return;
+            }
+
+            btnAutoLocation.textContent = "⌛ 定位中";
+            
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    try {
+                        // 使用開放免費的 OpenStreetMap Nominatim API 進行逆地理編碼
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`);
+                        const data = await response.json();
+                        
+                        if (data && data.address) {
+                            // 撈取 API 回傳的城市與鄉鎮市區名稱
+                            const city = data.address.city || data.address.town || data.address.county || "";
+                            const suburb = data.address.suburb || data.address.district || data.address.village || "";
+
+                            // 格式化字串以符合台灣格式（去雜質、統一繁體）
+                            let detectCity = city.replace("臺", "台");
+                            let detectDistrict = suburb.replace("臺", "台");
+
+                            // 對照看看是否有在我們的字典裡
+                            let foundCity = Object.keys(window.taiwanData).find(c => detectCity.includes(c));
+                            
+                            if (foundCity) {
+                                filterCity.value = foundCity;
+                                // 觸發 Change 事件讓行政區下拉選單生成
+                                filterCity.dispatchEvent(new Event('change'));
+
+                                let foundDist = window.taiwanData[foundCity].find(d => detectDistrict.includes(d) || d.includes(detectDistrict));
+                                if (foundDist) {
+                                    filterDistrict.value = foundDist;
+                                }
+                                
+                                alert(`🎯 定位成功：已自動為您切換至【${foundCity} ${filterDistrict.value}】`);
+                                renderBoard(); // 重新渲染
+                            } else {
+                                alert(`雖然定位成功，但找不到對應的台灣縣市名（偵測到：${detectCity}），請手動選取。`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("連線到定位逆查伺服器失敗，請手動選擇。");
+                    } finally {
+                        btnAutoLocation.textContent = "🎯 定位";
+                    }
+                },
+                (error) => {
+                    btnAutoLocation.textContent = "🎯 定位";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert("請允許網頁獲取您的 GPS 位置權限才能使用自動定位功能。");
+                            break;
+                        default:
+                            alert("無法取得您的位置資訊。");
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        });
+    }
+
     // --- F3: 蘑菇情報發佈 (寫入 Firebase) ---
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
-            
-            // 確保 Firebase 已經初始化完成
-            if (!window.fbDB) {
-                alert("Firebase 尚未就緒，請檢查連線與配置。");
-                return;
-            }
+            if (!window.fbDB) return;
 
             const city = document.getElementById("city").value;
             const district = document.getElementById("district").value;
@@ -75,54 +178,35 @@ document.addEventListener("DOMContentLoaded", () => {
             const minutes = parseInt(document.getElementById("time-minutes").value) || 0;
             const seconds = parseInt(document.getElementById("time-seconds").value) || 0;
 
-            // 依種類指派 picture/ 資料夾對應的圖片
-            // 在 js/report.js 中找到指派 iconPath 的地方，修改為：
-
-let iconPath = "picture/mushroom_normal.png"; // 預設圖片
-
-// 元素蘑菇判斷
-if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
-else if (type.includes("水")) iconPath = "picture/mushroom_water.png";
-else if (type.includes("水晶")) iconPath = "picture/mushroom_crystal.png";
-else if (type.includes("毒")) iconPath = "picture/mushroom_poison.png";
-else if (type.includes("電")) iconPath = "picture/mushroom_electric.png";
-
-// 普通顏色蘑菇判斷
-else if (type.includes("紅")) iconPath = "picture/shroom_red.png";
-else if (type.includes("藍")) iconPath = "picture/shroom_blue.png";
-else if (type.includes("黃")) iconPath = "picture/shroom_yellow.png";
-else if (type.includes("紫")) iconPath = "picture/shroom_purple.png";
-else if (type.includes("白")) iconPath = "picture/shroom_white.png";
-else if (type.includes("灰")) iconPath = "picture/shroom_gray.png";
-else if (type.includes("粉紅")) iconPath = "picture/shroom_pink.png";
-
-// 每月特殊蘑菇判斷
-else if (type.includes("每月特殊蘑菇")) {
-    iconPath = "picture/mushroom_monthly_special.png";
-}
+            let iconPath = "picture/mushroom_normal.png"; 
+            if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
+            else if (type.includes("水")) iconPath = "picture/mushroom_water.png";
+            else if (type.includes("水晶")) iconPath = "picture/mushroom_crystal.png";
+            else if (type.includes("毒")) iconPath = "picture/mushroom_poison.png";
+            else if (type.includes("電")) iconPath = "picture/mushroom_electric.png";
+            else if (type.includes("紅")) iconPath = "picture/shroom_red.png";
+            else if (type.includes("藍")) iconPath = "picture/shroom_blue.png";
+            else if (type.includes("黃")) iconPath = "picture/shroom_yellow.png";
+            else if (type.includes("紫")) iconPath = "picture/shroom_purple.png";
+            else if (type.includes("白")) iconPath = "picture/shroom_white.png";
+            else if (type.includes("灰")) iconPath = "picture/shroom_gray.png";
+            else if (type.includes("粉紅")) iconPath = "picture/shroom_pink.png";
+            else if (type.includes("每月特殊蘑菇")) iconPath = "picture/mushroom_monthly_special.png";
 
             const nowTimestamp = Date.now();
 
             const newMushroom = {
-                city,
-                district,
-                locationName,
-                type,
-                size,
+                city, district, locationName, type, size,
                 mushroomIcon: iconPath,
-                currentPlayers: players,
-                maxPlayers: 5,
+                currentPlayers: players, maxPlayers: 5,
                 timeReported: { hours, minutes, seconds },
-                createdAt: nowTimestamp,
-                updatedAt: nowTimestamp
+                createdAt: nowTimestamp, updatedAt: nowTimestamp
             };
 
-            // 推送到 Firebase
             const shroomRef = window.fbRef(window.fbDB, "mushrooms");
             window.fbPush(shroomRef, newMushroom)
                 .then(() => {
                     reportForm.reset();
-                    // 行政區重新鎖定防呆
                     document.getElementById("district").disabled = true;
                     alert("🎉 情報發佈成功！");
                 })
@@ -130,18 +214,14 @@ else if (type.includes("每月特殊蘑菇")) {
         });
     }
 
-    // --- F5: 即時看板監聽與定時倒數渲染 ---
+    // --- F5: 即時看板監聽與渲染 ---
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
-
         const shroomRef = window.fbRef(window.fbDB, "mushrooms");
         window.fbOnValue(shroomRef, (snapshot) => {
-            const data = snapshot.val();
-            localMushroomsData = data || {};
+            localMushroomsData = snapshot.val() || {};
             renderBoard();
         });
-
-        // 每秒執行一次，讓全網頁的所有卡片倒數秒數即時跳動
         setInterval(renderBoard, 1000);
     }
 
@@ -151,22 +231,38 @@ else if (type.includes("每月特殊蘑菇")) {
         let htmlContent = "";
         const keys = Object.keys(localMushroomsData);
 
+        // 取得當前的篩選值
+        const cityFilter = filterCity?.value || "all";
+        const distFilter = filterDistrict?.value || "all";
+        const keyword = searchKeyword?.value.trim().toLowerCase() || "";
+
         if (keys.length === 0) {
             mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報，快去發佈第一個吧！</p>';
             return;
         }
 
-        // 依據是否釘選排序，把有釘選的往前排
+        // 依據是否釘選權重排序
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
             return bPinned - aPinned; 
         });
 
+        let renderedCount = 0;
+
         keys.forEach(id => {
             const item = localMushroomsData[id];
             
-            // 計算時間差
+            // 🔍 進行條件篩選
+            if (cityFilter !== "all" && item.city !== cityFilter) return;
+            if (distFilter !== "all" && item.district !== distFilter) return;
+            if (keyword !== "") {
+                const matchLocation = item.locationName.toLowerCase().includes(keyword);
+                const matchType = item.type.toLowerCase().includes(keyword);
+                if (!matchLocation && !matchType) return;
+            }
+
+            // 計算時間倒數
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
             const expireTime = item.createdAt + totalReportedMs;
             const msLeft = expireTime - Date.now();
@@ -175,31 +271,28 @@ else if (type.includes("每月特殊蘑菇")) {
             let statusClass = "countdown-text";
 
             if (msLeft > 0) {
-                // 正常倒數階段
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
                 const s = totalSec % 60;
                 timeString = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
             } else {
-                // 進入重生緩衝期 (超過原本時間，5分鐘內，即 300000 毫秒)
                 const bufferLeft = 300000 + msLeft; 
                 if (bufferLeft > 0) {
                     const totalSec = Math.floor(bufferLeft / 1000);
                     const m = Math.floor(totalSec / 60);
                     const s = totalSec % 60;
                     timeString = `🔄 下次出現倒數：${m}分${s}秒`;
-                    statusClass = "countdown-text buffer-period"; // 轉為紅色
+                    statusClass = "countdown-text buffer-period";
                 } else {
-                    // 超過 5 分鐘，直接隱藏或不渲染該卡片（此處選擇不顯示過期情報）
-                    return;
+                    return; // 超過重生緩衝 5 分鐘，直接過期隱藏
                 }
             }
 
+            renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
 
-            // 組裝 HTML 卡片字串
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}">
                     <div class="card-header">
@@ -221,22 +314,21 @@ else if (type.includes("每月特殊蘑菇")) {
             `;
         });
 
-        mushroomBoard.innerHTML = htmlContent || '<p class="loading-text">目前情報皆已過期。</p>';
+        if (renderedCount === 0) {
+            mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
+        } else {
+            mushroomBoard.innerHTML = htmlContent;
+        }
     }
 
-    // 處理全域釘選功能
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
-        if (index > -1) {
-            pinnedList.splice(index, 1);
-        } else {
-            pinnedList.push(id);
-        }
+        if (index > -1) pinnedList.splice(index, 1);
+        else pinnedList.push(id);
         localStorage.setItem("pinned_mushrooms", JSON.stringify(pinnedList));
         renderBoard();
     };
 
-    // 處理快速更新人數功能 (F7 互動)
     window.quickJoin = (id) => {
         const item = localMushroomsData[id];
         if (!item || !window.fbDB) return;
@@ -251,12 +343,12 @@ else if (type.includes("每月特殊蘑菇")) {
         });
     };
 
-    // 啟動 Firebase 同步監聽
-    // 透過定時檢查確認 fbDB 變數是否掛載至全域
+    // 確保等全域的地區字典與 Firebase 都好之後，同步啟動
     const checkFbInterval = setInterval(() => {
-        if (window.fbDB) {
+        if (window.fbDB && window.taiwanData) {
             clearInterval(checkFbInterval);
-            startBoardSync();
+            initFilterDistricts(); // 啟動篩選器選單生成
+            startBoardSync();      // 啟動雲端即時載入
         }
     }, 200);
 });
