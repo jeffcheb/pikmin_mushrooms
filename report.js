@@ -25,7 +25,7 @@ let activeReminders = JSON.parse(localStorage.getItem('mushroom_reminders') || '
 let sentNotifications = new Set(); 
 let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]');
 
-// 🎴 版面檢視狀態：'grid' (卡片) 或 'list' (清單)
+// 🎴 版面狀態記憶
 let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
 const firebaseConfig = {
@@ -151,8 +151,7 @@ function filterAndSortMushroomCards() {
     const sizeWeight = { "巨型": 4, "大": 3, "普通": 2, "小": 1 };
 
     filteredList.sort((a, b) => {
-        const dataA = a.data;
-        const dataB = b.data;
+        const dataA = a.data; const dataB = b.data;
         if (sortWay === "updateTime") {
             return (Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0) - (Date.parse(dataA.reportTime.replace(/-/g, '/')) || 0);
         } else if (sortWay === "remainingTime") {
@@ -177,7 +176,6 @@ function filterAndSortMushroomCards() {
         return 0;
     });
 
-    // 📌 記憶置頂排序
     filteredList.sort((a, b) => {
         const isPinnedA = pinnedMushrooms.includes(a.id) ? 1 : 0;
         const isPinnedB = pinnedMushrooms.includes(b.id) ? 1 : 0;
@@ -340,38 +338,34 @@ function toggleSubscription(id, buttonEl, text) {
     localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
 }
 
-// 🎴 核心防崩潰渲染：如果是 list 模式，純靠 JS 注入內建小樣式，絕對不破壞原本的 CSS 排版結構
+// 🎴 【終極防崩潰排版】如果不開清單模式，一切照舊；如果開清單模式，純用 JS 把大圖片縮到最小，絕對零跑版
 function renderMushroomCard(id, data) {
     const newCard = document.createElement('div');
     newCard.className = "card";
     newCard.setAttribute('data-id', id);
-    
-    // 🌟 如果是清單模式，注入幾行不爆版的隱藏微調
-    if (currentViewMode === 'list') {
-        newCard.style.padding = "10px 15px";
-        newCard.style.minHeight = "auto";
-        newCard.style.marginBottom = "8px";
-    }
 
     const isSubscribed = activeReminders.includes(id);
     const isPinned = pinnedMushrooms.includes(id);
     let notifyBtnText = isSubscribed ? (("Notification" in window && Notification.permission === "granted") ? "🔔 已設提醒" : "🎵 音效提醒") : "🔔 提醒我";
-    
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     
-    // 🌟 清單模式下，縮小圖片、隱藏無用標籤
-    const imgStyle = (currentViewMode === 'list') ? 'width:35px; height:35px; margin:0 10px 0 0; float:left;' : '';
-    const textStyle = (currentViewMode === 'list') ? 'display:inline-block; margin:2px 0; font-size:14px;' : '';
+    // 🌟 核心防爆修改：在清單模式下，直接控制圖片寬高與縮減上下間距
+    const isList = (currentViewMode === 'list');
+    const cardPadding = isList ? 'padding: 8px 15px;' : '';
+    const imgStyle = isList ? 'width: 32px; height: 32px; margin: 0 auto 4px auto;' : '';
+    const textMargin = isList ? 'margin: 3px 0; font-size: 13px;' : '';
+
+    if (cardPadding) newCard.setAttribute('style', cardPadding);
 
     newCard.innerHTML = `
         <button class="pin-btn ${isPinned?'active':''}" title="釘選">📌</button>
         <button class="quick-edit-btn" title="更新">📝 更新</button>
         <button class="delete-btn" title="刪除">❌</button>
         <img src="picture/${data.img}" alt="菇" class="card-icon" style="${imgStyle}">
-        <h3 style="${textStyle}">[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}">◉</span></h3>
-        <p style="${textStyle}">📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
-        <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="${textStyle}; font-weight:bold;">⏳ 計算中...</p>
-        <p style="${textStyle}; margin-bottom:4px;">👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
+        <h3 style="${textMargin}">[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}">◉</span></h3>
+        <p style="${textMargin}">📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
+        <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="${textMargin} font-weight:bold;">⏳ 計算中...</p>
+        <p style="${textMargin}">👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
         <button class="notify-me-btn" style="border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">${notifyBtnText}</button>
     `;
     
@@ -389,7 +383,6 @@ function updateCountdowns() {
         if (!document.body.contains(el)) return;
         const currentCard = el.closest('.card');
         const cardId = currentCard.getAttribute('data-id');
-        const h3Title = currentCard.querySelector('h3');
         const verifyBtn = currentCard.querySelector('.verify-fact-btn');
         const notifyBtn = currentCard.querySelector('.notify-me-btn');
         
@@ -412,7 +405,6 @@ function updateCountdowns() {
                 el.innerText = `🔄 下次出現倒數：${format(rM)}分${format(rS)}秒`;
                 el.style.color = "#d32f2f";
 
-                // 🔔 倒數 1 分鐘智慧通知
                 if (activeReminders.includes(cardId) && !sentNotifications.has(cardId)) {
                     if (Math.floor(respawnLeftMs / 1000) <= 60) {
                         sentNotifications.add(cardId);
@@ -487,7 +479,7 @@ if (viewToggleBtn) {
         currentViewMode = (currentViewMode === 'grid') ? 'list' : 'grid';
         localStorage.setItem('mushroom_view_mode', currentViewMode);
         updateViewToggleBtnText();
-        filterAndSortMushroomCards(); // 立即重新刷上對應排版
+        filterAndSortMushroomCards();
     });
 }
 
