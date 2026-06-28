@@ -7,8 +7,10 @@ const formDistrictSelect = document.getElementById('form-district');
 const filterCitySelect = document.getElementById('filter-city');
 const filterDistrictSelect = document.getElementById('filter-district');
 
-// 排序下拉選單
+// 排序與新增的搜尋、切換 UI 元件
 const cardSortSelect = document.getElementById('card-sort') || document.createElement('select');
+const searchNameInput = document.getElementById('search-name');
+const viewToggleBtn = document.getElementById('view-toggle-btn');
 
 const formTypeSelect = document.getElementById('form-type');
 const formSizeSelect = document.getElementById('form-size');
@@ -25,6 +27,12 @@ let globalMushroomList = [];
 // 🔔 儲存玩家主動訂閱「提醒我」的蘑菇 Firebase ID 陣列與已發送紀錄
 let activeReminders = JSON.parse(localStorage.getItem('mushroom_reminders') || '[]');
 let sentNotifications = new Set(); // 避免重複跳通知
+
+// 📌 記憶釘選的蘑菇 Firebase ID 陣列
+let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]');
+
+// 🎴 版面檢視樣式狀態 ('grid' 或 'list')，預設為卡片網格
+let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
 // 🛜 完美對齊你的美國資料庫設定
 const firebaseConfig = {
@@ -84,6 +92,9 @@ function initCityDropdowns() {
         opt.value = city; opt.innerText = city;
         filterCitySelect.appendChild(opt);
     });
+
+    // 重新更新切換按鈕文字
+    updateViewToggleBtnText();
 }
 
 function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = false) {
@@ -127,21 +138,38 @@ function updateCountLimitConstraint() {
     if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
 }
 
+function updateViewToggleBtnText() {
+    if (!viewToggleBtn) return;
+    if (currentViewMode === 'list') {
+        viewToggleBtn.innerText = "📋 清單模式";
+        mushroomContainer.classList.add('list-view'); // 讓 CSS 可以切換樣式
+    } else {
+        viewToggleBtn.innerText = "🎴 卡片模式";
+        mushroomContainer.classList.remove('list-view');
+    }
+}
+
 function filterAndSortMushroomCards() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
     const sortWay = cardSortSelect.value;
+    const searchKeyword = searchNameInput ? searchNameInput.value.trim().toLowerCase() : "";
 
+    // 1. 條件篩選 (包含新加入的關鍵字搜尋功能)
     let filteredList = globalMushroomList.filter(item => {
         const data = item.data;
         const cardDistricts = Array.isArray(data.district) ? data.district : [data.district];
+        
         const matchCity = (selectedCity === 'all' || data.city === selectedCity);
         const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict));
-        return matchCity && matchDistrict;
+        const matchKeyword = (!searchKeyword || data.name.toLowerCase().includes(searchKeyword) || data.title.toLowerCase().includes(searchKeyword));
+        
+        return matchCity && matchDistrict && matchKeyword;
     });
 
     const sizeWeight = { "巨型": 4, "大": 3, "普通": 2, "小": 1 };
 
+    // 2. 核心基礎排序
     filteredList.sort((a, b) => {
         const dataA = a.data;
         const dataB = b.data;
@@ -189,17 +217,37 @@ function filterAndSortMushroomCards() {
         return 0;
     });
 
+    // 🌟 3. 頂級特權：把具有「記憶釘選」的卡片強制置頂（符合篩選條件的才置頂）
+    filteredList.sort((a, b) => {
+        const isPinnedA = pinnedMushrooms.includes(a.id) ? 1 : 0;
+        const isPinnedB = pinnedMushrooms.includes(b.id) ? 1 : 0;
+        return isPinnedB - isPinnedA; // 1 排在 0 前面
+    });
+
     mushroomContainer.innerHTML = '';
     filteredList.forEach(item => { renderMushroomCard(item.id, item.data); });
 }
 
+// 📌 智慧記憶版釘選功能
 function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
             const currentCard = e.target.closest('.card');
-            e.target.classList.toggle('active');
-            if (e.target.classList.contains('active')) { mushroomContainer.prepend(currentCard); }
-            else { filterAndSortMushroomCards(); }
+            const firebaseId = currentCard.getAttribute('data-id');
+            
+            const index = pinnedMushrooms.indexOf(firebaseId);
+            if (index === -1) {
+                pinnedMushrooms.push(firebaseId);
+                e.target.classList.add('active');
+            } else {
+                pinnedMushrooms.splice(index, 1);
+                e.target.classList.remove('active');
+            }
+            
+            // 寫入本地快取儲存
+            localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
+            // 重新刷新，程式會自動將有釘選的推到最上方
+            filterAndSortMushroomCards();
         }
     });
 }
@@ -379,7 +427,6 @@ function setupDeveloperMode() {
     });
 }
 
-// 🔔 智慧推播與音效提醒我監聽按鈕 (iOS/iPad 及跨裝置相容並支援【關閉提醒】優化版)
 function setupNotificationFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('notify-me-btn')) {
@@ -387,19 +434,16 @@ function setupNotificationFeature() {
             const firebaseId = currentCard.getAttribute('data-id');
             const countdownEl = currentCard.querySelector('.countdown');
             
-            // 判斷目前卡片是「正在打」還是「冷卻中」，以決定提醒類型
             const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
             const now = Date.now();
             const isCurrentlyFighting = (targetTime - now > 0);
 
-            // 1. 檢查是否已經訂閱過，如果已經訂閱，則執行「關閉提醒」
             if (activeReminders.includes(firebaseId)) {
                 toggleSubscription(firebaseId, e.target, "🔔 提醒我");
                 alert("🔕 已成功關閉並取消該蘑菇的通知提醒。");
                 return;
             }
 
-            // 2. 如果沒訂閱，開始走訂閱流程（支援系統推播與音效保底）
             if ("Notification" in window) {
                 if (Notification.permission === "denied") {
                     alert("⚠️ 您先前拒絕了通知權限。系統將為您切換為【網頁音效模式】，時間到時會發出嗶嗶聲提醒！");
@@ -418,7 +462,6 @@ function setupNotificationFeature() {
                     }
                 });
             } else {
-                // 🍎 iOS Chrome 保底
                 toggleSubscription(firebaseId, e.target, "🎵 音效提醒");
                 alert(`🎵 偵測到您的瀏覽器不支援系統推播。系統已自動啟動【網頁音效提醒】！只要保持網頁開啟，結束/出生前 1 分鐘網頁就會發出聲音喔！`);
             }
@@ -426,7 +469,6 @@ function setupNotificationFeature() {
     });
 }
 
-// 輔助切換訂閱狀態
 function toggleSubscription(id, buttonEl, text) {
     const index = activeReminders.indexOf(id);
     if (index === -1) {
@@ -457,8 +499,10 @@ function renderMushroomCard(id, data) {
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
-    // 初步動態判定按鈕顯示狀態
+    // 判斷釘選與提醒狀態，加入對應 Class
     const isSubscribed = activeReminders.includes(id);
+    const isPinned = pinnedMushrooms.includes(id);
+    
     let notifyBtnText = "🔔 提醒我";
     let subClass = "";
     let btnStyle = "background: #fff8e1; border: 1px solid #ffe082; color: #b78103;";
@@ -468,9 +512,11 @@ function renderMushroomCard(id, data) {
         notifyBtnText = ("Notification" in window && Notification.permission === "granted") ? "🔔 已設提醒" : "🎵 音效提醒";
         btnStyle = "background: #e8f5e9; border: 1px solid #81c784; color: #2e7d32;";
     }
+
+    const pinClass = isPinned ? "pin-btn active" : "pin-btn";
     
     newCard.innerHTML = `
-        <button class="pin-btn" title="釘選此位置">📌</button>
+        <button class="${pinClass}" title="釘選此位置">📌</button>
         <button class="quick-edit-btn" title="快速原地修改人數時間">📝 更新</button>
         <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
         <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
@@ -660,12 +706,8 @@ function updateCountdowns() {
         const hasNotificationPermission = ("Notification" in window && Notification.permission === "granted");
 
         if (timeLeft > 0) {
-            // ==========================================
-            // A. ⏳ 正在被摧毀倒數中（剩餘時間）
-            // ==========================================
             if (verifyBtn) verifyBtn.style.display = 'inline-block';
             
-            // 🌟 核心規則：此狀態需要顯示提醒按鈕
             if (notifyBtn) {
                 notifyBtn.style.display = 'inline-block';
                 if (!isSubscribed) {
@@ -682,7 +724,6 @@ function updateCountdowns() {
             el.innerText = `⏳ 剩餘時間：${format(hours)}:${format(minutes)}:${format(seconds)}`;
             el.style.color = "#333";
 
-            // 🔔 【通知判定】打完前 1 分鐘提醒我上線看新蘑菇
             if (isSubscribed && !sentNotifications.has(cardId + "_end")) {
                 const totalFightSecondsLeft = Math.floor(timeLeft / 1000);
                 if (totalFightSecondsLeft <= 60 && totalFightSecondsLeft > 0) {
@@ -709,9 +750,6 @@ function updateCountdowns() {
             let rMinutes = Math.floor((respawnLeftMs / (1000 * 60)) % 60);
             
             if (respawnLeftMs > 0) {
-                // ==========================================
-                // B. 🔄 下次出現倒數中（冷卻期）
-                // ==========================================
                 if (notifyBtn) {
                     notifyBtn.style.display = 'inline-block';
                     if (!isSubscribed) {
@@ -726,7 +764,6 @@ function updateCountdowns() {
                 el.style.color = "#d32f2f"; 
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
 
-                // 🔔 【通知判定】出生前 1 分鐘提醒我卡位
                 if (isSubscribed && !sentNotifications.has(cardId + "_spawn")) {
                     const totalCooldownSecondsLeft = Math.floor(respawnLeftMs / 1000);
                     if (totalCooldownSecondsLeft <= 60 && totalCooldownSecondsLeft > 0) {
@@ -746,9 +783,6 @@ function updateCountdowns() {
                 }
 
             } else {
-                // ==========================================
-                // C. ⌛ 狀態：新蘑菇待更新...（唯獨此狀態要隱藏）
-                // ==========================================
                 if (notifyBtn) notifyBtn.style.display = 'none';
 
                 el.innerText = `⌛ 狀態：新蘑菇待更新...`;
@@ -756,7 +790,7 @@ function updateCountdowns() {
                 el.style.fontWeight = "bold";
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
                 
-                // 完全過期，自動清洗歷史訂閱快取
+                // 完全過期，自動清洗歷史訂閱快取與釘選快取
                 if (sentNotifications.has(cardId + "_end")) sentNotifications.delete(cardId + "_end");
                 if (sentNotifications.has(cardId + "_spawn")) sentNotifications.delete(cardId + "_spawn");
                 if (isSubscribed) {
@@ -766,12 +800,19 @@ function updateCountdowns() {
                         localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
                     }
                 }
+                // 🌟 當蘑菇完全走進「新蘑菇待更新」時，自動解除釘選，維持版面乾淨
+                if (pinnedMushrooms.includes(cardId)) {
+                    const pinIndex = pinnedMushrooms.indexOf(cardId);
+                    if (pinIndex !== -1) {
+                        pinnedMushrooms.splice(pinIndex, 1);
+                        localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
+                    }
+                }
             }
         }
     });
 }
 
-// 🔊 封裝音效產生器 (免 mp3 檔案保底蜂鳴)
 function playBeepSound() {
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -799,6 +840,20 @@ filterCitySelect.addEventListener('change', () => {
 });
 filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
 cardSortSelect.addEventListener('change', filterAndSortMushroomCards);
+
+// 🔍 監聽名稱搜尋輸入框：即時打字即時篩選
+if (searchNameInput) {
+    searchNameInput.addEventListener('input', filterAndSortMushroomCards);
+}
+
+// 🎴 監聽版面切換按鈕
+if (viewToggleBtn) {
+    viewToggleBtn.addEventListener('click', () => {
+        currentViewMode = (currentViewMode === 'grid') ? 'list' : 'grid';
+        localStorage.setItem('mushroom_view_mode', currentViewMode);
+        updateViewToggleBtnText();
+    });
+}
 
 formTypeSelect.addEventListener('change', updateCountLimitConstraint);
 formSizeSelect.addEventListener('change', updateCountLimitConstraint);
