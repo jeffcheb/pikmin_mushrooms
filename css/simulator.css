@@ -1,1 +1,47 @@
+/* js/simulator.css */
 
+.simulator-form {
+    margin-bottom: 24px;
+}
+
+/* 運算結果展示區塊 */
+.result-section {
+    background-color: var(--bg-color);
+    border: 2px dashed var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    text-align: center;
+    margin-top: 20px;
+    transition: var(--transition);
+}
+
+.result-section h3 {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+/* 最終戰力數字 */
+.power-value {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--primary-color);
+    text-shadow: 1px 1px 0px #fff;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* 錯誤提示 (禁止參戰) */
+.error-message {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--danger-color);
+    padding: 10px;
+    animation: shake 0.3s ease-in-out;
+}
+
+/* 簡單的抖動動畫，提醒玩家不能參戰 */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
