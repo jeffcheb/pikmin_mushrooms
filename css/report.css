@@ -188,3 +188,21 @@
     margin-bottom: 0;
     flex-grow: 0;
 }
+/* 🔘 灰色過期卡片專屬樣式 */
+.mushroom-card.card-expired-mode {
+    background-color: #f4f4f4 !important;
+    border: 2px dashed #b5b5b5 !important;
+    box-shadow: none !important;
+    opacity: 0.75;
+    filter: grayscale(30%); /* 微微去色呈現沉睡狀態 */
+}
+
+/* 待更新文字樣式 */
+.countdown-text.need-update-period {
+    color: #7f8c8d !important;
+    font-weight: bold;
+    background: #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
