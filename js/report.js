@@ -17,12 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
     let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
     let firedAlerts = {};
-
-    // 請求瀏覽器通知權限
-    if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-    }
-
     // 人數動態限制
     if (mushroomSize && currentPlayers) {
         const updateMaxPlayers = () => {
