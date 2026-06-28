@@ -1,1 +1,190 @@
+/* css/report.css */
 
+/* 看板控制列排版 */
+.board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.board-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+}
+
+.view-toggles button {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: var(--transition);
+}
+
+.view-toggles button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* 剩餘時間輸入框的特殊排版 */
+.time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.time-inputs input {
+    width: 60px;
+    text-align: center;
+}
+
+/* =========================================
+   卡片容器排版 (Grid v.s. List)
+   ========================================= */
+.board-container {
+    display: transition;
+}
+
+/* 網格模式 (Grid View) */
+.board-container.grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* 條列模式 (List View) */
+.board-container.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* =========================================
+   單張蘑菇卡片基本樣式
+   ========================================= */
+.mushroom-card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    box-shadow: var(--box-shadow);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: var(--transition);
+}
+
+.mushroom-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+/* 釘選狀態樣式 */
+.mushroom-card.pinned {
+    border: 2px solid #FFC107;
+    background-color: #FFFDF3;
+}
+
+/* 卡片內部元素排版 */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.shroom-img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.shroom-info h4 {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.shroom-info p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.card-body {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    flex-grow: 1;
+}
+
+.countdown-text {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* 進入重生緩衝期的紅色倒數文字 (F5) */
+.countdown-text.buffer-period {
+    color: var(--danger-color);
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background-color: #fff;
+    transition: var(--transition);
+}
+
+.btn-sm:hover {
+    background-color: var(--bg-color);
+}
+
+.btn-pin.active {
+    background-color: #FFC107;
+    color: white;
+    border-color: #FFC107;
+}
+
+.loading-text {
+    text-align: center;
+    grid-column: 1 / -1;
+    color: var(--text-muted);
+    padding: 40px 0;
+}
+
+/* 條列模式下的卡片外觀微調 */
+.board-container.list-view .mushroom-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+}
+
+.board-container.list-view .card-header {
+    margin-bottom: 0;
+}
+
+.board-container.list-view .card-body {
+    margin-bottom: 0;
+    flex-grow: 0;
+}
