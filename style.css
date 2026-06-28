@@ -1,5 +1,5 @@
 /* ==========================================================================
-   🟢 全站基礎通用設定 (雙頁面共用)
+   🟢 全站基礎通用設定 (戰力精算與回報看板共用)
    ========================================================================== */
 * {
     box-sizing: border-box;
@@ -13,7 +13,7 @@ body {
     padding: 20px;
 }
 
-/* 頂部導覽列 (Header & Nav) */
+/* 頂部導覽列 (Header & Nav) 排版還原 */
 header {
     display: flex;
     justify-content: space-between;
@@ -34,6 +34,11 @@ header {
     gap: 12px;
 }
 
+.logo {
+    height: 40px;
+    object-fit: contain;
+}
+
 .logo-area h1 {
     margin: 0;
     font-size: 22px;
@@ -41,33 +46,67 @@ header {
     font-weight: bold;
 }
 
+nav {
+    display: flex;
+    gap: 15px;
+}
+
 nav a {
-    margin-left: 20px;
     text-decoration: none;
     color: #555;
     font-weight: bold;
     font-size: 15px;
-    transition: color 0.2s;
+    padding: 6px 12px;
+    border-radius: 20px;
+    transition: all 0.2s;
 }
 
 nav a.active, nav a:hover {
     color: #2e7d32;
-    border-bottom: 2px solid #2e7d32;
-    padding-bottom: 4px;
+    background: #e8f5e9;
 }
 
-/* 通用按鈕與表單輸入框外觀微調 */
+/* 統一輸入框與下拉選單的高度 */
 input, select, button {
     font-family: inherit;
     font-size: 14px;
+    padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 6px;
     outline: none;
     transition: all 0.2s;
+    height: 38px;
+}
+
+input:focus, select:focus {
+    border-color: #2e7d32;
+}
+
+button {
+    cursor: pointer;
+    border-radius: 20px;
+}
+
+button:hover {
+    filter: brightness(0.95);
+}
+
+h2 {
+    color: #2e7d32;
+    text-align: center;
+}
+
+footer {
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid #e0e0e0;
 }
 
 /* ==========================================================================
-   🧮 1. 戰力精算器專用排版 (🚨 徹底封印巨大皮克敏！)
+   🧮 1. 戰力精算器專用原版排版 (index.html) - 🚨 徹底修正巨大皮克敏！
    ========================================================================== */
 .section-box {
     background: #ffffff;
@@ -103,57 +142,53 @@ input, select, button {
     width: 100%;
     padding: 10px;
     background-color: #fff;
-    border: 1px solid #ddd;
 }
 
-.form-group select:focus {
-    border-color: #2e7d32;
-}
-
-/* 🌟 皮克敏單選區塊排版：強迫圖片縮小，豆腐塊整齊排列 */
+/* 🌟 皮克敏單選區排版還原：橫向流暢排列 */
 .pikmin-select {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     background: #f9f9f9;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
     border: 1px solid #eee;
 }
 
 .pikmin-select label {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
     background: #ffffff;
     border: 1px solid #ddd;
-    padding: 10px 5px;
-    border-radius: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
     cursor: pointer;
-    font-size: 13px;
-    text-align: center;
-    gap: 6px;
+    font-size: 14px;
     user-select: none;
+    height: auto;
 }
 
 .pikmin-select label:hover {
     border-color: #2e7d32;
-    background: #f1f8e9;
+    background: #e8f5e9;
 }
 
 .pikmin-select input[type="radio"] {
     margin: 0;
+    height: auto;
+    width: auto;
 }
 
-/* 🚨 核心修復：強制把放大炸開的皮克敏圖片控制在 40 像素 */
+/* 🚨 終極修復：精準鎖定並強迫皮克敏選擇圖片維持在 32 像素，絕不炸開！ */
 .pikmin-select img {
-    width: 40px !important;
-    height: 40px !important;
+    width: 32px !important;
+    height: 32px !important;
     object-fit: contain;
+    vertical-align: middle;
 }
 
-/* 右側戰力預估分數落款方塊 */
+/* 右側戰力預估分數框排版還原 */
 .result-box {
     flex: 1;
     background: #f1f8e9;
@@ -165,7 +200,7 @@ input, select, button {
     justify-content: center;
     align-items: center;
     min-width: 250px;
-    max-height: 320px;
+    height: fit-content;
     border: 2px dashed #a5d6a7;
 }
 
@@ -180,18 +215,11 @@ input, select, button {
     font-weight: bold;
     color: #2e7d32;
     margin: 15px 0;
-}
-
-footer {
-    text-align: center;
-    font-size: 13px;
-    color: #999;
-    margin-top: 40px;
-    padding-bottom: 20px;
+    height: auto;
 }
 
 /* ==========================================================================
-   🍄 2. 雲端回報看板專用排版 (report.html)
+   🍄 2. 雲端回報看板專用原版排版 (report.html)
    ========================================================================== */
 .form-section {
     background: #ffffff;
@@ -202,17 +230,28 @@ footer {
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-/* 篩選工具列 */
+/* 綠色篩選工具列還原 */
 .filter-section {
     background: #f1f8e9;
     border-radius: 8px;
     padding: 15px;
     margin: 25px auto;
     max-width: 1200px;
-    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
 }
 
-/* 關鍵字搜尋框與模式切換鈕的外觀樣式微調 */
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
+    color: #2e7d32;
+}
+
 #search-name {
     padding: 8px 15px;
     border: 1px solid #ccc;
@@ -238,7 +277,7 @@ footer {
 }
 
 /* ==========================================================================
-   🎴 蘑菇卡片 - 預設標準網格樣式 (Grid Mode)
+   🎴 蘑菇看板卡片 - 預設標準網格樣式 (Grid Mode)
    ========================================================================== */
 #mushroom-container {
     display: grid;
@@ -273,17 +312,17 @@ footer {
 }
 
 .card h3 { margin: 10px 0; font-size: 17px; color: #1b5e20; font-weight: bold; }
-.card p { margin: 6px 0; font-size: 13px; color: #555; }
+.card p { margin: 6px 0; font-size: 14px; color: #555; height: auto; }
 
-/* 看板卡片上的漂浮控制功能按鈕 */
-.card .pin-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 16px; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; }
+/* 看板卡片上的定位控制功能按鈕 */
+.card .pin-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 16px; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; width: auto; height: auto; padding: 0; }
 .card .pin-btn.active, .card .pin-btn:hover { opacity: 1; }
-.card .quick-edit-btn { position: absolute; top: 15px; left: 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; }
-.card .delete-btn { position: absolute; top: 15px; left: 65px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; display: none; }
+.card .quick-edit-btn { position: absolute; top: 15px; left: 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; height: auto; }
+.card .delete-btn { position: absolute; top: 15px; left: 65px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; display: none; height: auto; }
 body.dev-active .card .delete-btn { display: block; }
 
 /* ==========================================================================
-   📋 核心擴充：當回報看板開啟「📋 清單模式」時的變形覆蓋 (Flexbox 流暢排列)
+   📋 核心擴充：當回報看板開啟「📋 清單模式」時的變形覆蓋 (Flexbox 流暢排列，絕不跑版)
    ========================================================================== */
 #mushroom-container.list-view {
     display: flex !important;
@@ -324,7 +363,7 @@ body.dev-active .card .delete-btn { display: block; }
 #mushroom-container.list-view .card h3 {
     font-size: 14px !important;
     margin: 0 !important;
-    width: 150px !important;
+    width: 140px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -342,18 +381,19 @@ body.dev-active .card .delete-btn { display: block; }
 }
 
 #mushroom-container.list-view .card .countdown {
-    width: 160px !important;
+    width: 150px !important;
     text-align: center !important;
     font-weight: bold !important;
     flex-shrink: 0 !important;
 }
 
 #mushroom-container.list-view .card p:has(.p-count) {
-    width: 120px !important;
+    width: 130px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     flex-shrink: 0 !important;
+    gap: 5px !important;
 }
 
 #mushroom-container.list-view .card .notify-me-btn {
@@ -365,7 +405,7 @@ body.dev-active .card .delete-btn { display: block; }
 }
 
 /* ==========================================================================
-   🔧 互動模態視窗後台樣式
+   🔧 3. 互動模態框與快捷更新彈窗樣式
    ========================================================================== */
 .edit-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .edit-modal-window { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
