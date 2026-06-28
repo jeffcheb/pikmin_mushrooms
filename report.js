@@ -149,43 +149,32 @@ function setupPinFeature() {
     });
 }
 
-// 🎯 ===================================================
-// ◉ 核心功能：點擊 ◉ 符號計算並彈出最後更新時間
-// ===================================================
 function setupTimeInfoFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('time-info-btn')) {
             const reportTimeStr = e.target.getAttribute('data-time');
             if (!reportTimeStr) return;
-            
-            // 解析上次上報的時間
             const reportTimestamp = Date.parse(reportTimeStr.replace(/-/g, '/'));
             const now = Date.now();
             const diffMs = now - reportTimestamp;
-            
-            if (isNaN(reportTimestamp)) {
-                alert(`📝 最後更新時間：${reportTimeStr}`);
-                return;
-            }
-
+            if (isNaN(reportTimestamp)) { alert(`📝 最後更新時間：${reportTimeStr}`); return; }
             const diffMins = Math.floor(diffMs / 1000 / 60);
-            
             let timeAgoText = "";
-            if (diffMins < 1) {
-                timeAgoText = "剛剛（1 分鐘內）";
-            } else if (diffMins < 60) {
-                timeAgoText = `${diffMins} 分鐘前`;
-            } else {
+            if (diffMins < 1) { timeAgoText = "剛剛（1 分鐘內）"; }
+            else if (diffMins < 60) { timeAgoText = `${diffMins} 分鐘前`; }
+            else {
                 const diffHours = Math.floor(diffMins / 60);
                 const remainMins = diffMins % 60;
                 timeAgoText = `${diffHours} 小時 ${remainMins} 分鐘前`;
             }
-
             alert(`⏰ 蘑菇情報最後更新時間：\n👉 ${reportTimeStr}\n歷史時差：大約在 ${timeAgoText} 進行了資料同步。`);
         }
     });
 }
 
+// 🎯 ===================================================
+// 📝 核心改動：升級為全內嵌「精美整合更新面板」
+// ===================================================
 function setupQuickEditFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('quick-edit-btn')) {
@@ -196,48 +185,78 @@ function setupQuickEditFeature() {
                 const currentData = snapshot.val();
                 if (!currentData) return;
 
-                const editChoice = prompt("📝 想要快速更新什麼？\n輸入 1 更改：目前參戰人數\n輸入 2 更改：剩餘倒數時間（時/分/秒）\n輸入 3 更改：跨區設定 (新增或修改可見行政區)");
+                const maxLimit = getCountLimit(currentData.size);
+                let currentDists = Array.isArray(currentData.district) ? currentData.district.join(" ") : currentData.district;
 
-                if (editChoice === "1") {
-                    const maxLimit = getCountLimit(currentData.size);
-                    const newCountInput = prompt(`👥 請輸入最新在場人數 (目前為 ${currentData.pCount} 人，上限為 ${maxLimit} 人)：`);
-                    if (newCountInput !== null) {
-                        const newCount = parseInt(newCountInput);
-                        if (isNaN(newCount) || newCount < 0 || newCount > maxLimit) {
-                            alert(`❌ 請輸入正確的人數範圍 (0-${maxLimit})！`);
-                        } else {
-                            dbRef.child(firebaseId).child('pCount').set(newCount).then(() => alert("✅ 參戰人數已連線更新！"));
-                        }
-                    }
-                } else if (editChoice === "2") {
-                    const newHoursInput = prompt("⏳ 請輸入最新看到的剩餘【小時】:", currentData.hours);
-                    const newMinutesInput = prompt("⏳ 請輸入最新看到的剩餘【分鐘】:", currentData.minutes);
-                    const newSecondsInput = prompt("⏳ 請輸入最新看到的剩餘【秒數】:", currentData.seconds || 0);
-                    
-                    if (newHoursInput !== null && newMinutesInput !== null && newSecondsInput !== null) {
-                        const h = parseInt(newHoursInput);
-                        const m = parseInt(newMinutesInput);
-                        const s = parseInt(newSecondsInput);
-
-                        if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || m > 59 || s < 0 || s > 59) {
-                            alert("❌ 時間格式輸入錯誤！");
-                        } else {
-                            const now = new Date();
-                            const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+                // 🏗️ 動態建立精美面板 DOM 節點
+                const modalOverlay = document.createElement('div');
+                modalOverlay.className = 'edit-modal-overlay';
+                modalOverlay.innerHTML = `
+                    <div class="edit-modal-window">
+                        <div class="edit-modal-header">
+                            <span>📝 快速更新蘑菇現況</span>
+                            <span class="edit-modal-close">&times;</span>
+                        </div>
+                        <div class="edit-modal-body">
+                            <p style="font-size:13px; color:#78909c; margin:0 0 12px 0;">📍 地點: ${currentData.city} · ${currentData.name}</p>
                             
-                            dbRef.child(firebaseId).update({ hours: h, minutes: m, seconds: s, reportTime: newReportTime })
-                                .then(() => alert("✅ 倒數時間已校正完畢！"));
-                        }
-                    }
-                } else if (editChoice === "3") {
-                    let currentDists = Array.isArray(currentData.district) ? currentData.district.join(" ") : currentData.district;
-                    const newDistsInput = prompt("🗺️ 請輸入此蘑菇可被偵測到的所有行政區 (多個請用空格隔開)：", currentDists);
-                    if (newDistsInput !== null) {
-                        const distArray = newDistsInput.trim().split(/\s+/);
-                        dbRef.child(firebaseId).child('district').set(distArray)
-                            .then(() => alert("✅ 跨區可見設定已成功更新！"));
-                    }
-                }
+                            <h4>👥 目前參戰人數 (上限 ${maxLimit} 人)</h4>
+                            <input type="number" id="modal-pcount" class="edit-modal-input" value="${currentData.pCount}" min="0" max="${maxLimit}">
+                            
+                            <h4>⏳ 剩餘倒數時間</h4>
+                            <div class="edit-modal-input-group">
+                                <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours}" placeholder="時" min="0">
+                                <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes}" placeholder="分" min="0" max="59">
+                                <input type="number" id="modal-seconds" class="edit-modal-input" value="${currentData.seconds || 0}" placeholder="秒" min="0" max="59">
+                            </div>
+                            
+                            <h4>🗺️ 跨區可見行政區設定 (空格隔開)</h4>
+                            <input type="text" id="modal-dists" class="edit-modal-input" value="${currentDists}">
+                        </div>
+                        <div class="edit-modal-footer">
+                            <button class="edit-btn-cancel">取消</button>
+                            <button class="edit-btn-save">儲存更新</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modalOverlay);
+
+                // 🛑 點擊取消或打叉關閉面板
+                const closeModal = () => modalOverlay.remove();
+                modalOverlay.querySelector('.edit-modal-close').addEventListener('click', closeModal);
+                modalOverlay.querySelector('.edit-btn-cancel').addEventListener('click', closeModal);
+
+                // 💾 點擊儲存寫入 Firebase 雲端
+                modalOverlay.querySelector('.edit-btn-save').addEventListener('click', () => {
+                    const newCount = parseInt(document.getElementById('modal-pcount').value);
+                    const h = parseInt(document.getElementById('modal-hours').value);
+                    const m = parseInt(document.getElementById('modal-minutes').value);
+                    const s = parseInt(document.getElementById('modal-seconds').value);
+                    const distsRaw = document.getElementById('modal-dists').value.trim();
+
+                    // 資料驗證
+                    if (isNaN(newCount) || newCount < 0 || newCount > maxLimit) { alert(`❌ 人數超出範圍 (0-${maxLimit})！`); return; }
+                    if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || m > 59 || s < 0 || s > 59) { alert("❌ 時間格式錯誤，分與秒必須在 0-59 之間！"); return; }
+                    if (!distsRaw) { alert("❌ 行政區不能留空喔！"); return; }
+
+                    const distArray = distsRaw.split(/\s+/);
+                    const now = new Date();
+                    const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+
+                    // 一鍵封裝同步雲端
+                    dbRef.child(firebaseId).update({
+                        pCount: newCount,
+                        hours: h,
+                        minutes: m,
+                        seconds: s,
+                        district: distArray,
+                        reportTime: newReportTime
+                    }).then(() => {
+                        alert("🚀 雲端面板連線成功！現況資料已全台同步更新！");
+                        closeModal();
+                    });
+                });
             });
         }
     });
@@ -284,7 +303,6 @@ function renderMushroomCard(id, data) {
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
-    // 🎯 在標題下方注入可點擊的 ◉ 符號按鈕
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
         <button class="quick-edit-btn" title="快速原地更新資料">📝 更新</button>
@@ -310,9 +328,7 @@ function setupReportForm() {
         const limit = getCountLimit(size);
         const pCount = parseInt(formCountInput.value) || 0;
 
-        if (pCount < 0 || pCount > limit) {
-            alert(`❌ 人數超出當前限制 (0-${limit}人)。`); return;
-        }
+        if (pCount < 0 || pCount > limit) { alert(`❌ 人數超出當前限制 (0-${limit}人)。`); return; }
 
         const city = formCitySelect.value;
         const district = [formDistrictSelect.value]; 
@@ -421,6 +437,7 @@ function setupGeolocation() {
 
 const format = (num) => String(num).padStart(2, '0');
 
+// 錨點校正
 function initSingleCountdown(el) {
     const reportTimeString = el.getAttribute('data-report-time');
     const initialHours = parseInt(el.getAttribute('data-initial-hours')) || 0;
