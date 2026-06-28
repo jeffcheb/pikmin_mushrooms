@@ -211,7 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         reportForm.reset();
                         document.getElementById("district").disabled = true;
                         delete firedAlerts[existingId];
-                        alert(`🔄 偵測到相同地點！已成功為您更新【${locationName}】的蘑菇狀態！`);
+                        alert(`🔄 偵測到相同地點！已覆蓋更新狀態！`);
                     })
                     .catch((error) => alert("更新失敗：" + error.message));
             } else {
@@ -227,11 +227,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🌟 【超級防呆校正版圖片路徑抓取引擎】 🌟
+    // 🌟 圖片路徑抓取引擎
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
-        
-        // 強制轉型成字串，防止任何型態錯誤
         const typeStr = String(type);
 
         if (typeStr.includes("火")) return "picture/mushroom_fire.png";
@@ -241,7 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeStr.includes("電")) return "picture/mushroom_electric.png";
         if (typeStr.includes("冰")) return "picture/mushroom_ice.png"; 
         
-        // 🎨 完美精準配對你的普通蘑菇圖片名稱 (mushroom_顏色.png)
         if (typeStr.includes("紅")) return "picture/mushroom_red.png";
         if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
         if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
@@ -253,14 +250,17 @@ document.addEventListener("DOMContentLoaded", () => {
         return "picture/mushroom_monthly_special.png"; 
     }
 
+    // 🌟 連線 Firebase：只有當資料庫真的有變動時，才呼叫 renderBoard()。杜絕每秒 innerHTML 重繪！
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
         const shroomRef = window.fbRef(window.fbDB, "mushrooms");
         window.fbOnValue(shroomRef, (snapshot) => {
             localMushroomsData = snapshot.val() || {};
-            renderBoard();
+            renderBoard(); // 🟢 資料庫有變，才畫一次結構
         });
-        setInterval(renderBoard, 1000); 
+        
+        // 🟢 每秒鐘只執行獨立微量計時器：更新「時間文字」，絕不重繪整張卡片結構！
+        setInterval(updateTickCounters, 1000); 
     }
 
     function renderBoard() {
@@ -301,14 +301,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!matchLocation && !matchType) return;
             }
 
-            const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
-            const expireTime = item.createdAt + totalReportedMs;
-            const msLeft = expireTime - Date.now();
-
-            let timeString = "";
-            let statusClass = "countdown-text";
-            let expiredCardClass = ""; 
-            let showQuickPanel = false; 
+            const lastUpdatedTime = item.updatedAt || item.createdAt;
+            const msSinceLastUpdate = Date.now() - lastUpdatedTime;
+            const isStale = msSinceLastUpdate > 900000; 
 
             let displayMaxPlayers = item.maxPlayers || 30;
             if (item.size === "小型") displayMaxPlayers = 25;
@@ -316,42 +311,9 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.size === "大型") displayMaxPlayers = 35;
             else if (item.size === "巨大") displayMaxPlayers = 40;
 
-            let curH = 0, curM = 0, curS = 0;
-
-            if (msLeft > 0) {
-                const totalSec = Math.floor(msLeft / 1000);
-                curH = Math.floor(totalSec / 3600);
-                curM = Math.floor((totalSec % 3600) / 60);
-                curS = totalSec % 60;
-                timeString = `⏳ 剩餘時間：${curH}時${curM}分${curS}秒`;
-            } else {
-                const bufferLeft = 300000 + msLeft; 
-                if (bufferLeft > 0) {
-                    const totalSec = Math.floor(bufferLeft / 1000);
-                    const m = Math.floor(totalSec / 60);
-                    const s = totalSec % 60;
-                    timeString = `🔄 下次出現倒數：${m}分${s}秒`;
-                    statusClass = "countdown-text buffer-period"; 
-
-                    if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
-                        firedAlerts[id] = true; 
-                        triggerWebNotification(item);
-                    }
-                } else {
-                    timeString = `🔄 待現場玩家更新 (新菇已出生)`;
-                    statusClass = "countdown-text need-update-period";
-                    expiredCardClass = "card-expired-mode"; 
-                    showQuickPanel = true; 
-                }
-            }
-
-            const lastUpdatedTime = item.updatedAt || item.createdAt;
-            const msSinceLastUpdate = Date.now() - lastUpdatedTime;
-            const isStale = msSinceLastUpdate > 900000; 
-
             renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
-            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 📌 釘選";
+            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
             const isAlertEnabled = alertEnabledList.includes(id);
             const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
 
@@ -361,23 +323,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const isEditOpen = activePanels[id]?.edit ? "block" : "none";
             const isHistoryOpen = activePanels[id]?.history ? "block" : "none";
 
-            const inputPlayersVal = document.getElementById(`edit-players-${id}`) ? document.getElementById(`edit-players-${id}`).value : item.currentPlayers;
-            const inputHVal = document.getElementById(`edit-h-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-h-${id}`).value : curH;
-            const inputMVal = document.getElementById(`edit-m-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-m-${id}`).value : curM;
-            const inputSVal = document.getElementById(`edit-s-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-s-${id}`).value : curS;
-
-            // 🌟 核心修正：動態校正舊資料或任何回報中可能遺留的錯誤圖片連結
             const dynamicImgSrc = getIconPath(item.type);
 
+            // 💡 建立結構，將時間文字標記上特定的 id 用於精準控制
             htmlContent += `
-                <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
+                <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
                     
-                    ${isStale && !showQuickPanel ? `
-                    <div class="stale-warning-badge">⚠️ 許久未更新</div>
-                    ` : ''}
+                    <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
 
                     <div class="card-header">
-                        <img src="${dynamicImgSrc}" class="shroom-img" alt="${item.type}" onerror="this.src='picture/mushroom_monthly_special.png'">
+                        <img src="${dynamicImgSrc}" class="shroom-img" alt="${item.type}">
                         <div class="shroom-info">
                             <h4>[${item.size}] ${item.type}</h4>
                             <p>📍 ${item.city}${item.district} - ${item.locationName}</p>
@@ -391,21 +346,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     <div class="card-body">
                         <p>👥 參戰人數：<strong>${item.currentPlayers} / ${displayMaxPlayers}</strong> 人</p>
-                        <p class="${statusClass}">${timeString}</p>
+                        <p class="countdown-text" id="time-text-${id}">⏳ 計算時間中...</p>
                     </div>
 
                     <div id="edit-panel-${id}" class="edit-status-panel" style="display: ${isEditOpen};">
                         <h5>✏️ 修改目前即時狀態：</h5>
                         <div class="edit-row">
                             <label>👥 人數：</label>
-                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${inputPlayersVal}">
+                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${item.currentPlayers}">
                         </div>
                         <div class="edit-row">
                             <label>⏳ 時間：</label>
                             <div class="edit-time-inputs">
-                                <input type="number" id="edit-h-${id}" min="0" max="23" value="${inputHVal}" placeholder="時">:
-                                <input type="number" id="edit-m-${id}" min="0" max="59" value="${inputMVal}" placeholder="分">:
-                                <input type="number" id="edit-s-${id}" min="0" max="59" value="${inputSVal}" placeholder="秒">
+                                <input type="number" id="edit-h-${id}" min="0" max="23" value="0" placeholder="時">:
+                                <input type="number" id="edit-m-${id}" min="0" max="59" value="0" placeholder="分">:
+                                <input type="number" id="edit-s-${id}" min="0" max="59" value="0" placeholder="秒">
                             </div>
                         </div>
                         <div class="edit-actions">
@@ -414,8 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </div>
 
-                    ${showQuickPanel ? `
-                    <div class="quick-update-panel">
+                    <div class="quick-update-panel" id="quick-panel-${id}" style="display:none;">
                         <h5>⚡ 快速回報現場新菇：</h5>
                         <div class="quick-buttons">
                             <button onclick="quickUpdateStatus('${id}', '每月特殊蘑菇', '巨大', 4)">✨ 巨大特殊菇 (4小時)</button>
@@ -425,16 +379,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             <button class="btn-no-shroom" onclick="quickUpdateStatus('${id}', '暫無蘑菇', '無', 0)">❌ 目前沒長菇 (清除卡片)</button>
                         </div>
                     </div>
-                    ` : ''}
 
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
-                        <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
-                        <button class="btn-sm btn-edit-trigger" onclick="toggleEditPanel('${id}')" ${showQuickPanel ? 'style="display:none;"' : ''}>✏️ 更新狀態</button>
-                        
-                        ${isStale && !showQuickPanel ? `
-                        <button class="btn-sm btn-verify" onclick="verifyMushroomStatus('${id}')">✅ 核實狀態</button>
-                        ` : ''}
+                        <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" id="alert-btn-${id}" onclick="toggleAlert('${id}')">${alertBtnText}</button>
+                        <button class="btn-sm btn-edit-trigger" id="edit-btn-${id}" onclick="toggleEditPanel('${id}')">✏️ 更新狀態</button>
+                        <button class="btn-sm btn-verify" id="verify-btn-${id}" style="display:none;" onclick="verifyMushroomStatus('${id}')">✅ 核實狀態</button>
                     </div>
                 </div>
             `;
@@ -444,7 +394,85 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
         } else {
             mushroomBoard.innerHTML = htmlContent;
+            // 立即執行一次時間注入，防止出現空白
+            updateTickCounters();
         }
+    }
+
+    // ========================================================
+    // 🌟 獨立輕量計時器：只修改文字（.textContent），杜絕狂跳與破圖
+    // ========================================================
+    function updateTickCounters() {
+        const keys = Object.keys(localMushroomsData);
+        keys.forEach(id => {
+            const item = localMushroomsData[id];
+            const textElement = document.getElementById(`time-text-${id}`);
+            const cardElement = document.getElementById(`card-${id}`);
+            const quickPanel = document.getElementById(`quick-panel-${id}`);
+            const editBtn = document.getElementById(`edit-btn-${id}`);
+            const alertBtn = document.getElementById(`alert-btn-${id}`);
+            const verifyBtn = document.getElementById(`verify-btn-${id}`);
+            const staleBadge = document.getElementById(`stale-badge-${id}`);
+
+            if (!textElement) return;
+
+            const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
+            const expireTime = item.createdAt + totalReportedMs;
+            const msLeft = expireTime - Date.now();
+
+            let isOver5Min = false;
+
+            if (msLeft > 0) {
+                // 🟢 進行中倒數
+                const totalSec = Math.floor(msLeft / 1000);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                const s = totalSec % 60;
+                textElement.textContent = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
+                textElement.className = "countdown-text";
+            } else {
+                const bufferLeft = 300000 + msLeft; // 5分鐘
+                if (bufferLeft > 0) {
+                    // 🔴 5分鐘重生倒數
+                    const totalSec = Math.floor(bufferLeft / 1000);
+                    const m = Math.floor(totalSec / 60);
+                    const s = totalSec % 60;
+                    textElement.textContent = `🔄 下次出現倒數：${m}分${s}秒`;
+                    textElement.className = "countdown-text buffer-period";
+
+                    if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
+                        firedAlerts[id] = true;
+                        triggerWebNotification(item);
+                    }
+                } else {
+                    // 🔘 超過5分鐘，過期狀態
+                    textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
+                    textElement.className = "countdown-text need-update-period";
+                    isOver5Min = true;
+                }
+            }
+
+            // 💡 精準動態控制介面，不再依賴重繪 HTML 的 class
+            if (isOver5Min) {
+                cardElement?.classList.add("card-expired-mode");
+                if (quickPanel) quickPanel.style.display = "block";
+                if (editBtn) editBtn.style.display = "none";
+                if (alertBtn) alertBtn.style.display = "none";
+                if (verifyBtn) verifyBtn.style.display = "none";
+                if (staleBadge) staleBadge.style.display = "none";
+            } else {
+                cardElement?.classList.remove("card-expired-mode");
+                if (quickPanel) quickPanel.style.display = "none";
+                if (editBtn) editBtn.style.display = "inline-block";
+                if (alertBtn) alertBtn.style.display = "inline-block";
+                
+                // 檢查久未更新狀態（15分鐘）
+                const lastUpdatedTime = item.updatedAt || item.createdAt;
+                const isStale = (Date.now() - lastUpdatedTime) > 900000;
+                if (staleBadge) staleBadge.style.display = isStale ? "block" : "none";
+                if (verifyBtn) verifyBtn.style.display = isStale ? "inline-block" : "none";
+            }
+        });
     }
 
     // 核實按鈕
@@ -483,7 +511,26 @@ document.addEventListener("DOMContentLoaded", () => {
     window.toggleEditPanel = (id) => {
         if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
         activePanels[id].edit = !activePanels[id].edit;
-        renderBoard();
+        
+        // 打開面板時，動態把當前倒數的時分秒塞進輸入框，方便微調
+        if (activePanels[id].edit) {
+            renderBoard(); // 刷新一次帶入結構
+            const item = localMushroomsData[id];
+            if (item) {
+                const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
+                const msLeft = (item.createdAt + totalReportedMs) - Date.now();
+                if (msLeft > 0) {
+                    const totalSec = Math.floor(msLeft / 1000);
+                    if (document.getElementById(`edit-h-${id}`)) {
+                        document.getElementById(`edit-h-${id}`).value = Math.floor(totalSec / 3600);
+                        document.getElementById(`edit-m-${id}`).value = Math.floor((totalSec % 3600) / 60);
+                        document.getElementById(`edit-s-${id}`).value = totalSec % 60;
+                    }
+                }
+            }
+        } else {
+            renderBoard();
+        }
     };
 
     window.saveStatusEdit = (id) => {
@@ -573,23 +620,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    window.quickJoin = (id) => {
-        const item = localMushroomsData[id];
-        if (!item || !window.fbDB) return;
-        let currentMax = 30;
-        if (item.size === "小型") currentMax = 25;
-        else if (item.size === "普通" || item.size === "一般") currentMax = 30;
-        else if (item.size === "大型") currentMax = 35;
-        else if (item.size === "巨大") currentMax = 40;
-
-        if (item.currentPlayers >= currentMax) return;
-        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
-        window.fbUpdate(shroomRef, {
-            currentPlayers: item.currentPlayers + 1,
-            updatedAt: Date.now()
-        });
-    };
-
+    // 多軌輪詢
     function bootstrapFilter() {
         const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
         if (availableData) {
