@@ -91,96 +91,92 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🎯 定位功能：免 API 的純前端超速定位（已修正變數名稱錯誤）
+    // 🎯 定位功能：免 API 的純前端超速定位
     // ========================================================
-    // 🔍 請在 js/report.js 中，找到 btnAutoLocation 的 addEventListener 區塊，整段取代為：
+    if (btnAutoLocation) {
+        btnAutoLocation.addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                alert("您的瀏覽器不支援地理定位功能。");
+                return;
+            }
 
-if (btnAutoLocation) {
-    btnAutoLocation.addEventListener("click", () => {
-        if (!navigator.geolocation) {
-            alert("您的瀏覽器不支援地理定位功能。");
-            return;
-        }
+            btnAutoLocation.textContent = "⌛ 定位中";
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
 
-        btnAutoLocation.textContent = "⌛ 定位中";
-        
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
+                    // 台灣主要縣市中心點概略經緯度
+                    const TaiwanCityCoordinates = {
+                        "台北市": { lat: 25.0339, lon: 121.5644, defaultDist: "大安區" },
+                        "新北市": { lat: 25.0169, lon: 121.4627, defaultDist: "板橋區" },
+                        "桃園市": { lat: 24.9936, lon: 121.3009, defaultDist: "桃園區" },
+                        "台中市": { lat: 24.1477, lon: 120.6736, defaultDist: "西屯區" },
+                        "台南市": { lat: 22.9908, lon: 120.2133, defaultDist: "中西區" },
+                        "高雄市": { lat: 22.6273, lon: 120.3014, defaultDist: "前鎮區" },
+                        "基隆市": { lat: 25.1283, lon: 121.7391, defaultDist: "仁愛區" },
+                        "新竹市": { lat: 24.8138, lon: 120.9674, defaultDist: "東區" },
+                        "嘉義市": { lat: 23.4800, lon: 120.4491, defaultDist: "西區" },
+                        "新竹縣": { lat: 24.8383, lon: 121.0117, defaultDist: "竹北市" },
+                        "苗栗縣": { lat: 24.5601, lon: 120.8207, defaultDist: "苗栗市" },
+                        "彰化縣": { lat: 24.0516, lon: 120.5161, defaultDist: "彰化市" },
+                        "南投縣": { lat: 23.9155, lon: 120.6868, defaultDist: "南投市" },
+                        "雲林縣": { lat: 23.7092, lon: 120.4313, defaultDist: "斗六市" },
+                        "嘉義縣": { lat: 23.4592, lon: 120.2931, defaultDist: "太保市" },
+                        "屏東縣": { lat: 22.6660, lon: 120.4860, defaultDist: "屏東市" },
+                        "宜蘭縣": { lat: 24.7570, lon: 121.7530, defaultDist: "宜蘭市" },
+                        "花蓮縣": { lat: 23.9870, lon: 121.6010, defaultDist: "花蓮市" },
+                        "台東縣": { lat: 22.7560, lon: 121.1520, defaultDist: "台東市" },
+                        "澎湖縣": { lat: 23.5710, lon: 119.5790, defaultDist: "馬公市" }
+                    };
 
-                // 台灣主要縣市中心點概略經緯度 (純前端秒配對)
-                const TaiwanCityCoordinates = {
-                    "台北市": { lat: 25.0339, lon: 121.5644, defaultDist: "大安區" },
-                    "新北市": { lat: 25.0169, lon: 121.4627, defaultDist: "板橋區" },
-                    "桃園市": { lat: 24.9936, lon: 121.3009, defaultDist: "桃園區" },
-                    "台中市": { lat: 24.1477, lon: 120.6736, defaultDist: "西屯區" },
-                    "台南市": { lat: 22.9908, lon: 120.2133, defaultDist: "中西區" },
-                    "高雄市": { lat: 22.6273, lon: 120.3014, defaultDist: "前鎮區" },
-                    "基隆市": { lat: 25.1283, lon: 121.7391, defaultDist: "仁愛區" },
-                    "新竹市": { lat: 24.8138, lon: 120.9674, defaultDist: "東區" },
-                    "嘉義市": { lat: 23.4800, lon: 120.4491, defaultDist: "西區" },
-                    "新竹縣": { lat: 24.8383, lon: 121.0117, defaultDist: "竹北市" },
-                    "苗栗縣": { lat: 24.5601, lon: 120.8207, defaultDist: "苗栗市" },
-                    "彰化縣": { lat: 24.0516, lon: 120.5161, defaultDist: "彰化市" },
-                    "南投縣": { lat: 23.9155, lon: 120.6868, defaultDist: "南投市" },
-                    "雲林縣": { lat: 23.7092, lon: 120.4313, defaultDist: "斗六市" },
-                    "嘉義縣": { lat: 23.4592, lon: 120.2931, defaultDist: "太保市" },
-                    "屏東縣": { lat: 22.6660, lon: 120.4860, defaultDist: "屏東市" },
-                    "宜蘭縣": { lat: 24.7570, lon: 121.7530, defaultDist: "宜蘭市" },
-                    "花蓮縣": { lat: 23.9870, lon: 121.6010, defaultDist: "花蓮市" },
-                    "台東縣": { lat: 22.7560, lon: 121.1520, defaultDist: "台東市" },
-                    "澎湖縣": { lat: 23.5710, lon: 119.5790, defaultDist: "馬公市" }
-                };
+                    let closestCity = "高雄市"; 
+                    let minDistance = Infinity;
 
-                let closestCity = "高雄市"; 
-                let minDistance = Infinity;
-
-                for (const [cityName, coord] of Object.entries(TaiwanCityCoordinates)) {
-                    const dLat = lat - coord.lat;
-                    const dLon = lon - coord.lon;
-                    const distance = Math.sqrt(dLat * dLat + dLon * dLon);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestCity = cityName;
+                    for (const [cityName, coord] of Object.entries(TaiwanCityCoordinates)) {
+                        const dLat = lat - coord.lat;
+                        const dLon = lon - coord.lon;
+                        const distance = Math.sqrt(dLat * dLat + dLon * dLon);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestCity = cityName;
+                        }
                     }
-                }
 
-                const matchedData = TaiwanCityCoordinates[closestCity];
-                const foundDist = matchedData.defaultDist;
+                    const matchedData = TaiwanCityCoordinates[closestCity];
+                    const foundDist = matchedData.defaultDist;
 
-                if (filterCity && filterDistrict) {
-                    // 🌟 修正核心：將原先報錯的 boardTaiwanData 換成正確的 window.taiwanData
-                    const districtsData = window.taiwanData || {}; 
-                    
-                    filterCity.value = closestCity;
-                    
-                    // 強制動態填入對應縣市的行政區選單項目
-                    filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
-                    filterDistrict.disabled = false;
-                    
-                    const districts = districtsData[closestCity] || [];
-                    districts.forEach(dist => {
-                        const option = document.createElement("option");
-                        option.value = dist;
-                        option.textContent = dist;
-                        filterDistrict.appendChild(option);
-                    });
+                    if (filterCity && filterDistrict) {
+                        const districtsData = window.taiwanData || {}; 
+                        
+                        filterCity.value = closestCity;
+                        
+                        filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+                        filterDistrict.disabled = false;
+                        
+                        const districts = districtsData[closestCity] || [];
+                        districts.forEach(dist => {
+                            const option = document.createElement("option");
+                            option.value = dist;
+                            option.textContent = dist;
+                            filterDistrict.appendChild(option);
+                        });
 
-                    filterDistrict.value = foundDist;
+                        filterDistrict.value = foundDist;
+                        btnAutoLocation.textContent = "🎯 定位";
+                        alert(`🎯 定位成功：已自動切換至【${closestCity} ${foundDist}】`);
+                        renderBoard();
+                    }
+                },
+                (error) => {
                     btnAutoLocation.textContent = "🎯 定位";
-                    alert(`🎯 定位成功：已自動切換至【${closestCity} ${foundDist}】`);
-                    renderBoard();
-                }
-            },
-            (error) => {
-                btnAutoLocation.textContent = "🎯 定位";
-                alert("GPS 定位取得失敗，請確認是否給予網頁位置存取權限！");
-            },
-            { enableHighAccuracy: false, timeout: 5000 }
-        );
-    });
-}
+                    alert("GPS 定位取得失敗，請確認是否給予網頁位置權限！");
+                },
+                { enableHighAccuracy: false, timeout: 5000 }
+            );
+        });
+    }
 
     // --- F3: 情報發佈 (寫入 Firebase) ---
     if (reportForm) {
@@ -365,14 +361,11 @@ if (btnAutoLocation) {
     };
 
     // ========================================================
-    // 🚀 終極修正：初始化與 Firebase 解耦
+    // 🚀 終極非同步修正：初始化與 Firebase 解耦
     // ========================================================
-    
-    // 1. 網頁一載入，完全不用等 Firebase，立刻先把全台縣市選單填滿！
     if (window.taiwanData) {
         initFilterDistricts();
     } else {
-        // 如果 taiwan-districts.js 稍微慢了一點點，用一個短計時器保底
         const checkDataInterval = setInterval(() => {
             if (window.taiwanData) {
                 clearInterval(checkDataInterval);
@@ -381,12 +374,10 @@ if (btnAutoLocation) {
         }, 50);
     }
 
-    // 2. Firebase 的連線與資料同步，讓它自己在背景慢慢連，連上後再開始同步看板卡片
     const checkFbInterval = setInterval(() => {
         if (window.fbDB) {
             clearInterval(checkFbInterval);
-            startBoardSync(); // 連上 Firebase 後，才開始抓取蘑菇卡片資料
+            startBoardSync(); 
         }
     }, 200);
-});
 });
