@@ -18,6 +18,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
     let firedAlerts = {};
 
+    // 🌟 【解決閃退核心】紀錄目前哪一張卡片的哪一個面板被點開了
+    // 格式會像是： { "mushroom_id_1": { edit: true, history: false } }
+    let activePanels = {};
+
     // 人數動態限制
     if (mushroomSize && currentPlayers) {
         const updateMaxPlayers = () => {
@@ -232,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🌍 看板渲染引擎（整合即時狀態修改面板與歷史面板）
+    // 🌍 看板渲染引擎（支援記憶開關狀態，杜絕一秒閃退）
     // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
@@ -325,6 +329,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const lastUpdatedDate = new Date(item.updatedAt || item.createdAt);
             const formattedTime = `${lastUpdatedDate.getMonth()+1}/${lastUpdatedDate.getDate()} ${lastUpdatedDate.getHours().toString().padStart(2,'0')}:${lastUpdatedDate.getMinutes().toString().padStart(2,'0')}:${lastUpdatedDate.getSeconds().toString().padStart(2,'0')}`;
 
+            // 🌟 核心修復：從記憶體中拿回這張卡片此時此刻的面板開關狀態（若無，預設為隱藏 none）
+            const isEditOpen = activePanels[id]?.edit ? "block" : "none";
+            const isHistoryOpen = activePanels[id]?.history ? "block" : "none";
+
+            // 💡 如果目前面板是打開的，輸入框內的數值就要在重繪時，保留玩家剛才輸入到一半的值，而不是每秒被洗掉
+            const inputPlayersVal = document.getElementById(`edit-players-${id}`) ? document.getElementById(`edit-players-${id}`).value : item.currentPlayers;
+            const inputHVal = document.getElementById(`edit-h-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-h-${id}`).value : curH;
+            const inputMVal = document.getElementById(`edit-m-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-m-${id}`).value : curM;
+            const inputSVal = document.getElementById(`edit-s-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-s-${id}`).value : curS;
+
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
                     <div class="card-header">
@@ -336,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button class="btn-history-trigger" onclick="toggleHistoryPanel('${id}')" title="顯示上次更新時間">◎</button>
                     </div>
 
-                    <div id="history-panel-${id}" class="history-info-panel" style="display:none;">
+                    <div id="history-panel-${id}" class="history-info-panel" style="display: ${isHistoryOpen};">
                         <p>🕒 上次更新：<strong>${formattedTime}</strong></p>
                     </div>
 
@@ -345,18 +359,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         <p class="${statusClass}">${timeString}</p>
                     </div>
 
-                    <div id="edit-panel-${id}" class="edit-status-panel" style="display:none;">
+                    <div id="edit-panel-${id}" class="edit-status-panel" style="display: ${isEditOpen};">
                         <h5>✏️ 修改目前即時狀態：</h5>
                         <div class="edit-row">
                             <label>👥 人數：</label>
-                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${item.currentPlayers}">
+                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${inputPlayersVal}">
                         </div>
                         <div class="edit-row">
                             <label>⏳ 時間：</label>
                             <div class="edit-time-inputs">
-                                <input type="number" id="edit-h-${id}" min="0" max="23" value="${curH}" placeholder="時">:
-                                <input type="number" id="edit-m-${id}" min="0" max="59" value="${curM}" placeholder="分">:
-                                <input type="number" id="edit-s-${id}" min="0" max="59" value="${curS}" placeholder="秒">
+                                <input type="number" id="edit-h-${id}" min="0" max="23" value="${inputHVal}" placeholder="時">:
+                                <input type="number" id="edit-m-${id}" min="0" max="59" value="${inputMVal}" placeholder="分">:
+                                <input type="number" id="edit-s-${id}" min="0" max="59" value="${inputSVal}" placeholder="秒">
                             </div>
                         </div>
                         <div class="edit-actions">
@@ -381,8 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
                         <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
-                        
-                        <button class="btn-sm btn-edit-trigger" onclick="toggleEditPanel('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>✏️ 更新狀態</button>
+                        <button class="btn-sm btn-edit-trigger" onclick="toggleEditPanel('${id}')" ${showQuickPanel ? 'style="display:none;"' : ''}>✏️ 更新狀態</button>
                     </div>
                 </div>
             `;
@@ -395,19 +408,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ◎ 歷史紀錄面板切換
+    // 🌟 更新歷史面板開關狀態並紀錄到記憶體中
     window.toggleHistoryPanel = (id) => {
-        const panel = document.getElementById(`history-panel-${id}`);
-        if (panel) panel.style.display = panel.style.display === "none" ? "block" : "none";
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        activePanels[id].history = !activePanels[id].history;
+        renderBoard(); // 點擊瞬間手動重新渲染，反應畫面
     };
 
-    // ✏️ 修改面板顯示/隱藏切換
+    // 🌟 更新編輯面板開關狀態並紀錄到記憶體中
     window.toggleEditPanel = (id) => {
-        const panel = document.getElementById(`edit-panel-${id}`);
-        if (panel) panel.style.display = panel.style.display === "none" ? "block" : "none";
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        activePanels[id].edit = !activePanels[id].edit;
+        renderBoard(); // 點擊瞬間手動重新渲染，反應畫面
     };
 
-    // ✏️ 儲存覆蓋狀態並寫入 Firebase
+    // ✏️ 儲存覆蓋狀態
     window.saveStatusEdit = (id) => {
         if (!window.fbDB) return;
         const item = localMushroomsData[id];
@@ -421,15 +436,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
         const now = Date.now();
 
-        // 核心更新：直接覆蓋雲端的人數與重設計算時間起點
         window.fbUpdate(shroomRef, {
             currentPlayers: newPlayers,
             timeReported: { hours: h, minutes: m, seconds: s },
-            createdAt: now, // 重設基準時間戳，讓所有人的倒數重新對齊新剩餘時間
+            createdAt: now, 
             updatedAt: now
         }).then(() => {
-            alert("💾 狀態更新成功！已同步發佈至即時看板。");
-            // 如果時間有被大幅微調延長，順便幫他清除通知鎖，讓新倒數能再次通知
+            alert("💾 狀態更新成功！");
+            // 成功儲存後，將該卡片的編輯狀態關閉
+            if (activePanels[id]) activePanels[id].edit = false;
             delete firedAlerts[id];
         }).catch(err => alert("更新失敗：" + err.message));
     };
@@ -498,6 +513,26 @@ document.addEventListener("DOMContentLoaded", () => {
         else pinnedList.push(id);
         localStorage.setItem("pinned_mushrooms", JSON.stringify(pinnedList));
         renderBoard();
+    };
+
+    window.quickJoin = (id) => {
+        const item = localMushroomsData[id];
+        if (!item || !window.fbDB) return;
+        let currentMax = 30;
+        if (item.size === "小型") currentMax = 25;
+        else if (item.size === "普通" || item.size === "一般") currentMax = 30;
+        else if (item.size === "大型") currentMax = 35;
+        else if (item.size === "巨大") currentMax = 40;
+
+        if (item.currentPlayers >= currentMax) {
+            alert("該蘑菇人數已滿！");
+            return;
+        }
+        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+        window.fbUpdate(shroomRef, {
+            currentPlayers: item.currentPlayers + 1,
+            updatedAt: Date.now()
+        });
     };
 
     // 多軌輪詢
