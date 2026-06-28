@@ -1,5 +1,5 @@
 /* ==========================================================================
-   🟢 全站基礎通用設定 (戰力精算與回報看板共用)
+   🟢 全站基礎通用設定 (戰力精算與雲端回報頁面共用)
    ========================================================================== */
 * {
     box-sizing: border-box;
@@ -13,7 +13,7 @@ body {
     padding: 20px;
 }
 
-/* 頂部導覽列 (Header & Nav) 排版還原 */
+/* 頂部導覽列 (Header & Nav) 排版完全還原 */
 header {
     display: flex;
     justify-content: space-between;
@@ -56,7 +56,7 @@ nav a {
     color: #555;
     font-weight: bold;
     font-size: 15px;
-    padding: 6px 12px;
+    padding: 8px 16px;
     border-radius: 20px;
     transition: all 0.2s;
 }
@@ -66,7 +66,7 @@ nav a.active, nav a:hover {
     background: #e8f5e9;
 }
 
-/* 統一輸入框與下拉選單的高度 */
+/* 網頁通用輸入框、下拉選單與基礎按鈕高度與外觀優化 */
 input, select, button {
     font-family: inherit;
     font-size: 14px;
@@ -106,15 +106,20 @@ footer {
 }
 
 /* ==========================================================================
-   🧮 1. 戰力精算器專用原版排版 (index.html) - 🚨 徹底修正巨大皮克敏！
+   🧮 1. 戰力精算器專用原版排版 (index.html 還原) - 🚨 徹底封印巨大皮克敏！
    ========================================================================== */
 .section-box {
     background: #ffffff;
     border-radius: 12px;
     padding: 30px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto 30px auto;
+}
+
+.section-box p {
+    color: #666;
+    margin-bottom: 20px;
 }
 
 .calc-flex {
@@ -124,6 +129,7 @@ footer {
     margin-top: 20px;
 }
 
+/* 左側回報控制組 */
 .form-group {
     flex: 1.6;
     min-width: 300px;
@@ -136,6 +142,7 @@ footer {
     font-weight: bold;
     color: #333;
     margin-bottom: -5px;
+    margin-top: 10px;
 }
 
 .form-group select {
@@ -144,28 +151,33 @@ footer {
     background-color: #fff;
 }
 
-/* 🌟 皮克敏單選區排版還原：橫向流暢排列 */
+/* 🌟 皮克敏單選排列區還原：橫向流暢豆腐塊包覆 */
 .pikmin-select {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     background: #f9f9f9;
-    padding: 12px;
+    padding: 15px;
     border-radius: 8px;
     border: 1px solid #eee;
 }
 
 .pikmin-select label {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
     background: #ffffff;
     border: 1px solid #ddd;
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 10px 8px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+    gap: 6px;
     user-select: none;
+    min-width: 85px;
     height: auto;
 }
 
@@ -176,19 +188,19 @@ footer {
 
 .pikmin-select input[type="radio"] {
     margin: 0;
-    height: auto;
     width: auto;
+    height: auto;
 }
 
-/* 🚨 終極修復：精準鎖定並強迫皮克敏選擇圖片維持在 32 像素，絕不炸開！ */
+/* 🚨 終極修復：精準鎖定並強迫戰力模擬器的皮克敏圖示縮回 45px，絕不允許炸開！ */
 .pikmin-select img {
-    width: 32px !important;
-    height: 32px !important;
+    width: 45px !important;
+    height: 45px !important;
     object-fit: contain;
-    vertical-align: middle;
+    display: block;
 }
 
-/* 右側戰力預估分數框排版還原 */
+/* 右側戰力預估分數落款方塊排版還原 */
 .result-box {
     flex: 1;
     background: #f1f8e9;
@@ -199,7 +211,7 @@ footer {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-width: 250px;
+    min-width: 280px;
     height: fit-content;
     border: 2px dashed #a5d6a7;
 }
@@ -219,7 +231,7 @@ footer {
 }
 
 /* ==========================================================================
-   🍄 2. 雲端回報看板專用原版排版 (report.html)
+   🍄 2. 雲端回報看板專用原版排版 (report.html 還原)
    ========================================================================== */
 .form-section {
     background: #ffffff;
@@ -230,7 +242,7 @@ footer {
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-/* 綠色篩選工具列還原 */
+/* 綠色篩選工具列排版還原 */
 .filter-section {
     background: #f1f8e9;
     border-radius: 8px;
@@ -249,7 +261,6 @@ footer {
     align-items: center;
     gap: 5px;
     font-weight: bold;
-    color: #2e7d32;
 }
 
 #search-name {
@@ -314,15 +325,31 @@ footer {
 .card h3 { margin: 10px 0; font-size: 17px; color: #1b5e20; font-weight: bold; }
 .card p { margin: 6px 0; font-size: 14px; color: #555; height: auto; }
 
-/* 看板卡片上的定位控制功能按鈕 */
-.card .pin-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 16px; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; width: auto; height: auto; padding: 0; }
+/* 看板卡片上的漂浮控制功能按鈕 */
+.card .pin-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 16px; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; padding: 0; width: auto; height: auto; }
 .card .pin-btn.active, .card .pin-btn:hover { opacity: 1; }
 .card .quick-edit-btn { position: absolute; top: 15px; left: 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; height: auto; }
 .card .delete-btn { position: absolute; top: 15px; left: 65px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; display: none; height: auto; }
 body.dev-active .card .delete-btn { display: block; }
 
+.card .notify-me-btn {
+    border: 1px solid #ffe082;
+    background: #fff8e1;
+    color: #b78103;
+    border-radius: 20px; 
+    padding: 6px 16px; 
+    font-size: 12px; 
+    cursor: pointer; 
+    font-weight: bold;
+}
+.card .notify-me-btn.subscribed {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-color: #81c784;
+}
+
 /* ==========================================================================
-   📋 核心擴充：當回報看板開啟「📋 清單模式」時的變形覆蓋 (Flexbox 流暢排列，絕不跑版)
+   📋 3. 獨立安全擴充：當回報看板開啟「📋 清單模式」時的變形覆蓋 (Flexbox 絕不跑版)
    ========================================================================== */
 #mushroom-container.list-view {
     display: flex !important;
@@ -344,7 +371,6 @@ body.dev-active .card .delete-btn { display: block; }
     border-radius: 8px !important;
 }
 
-/* 解除按鈕的絕對定位，讓它們回到橫列中排隊 */
 #mushroom-container.list-view .card .pin-btn,
 #mushroom-container.list-view .card .quick-edit-btn,
 #mushroom-container.list-view .card .delete-btn {
@@ -405,7 +431,7 @@ body.dev-active .card .delete-btn { display: block; }
 }
 
 /* ==========================================================================
-   🔧 3. 互動模態框與快捷更新彈窗樣式
+   🔧 4. 彈出視窗與互動模態框 (更新、時間核實等後台樣式)
    ========================================================================== */
 .edit-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .edit-modal-window { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
