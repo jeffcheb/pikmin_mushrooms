@@ -7,6 +7,9 @@ const formDistrictSelect = document.getElementById('form-district');
 const filterCitySelect = document.getElementById('filter-city');
 const filterDistrictSelect = document.getElementById('filter-district');
 
+// 🌟 新增：排序下拉選單的 DOM 節點 (請確保你的 html 中有 id="card-sort" 的 select 元素)
+const cardSortSelect = document.getElementById('card-sort') || document.createElement('select');
+
 const formTypeSelect = document.getElementById('form-type');
 const formSizeSelect = document.getElementById('form-size');
 const formCountInput = document.getElementById('form-count');
@@ -15,6 +18,9 @@ const countHint = document.getElementById('count-hint');
 const devModeBtn = document.getElementById('dev-mode-btn');
 const devStatusText = document.getElementById('dev-status');
 let isDevMode = false;
+
+// 儲存目前從雲端抓取到的所有蘑菇原始資料，方便隨時即時排序
+let globalMushroomList = [];
 
 // 🛜 完美對齊你的美國資料庫設定
 const firebaseConfig = {
@@ -117,24 +123,73 @@ function updateCountLimitConstraint() {
     if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
 }
 
-function filterLocation() {
+// 🎯 ===================================================
+// 📊 核心新功能：處理五大維度卡片排序與行政區聯動篩選
+// ===================================================
+function filterAndSortMushroomCards() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
-    const cards = document.querySelectorAll('#mushroom-container .card');
+    const sortWay = cardSortSelect.value; // 取得目前選取的排序方式
 
-    cards.forEach(card => {
-        const cardCity = card.getAttribute('data-city');
-        let cardDistricts = [];
-        try {
-            cardDistricts = JSON.parse(card.getAttribute('data-districts'));
-        } catch(e) {
-            cardDistricts = [card.getAttribute('data-districts')];
-        }
-
-        const matchCity = (selectedCity === 'all' || cardCity === selectedCity);
+    // 1. 先進行地區過濾
+    let filteredList = globalMushroomList.filter(item => {
+        const data = item.data;
+        const cardDistricts = Array.isArray(data.district) ? data.district : [data.district];
+        const matchCity = (selectedCity === 'all' || data.city === selectedCity);
         const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict));
-        
-        card.style.display = (matchCity && matchDistrict) ? 'block' : 'none';
+        return matchCity && matchDistrict;
+    });
+
+    // 2. 進行權重定義 (用於大小與種類的文字排序排序)
+    const sizeWeight = { "巨型": 4, "大": 3, "普通": 2, "小": 1 };
+
+    // 3. 核心排序算法
+    filteredList.sort((a, b) => {
+        const dataA = a.data;
+        const dataB = b.data;
+
+        if (sortWay === "updateTime") {
+            // A. 更新時間排序 (精準度：毫秒比較，最新上報的排在最前面)
+            const timeA = Date.parse(dataA.reportTime.replace(/-/g, '/')) || 0;
+            const timeB = Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0;
+            return timeB - timeA;
+
+        } else if (sortWay === "remainingTime") {
+            // B. 剩餘倒數時間排序 (時間最少、快打完的蘑菇優先排在最前面)
+            const now = Date.now();
+            const getMsLeft = (d) => {
+                const repTime = Date.parse(d.reportTime.replace(/-/g, '/')) || 0;
+                const totalDur = ((parseInt(d.hours) || 0) * 3600 + (parseInt(d.minutes) || 0) * 60 + (parseInt(d.seconds) || 0)) * 1000;
+                return (repTime + totalDur) - now;
+            };
+            // 已過期的移到最後面
+            const leftA = getMsLeft(dataA);
+            const leftB = getMsLeft(dataB);
+            if (leftA <= 0) return 1;
+            if (leftB <= 0) return -1;
+            return leftA - leftB;
+
+        } else if (sortWay === "totalPlayers") {
+            // C. 總人數排序 (在場人數最多的优先排前面)
+            return (dataB.pCount || 0) - (dataA.pCount || 0);
+
+        } else if (sortWay === "mushroomSize") {
+            // D. 蘑菇大小排序 (巨型 > 大 > 普通 > 小)
+            const wA = sizeWeight[dataA.size] || 0;
+            const wB = sizeWeight[dataB.size] || 0;
+            return wB - wA;
+
+        } else if (sortWay === "mushroomType") {
+            // E. 蘑菇種類排序 (按標題中文字元或種類代碼拼音排序)
+            return dataA.title.localeCompare(dataB.title, 'zh-Hant');
+        }
+        return 0;
+    });
+
+    // 4. 清空容器並依照排序完的順序重新渲染卡片
+    mushroomContainer.innerHTML = '';
+    filteredList.forEach(item => {
+        renderMushroomCard(item.id, item.data);
     });
 }
 
@@ -144,14 +199,11 @@ function setupPinFeature() {
             const currentCard = e.target.closest('.card');
             e.target.classList.toggle('active');
             if (e.target.classList.contains('active')) { mushroomContainer.prepend(currentCard); }
-            else { mushroomContainer.appendChild(currentCard); }
+            else { filterAndSortMushroomCards(); } // 取消釘選時，恢復本來的排序
         }
     });
 }
 
-// 🎯 ===================================================
-// ◉ 核心改動：最後更新時間也全面升級為「精美彈出面板」
-// ===================================================
 function setupTimeInfoFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('time-info-btn')) {
@@ -172,13 +224,10 @@ function setupTimeInfoFeature() {
                     const remainMins = diffMins % 60;
                     timeAgoText = `${diffHours} 小時 ${remainMins} 分鐘前`;
                 }
-            } else {
-                timeAgoText = reportTimeStr;
-            }
+            } else { timeAgoText = reportTimeStr; }
 
-            // 🏗️ 動態建立精美的時間面板 HTML
             const timeOverlay = document.createElement('div');
-            timeOverlay.className = 'edit-modal-overlay'; // 沿用遮罩模糊底色
+            timeOverlay.className = 'edit-modal-overlay'; 
             timeOverlay.innerHTML = `
                 <div class="time-modal-window">
                     <div class="time-modal-header">⏰ 情報最後更新歷史</div>
@@ -191,8 +240,6 @@ function setupTimeInfoFeature() {
                 </div>
             `;
             document.body.appendChild(timeOverlay);
-
-            // 🛑 點擊按鈕關閉
             timeOverlay.querySelector('.time-btn-close').addEventListener('click', () => timeOverlay.remove());
         }
     });
@@ -221,17 +268,14 @@ function setupQuickEditFeature() {
                         </div>
                         <div class="edit-modal-body">
                             <p style="font-size:13px; color:#78909c; margin:0 0 12px 0;">📍 地點: ${currentData.city} · ${currentData.name}</p>
-                            
                             <h4>👥 目前參戰人數 (上限 ${maxLimit} 人)</h4>
                             <input type="number" id="modal-pcount" class="edit-modal-input" value="${currentData.pCount}" min="0" max="${maxLimit}">
-                            
                             <h4>⏳ 剩餘倒數時間</h4>
                             <div class="edit-modal-input-group">
                                 <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours}" placeholder="時" min="0">
                                 <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes}" placeholder="分" min="0" max="59">
                                 <input type="number" id="modal-seconds" class="edit-modal-input" value="${currentData.seconds || 0}" placeholder="秒" min="0" max="59">
                             </div>
-                            
                             <h4>🗺️ 跨區可見行政區設定 (空格隔開)</h4>
                             <input type="text" id="modal-dists" class="edit-modal-input" value="${currentDists}">
                         </div>
@@ -243,7 +287,6 @@ function setupQuickEditFeature() {
                 `;
 
                 document.body.appendChild(modalOverlay);
-
                 const closeModal = () => modalOverlay.remove();
                 modalOverlay.querySelector('.edit-modal-close').addEventListener('click', closeModal);
                 modalOverlay.querySelector('.edit-btn-cancel').addEventListener('click', closeModal);
@@ -271,7 +314,7 @@ function setupQuickEditFeature() {
                         district: distArray,
                         reportTime: newReportTime
                     }).then(() => {
-                        alert("🚀 雲端面板連線成功！現況資料已全台同步更新！");
+                        alert("🚀 現況已即時全台同步更新！");
                         closeModal();
                     });
                 });
@@ -336,7 +379,7 @@ function renderMushroomCard(id, data) {
         <p>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</p>
     `;
     initSingleCountdown(newCard.querySelector('.countdown'));
-    mushroomContainer.prepend(newCard);
+    mushroomContainer.appendChild(newCard); // 按照 sort 的順序塞入
 }
 
 function setupReportForm() {
@@ -394,7 +437,7 @@ function setupReportForm() {
             const targetData = { city, district: finalDistricts, name, size, title: mInfo.title, img: mInfo.img, reportTime: reportTimeString, hours, minutes, seconds, pCount, limit };
 
             if (existingKey) {
-                dbRef.child(existingKey).set(targetData).then(() => alert("🔄 雲端偵測到相同地點！已自動完成情報合併與時間校準！"));
+                dbRef.child(existingKey).set(targetData).then(() => alert("🔄 情報合併與時間校準完畢！"));
             } else {
                 dbRef.push(targetData).then(() => alert("🚀 蘑菇成功同步至雲端資料庫！"));
             }
@@ -411,11 +454,19 @@ function setupReportForm() {
     });
 }
 
+// 🎯 ===================================================
+// 💾 從 Firebase 監聽：每次資料庫更新，重新跑過濾與排序
+// ===================================================
 function listenToCloudDatabase() {
     dbRef.on('value', (snapshot) => {
-        mushroomContainer.innerHTML = ''; 
-        snapshot.forEach((childSnapshot) => { renderMushroomCard(childSnapshot.key, childSnapshot.val()); });
-        filterLocation(); 
+        globalMushroomList = []; // 重設清單
+        snapshot.forEach((childSnapshot) => {
+            globalMushroomList.push({
+                id: childSnapshot.key,
+                data: childSnapshot.val()
+            });
+        });
+        filterAndSortMushroomCards(); // 即時重排
     });
 }
 
@@ -446,7 +497,7 @@ function setupGeolocation() {
                     alert(`定位成功！但此專案暫無建立您所在的區域資料。\n您目前在：\n${address}`);
                     filterCitySelect.value = "all"; filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>';
                 }
-                filterLocation(); geoBtn.innerText = "🎯 自動定位";
+                filterAndSortMushroomCards(); geoBtn.innerText = "🎯 自動定位";
             } catch (e) { alert("網路解碼失敗。"); geoBtn.innerText = "🎯 自動定位"; }
             finally { geoBtn.disabled = false; }
         }, () => { alert("定位失敗，請授權瀏覽器位置權限。"); geoBtn.innerText = "🎯 自動定位"; geoBtn.disabled = false; }, { enableHighAccuracy: true, timeout: 10000 });
@@ -496,13 +547,16 @@ function updateCountdowns() {
     });
 }
 
+// 監聽器設定
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
     if (filterCitySelect.value === 'all') {
-        filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>'; filterLocation();
-    } else { updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true); filterLocation(); }
+        filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>'; filterAndSortMushroomCards();
+    } else { updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true); filterAndSortMushroomCards(); }
 });
-filterDistrictSelect.addEventListener('change', filterLocation);
+filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
+cardSortSelect.addEventListener('change', filterAndSortMushroomCards); // 🌟 當切換排序選項時，立刻即時排序
+
 formTypeSelect.addEventListener('change', updateCountLimitConstraint);
 formSizeSelect.addEventListener('change', updateCountLimitConstraint);
 
