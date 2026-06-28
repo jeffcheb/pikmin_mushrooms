@@ -1,448 +1,548 @@
-/* ==========================================================================
-   🟢 全站基礎通用設定 (戰力精算與雲端回報頁面共用)
-   ========================================================================== */
-* {
-    box-sizing: border-box;
-}
-
+/* ==========================================
+   🎨 全站基礎設定與字體
+   ========================================== */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: #f4f6f8;
-    color: #333;
     margin: 0;
-    padding: 20px;
+    padding: 0;
+    background-color: #f4f9f4; /* 療癒系皮克敏草地綠背景 */
+    color: #333;
+    line-height: 1.5;
 }
 
-/* 頂部導覽列 (Header & Nav) 排版完全還原 */
 header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #ffffff;
-    padding: 15px 25px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    margin-bottom: 25px;
-    border-radius: 8px;
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .logo-area {
     display: flex;
     align-items: center;
-    gap: 12px;
 }
 
 .logo {
+    width: 40px;
     height: 40px;
+    margin-right: 12px;
     object-fit: contain;
 }
 
-.logo-area h1 {
+h1 {
+    font-size: 1.3rem;
     margin: 0;
-    font-size: 22px;
-    color: #2e7d32;
-    font-weight: bold;
 }
 
+/* 🧭 導覽列分頁切換樣式 */
 nav {
     display: flex;
-    gap: 15px;
+    gap: 10px;
 }
 
 nav a {
+    color: white;
     text-decoration: none;
-    color: #555;
     font-weight: bold;
-    font-size: 15px;
-    padding: 8px 16px;
-    border-radius: 20px;
-    transition: all 0.2s;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background 0.2s, transform 0.1s;
+    font-size: 0.95rem;
 }
 
 nav a.active, nav a:hover {
-    color: #2e7d32;
-    background: #e8f5e9;
+    background-color: #388e3c;
+    transform: translateY(-1px);
 }
 
-/* 網頁通用輸入框、下拉選單與基礎按鈕高度與外觀優化 */
-input, select, button {
-    font-family: inherit;
-    font-size: 14px;
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    outline: none;
-    transition: all 0.2s;
-    height: 38px;
+/* ==========================================
+   📦 通用區塊排版 (Section Box)
+   ========================================== */
+main {
+    padding: 10px;
 }
 
-input:focus, select:focus {
-    border-color: #2e7d32;
-}
-
-button {
-    cursor: pointer;
-    border-radius: 20px;
-}
-
-button:hover {
-    filter: brightness(0.95);
+.section-box {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 h2 {
     color: #2e7d32;
-    text-align: center;
-}
-
-footer {
-    text-align: center;
-    font-size: 13px;
-    color: #999;
-    margin-top: 40px;
-    padding: 20px 0;
-    border-top: 1px solid #e0e0e0;
-}
-
-/* ==========================================================================
-   🧮 1. 戰力精算器專用原版排版 (index.html 還原) - 🚨 徹底封印巨大皮克敏！
-   ========================================================================== */
-.section-box {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    max-width: 1200px;
-    margin: 0 auto 30px auto;
-}
-
-.section-box p {
-    color: #666;
+    font-size: 1.4rem;
+    margin-top: 0;
     margin-bottom: 20px;
+    border-bottom: 2px solid #e8f5e9;
+    padding-bottom: 10px;
 }
 
+/* ==========================================
+   🧮 頁面一：戰力模擬器專用樣式 (`index.html`)
+   ========================================== */
 .calc-flex {
     display: flex;
-    gap: 30px;
+    justify-content: space-between;
     flex-wrap: wrap;
-    margin-top: 20px;
+    gap: 25px;
 }
 
-/* 左側回報控制組 */
 .form-group {
-    flex: 1.6;
+    flex: 1.3;
     min-width: 300px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
 }
 
 .form-group label {
     font-weight: bold;
-    color: #333;
-    margin-bottom: -5px;
-    margin-top: 10px;
+    color: #444;
+    display: block;
+    margin-bottom: 5px;
 }
 
 .form-group select {
     width: 100%;
     padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
     background-color: #fff;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    box-sizing: border-box;
 }
 
-/* 🌟 皮克敏單選排列區還原：橫向流暢豆腐塊包覆 */
+/* 🔴🔵🟡 皮克敏顏色單選框美化 */
 .pikmin-select {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #eee;
+    gap: 8px;
+    margin-bottom: 15px;
 }
 
 .pikmin-select label {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    border: 1px solid #ddd;
-    padding: 10px 8px;
-    border-radius: 8px;
+    background: #f1f8e9;
+    padding: 6px 10px;
+    border: 1px solid #dcedc8;
+    border-radius: 6px;
+    font-weight: normal;
+    font-size: 0.9rem;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: bold;
-    color: #555;
-    gap: 6px;
-    user-select: none;
-    min-width: 85px;
-    height: auto;
+    transition: background 0.2s, border-color 0.2s;
 }
 
 .pikmin-select label:hover {
-    border-color: #2e7d32;
-    background: #e8f5e9;
+    background: #c5e1a5;
 }
 
 .pikmin-select input[type="radio"] {
-    margin: 0;
-    width: auto;
-    height: auto;
+    margin-right: 4px;
 }
 
-/* 🚨 終極修復：精準鎖定並強迫戰力模擬器的皮克敏圖示縮回 45px，絕不允許炸開！ */
 .pikmin-select img {
-    width: 45px !important;
-    height: 45px !important;
+    width: 22px;
+    height: 22px;
+    margin: 0 4px;
     object-fit: contain;
-    display: block;
 }
 
-/* 右側戰力預估分數落款方塊排版還原 */
+/* 右側大型戰力結果看板 */
 .result-box {
-    flex: 1;
-    background: #f1f8e9;
-    padding: 30px;
+    background: #e8f5e9;
+    border: 2px dashed #81c784;
+    padding: 20px;
     border-radius: 12px;
     text-align: center;
+    flex: 1;
+    min-width: 250px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-width: 280px;
-    height: fit-content;
-    border: 2px dashed #a5d6a7;
+    box-sizing: border-box;
 }
 
 .result-box h3 {
-    margin: 0 0 10px 0;
-    color: #2e7d32;
-    font-size: 18px;
+    margin-top: 0;
+    color: #388e3c;
+    font-size: 1.1rem;
 }
 
-.result-box .score {
-    font-size: 64px;
+.score {
+    font-size: 3.5rem;
     font-weight: bold;
     color: #2e7d32;
-    margin: 15px 0;
-    height: auto;
+    margin: 10px 0;
+    font-family: "Courier New", Courier, monospace;
 }
 
-/* ==========================================================================
-   🍄 2. 雲端回報看板專用原版排版 (report.html 還原)
-   ========================================================================== */
-.form-section {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 25px;
-    margin: 20px auto;
-    max-width: 600px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+/* ==========================================
+   ✍️ 頁面二：新增回報表單樣式 (`report.html`)
+   ========================================== */
+.report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
-/* 綠色篩選工具列排版還原 */
-.filter-section {
-    background: #f1f8e9;
+.form-row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.form-cell {
+    flex: 1;
+    min-width: 140px;
+}
+
+.report-form input[type="text"],
+.report-form input[type="number"],
+.report-form select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    margin-top: 5px;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+/* ⏳ 剩餘時間時分秒群組 */
+.time-input-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.time-input-group input[type="number"] {
+    width: 100%;
+    padding: 10px 5px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    text-align: center;
+    margin-top: 0;
+}
+
+.time-input-group span {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
+}
+
+.submit-btn {
+    background-color: #4CAF50;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    padding: 12px;
     border-radius: 8px;
-    padding: 15px;
-    margin: 25px auto;
-    max-width: 1200px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: #388e3c;
+}
+
+.submit-btn:active {
+    transform: scale(0.99);
+}
+
+/* ==========================================
+   🍄 頁面二：當前蘑菇列表與區域篩選
+   ========================================== */
+.location-select-wrapper {
+    margin-bottom: 20px;
+    padding: 12px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px dashed #4CAF50;
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
-.filter-group {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+.location-select-wrapper label {
     font-weight: bold;
+    font-size: 0.9rem;
 }
 
-#search-name {
-    padding: 8px 15px;
+.location-select-wrapper select {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    border-radius: 6px;
     border: 1px solid #ccc;
-    border-radius: 20px;
-    width: 190px;
+    background: #fff;
 }
 
-#view-toggle-btn {
-    padding: 8px 16px;
-    background: #ffffff;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    font-weight: bold;
-}
-
-#geo-btn {
-    padding: 8px 16px;
-    background: #2e7d32;
-    color: #ffffff;
+/* 🎯 GPS定位按鈕 */
+.geo-btn {
+    background-color: #2e7d32;
+    color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: 6px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
     font-weight: bold;
+    transition: background 0.2s;
 }
 
-/* ==========================================================================
-   🎴 蘑菇看板卡片 - 預設標準網格樣式 (Grid Mode)
-   ========================================================================== */
-#mushroom-container {
+.geo-btn:hover {
+    background-color: #1b5e20;
+}
+
+.geo-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* 🎴 蘑菇卡片響應式網格 */
+.grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 20px;
-    max-width: 1200px;
-    margin: 25px auto;
 }
 
 .card {
-    background: #ffffff;
-    border: 1px solid #eef0f2;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
     position: relative;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 30px 15px 15px 15px;
+    text-align: center;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-.card .card-icon {
-    width: 75px;
-    height: 75px;
+.card-icon {
+    width: 55px;
+    height: 55px;
     object-fit: contain;
-    margin: 0 auto 12px auto;
-    display: block;
+    margin-bottom: 5px;
 }
 
-.card h3 { margin: 10px 0; font-size: 17px; color: #1b5e20; font-weight: bold; }
-.card p { margin: 6px 0; font-size: 14px; color: #555; height: auto; }
+.card h3 {
+    margin: 8px 0;
+    font-size: 1.1rem;
+    color: #1b5e20;
+}
 
-/* 看板卡片上的漂浮控制功能按鈕 */
-.card .pin-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 16px; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; padding: 0; width: auto; height: auto; }
-.card .pin-btn.active, .card .pin-btn:hover { opacity: 1; }
-.card .quick-edit-btn { position: absolute; top: 15px; left: 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; height: auto; }
-.card .delete-btn { position: absolute; top: 15px; left: 65px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; display: none; height: auto; }
-body.dev-active .card .delete-btn { display: block; }
+.card p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: #555;
+}
 
-.card .notify-me-btn {
-    border: 1px solid #ffe082;
-    background: #fff8e1;
-    color: #b78103;
-    border-radius: 20px; 
-    padding: 6px 16px; 
-    font-size: 12px; 
-    cursor: pointer; 
+/* 📌 釘選按鈕 */
+.pin-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 5px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.pin-btn:hover {
+    opacity: 1;
+    background: #f5f5f5;
+}
+
+.pin-btn.active {
+    opacity: 1;
+    background: #e8f5e9;
+    border-color: #4CAF50;
+}
+
+/* 🛠️ 開發者模式與下架刪除按鈕 */
+.delete-btn {
+    display: none; /* 預設安全狀態下隱藏 */
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    background-color: #c62828;
+    color: white;
+}
+
+.dev-active .delete-btn {
+    display: block; /* 開啟管理員模式後顯示 */
+}
+
+.dev-toolbar {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 10px 15px;
+    background-color: #eceff1;
+    border-radius: 8px;
+    border-left: 5px solid #607d8b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+.dev-mode-btn {
+    background-color: #607d8b;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.dev-mode-btn:hover {
+    background-color: #455a64;
+}
+
+.dev-status {
+    font-size: 0.8rem;
+    color: #546e7a;
     font-weight: bold;
 }
-.card .notify-me-btn.subscribed {
-    background: #e8f5e9;
-    color: #2e7d32;
-    border-color: #81c784;
+
+/* ==========================================
+   🏁 頁尾設定
+   ========================================== */
+footer {
+    text-align: center;
+    padding: 15px;
+    background: #222;
+    color: #aaa;
+    font-size: 0.8rem;
+    margin-top: 40px;
+}
+/* 📝 快速編輯按鈕樣式 */
+.quick-edit-btn {
+    position: absolute;
+    top: 8px;
+    right: 45px; /* 剛好排在📌按鈕的左邊 */
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+    opacity: 0.6;
+    transition: all 0.2s;
 }
 
-/* ==========================================================================
-   📋 3. 獨立安全擴充：當回報看板開啟「📋 清單模式」時的變形覆蓋 (Flexbox 絕不跑版)
-   ========================================================================== */
-#mushroom-container.list-view {
+.quick-edit-btn:hover {
+    opacity: 1;
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #1e88e5;
+}
+
+/* ==========================================
+   ✨ 【這裡以下是新增功能專用，絕不影響原版】✨
+   ========================================== */
+
+/* 📋 1. 清單模式專用排版 (僅在按下卡片模式按鈕時觸發) */
+.grid-container.list-view {
     display: flex !important;
     flex-direction: column !important;
-    max-width: 900px !important;
-    gap: 10px !important;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
-#mushroom-container.list-view .card {
+.grid-container.list-view .card {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    width: 100% !important;
-    min-height: auto !important;
-    padding: 10px 20px !important;
-    margin: 0 !important;
+    padding: 10px 15px !important;
     text-align: left !important;
-    border-radius: 8px !important;
+    min-height: auto !important;
 }
 
-#mushroom-container.list-view .card .pin-btn,
-#mushroom-container.list-view .card .quick-edit-btn,
-#mushroom-container.list-view .card .delete-btn {
-    position: static !important;
-    margin: 0 5px 0 0 !important;
-    flex-shrink: 0 !important;
+.grid-container.list-view .card > * {
+    margin: 0 !important;
 }
 
-#mushroom-container.list-view .card .card-icon {
-    width: 36px !important;
-    height: 36px !important;
-    margin: 0 15px 0 0 !important;
-    flex-shrink: 0 !important;
+.grid-container.list-view .card-icon {
+    width: 32px !important;
+    height: 32px !important;
+    margin-right: 10px !important;
 }
 
-#mushroom-container.list-view .card h3 {
+.grid-container.list-view .card h3 {
     font-size: 14px !important;
-    margin: 0 !important;
     width: 140px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    flex-shrink: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-#mushroom-container.list-view .card p {
+.grid-container.list-view .card p {
     font-size: 13px !important;
-    margin: 0 !important;
-    flex-grow: 1 !important;
-    padding: 0 15px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-#mushroom-container.list-view .card .countdown {
-    width: 150px !important;
-    text-align: center !important;
-    font-weight: bold !important;
-    flex-shrink: 0 !important;
+/* 解除按鈕絕對定位，讓它在清單裡乖乖排隊 */
+.grid-container.list-view .pin-btn,
+.grid-container.list-view .quick-edit-btn,
+.grid-container.list-view .delete-btn {
+    position: static !important;
+    display: inline-block !important;
+    margin-right: 5px !important;
 }
 
-#mushroom-container.list-view .card p:has(.p-count) {
-    width: 130px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
-    gap: 5px !important;
+.grid-container.list-view .time-info-btn,
+.grid-container.list-view .verify-fact-btn,
+.grid-container.list-view .notify-me-btn {
+    margin-left: 10px !important;
 }
 
-#mushroom-container.list-view .card .notify-me-btn {
-    margin: 0 0 0 15px !important;
-    padding: 4px 12px !important;
-    font-size: 12px !important;
-    flex-shrink: 0 !important;
-    height: auto !important;
-}
-
-/* ==========================================================================
-   🔧 4. 彈出視窗與互動模態框 (更新、時間核實等後台樣式)
-   ========================================================================== */
+/* 🔧 2. 後台編輯與時間資訊「彈出視窗 (Modal)」必備樣式 */
 .edit-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-.edit-modal-window { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.edit-modal-window { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: left; }
 .edit-modal-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
 .edit-modal-close { cursor: pointer; font-size: 20px; color: #999; }
-.edit-modal-input { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+.edit-modal-input { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
 .edit-modal-input-group { display: flex; gap: 10px; }
 .edit-modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-.edit-btn-cancel, .edit-btn-save, .time-btn-close { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: auto; }
+.edit-btn-cancel, .edit-btn-save, .time-btn-close { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .edit-btn-cancel { background: #e0e0e0; color: #333; }
-.edit-btn-save { background: #2e7d32; color: #fff; }
+.edit-btn-save { background: #4CAF50; color: #fff; }
 .time-btn-close { background: #0288d1; color: #fff; width: 100%; margin-top: 15px; }
 .time-modal-clock { font-size: 40px; text-align: center; margin: 10px 0; }
 .time-modal-timestamp { font-size: 18px; font-weight: bold; color: #333; text-align: center; }
