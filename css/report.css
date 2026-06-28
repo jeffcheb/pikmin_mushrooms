@@ -216,3 +216,18 @@
     border-radius: 4px;
     display: inline-block;
 }
+/* 🟢 終極防抖按鈕樣式保護 */
+.mushroom-card button,
+.card-footer button {
+    /* 強制設定在 JavaScript 重繪時，按鈕的滑鼠交互（Hitbox）維持絕對穩定 */
+    pointer-events: auto !important;
+    backface-visibility: hidden;
+    transform: translateZ(0); 
+    transition: background-color 0.2s ease, transform 0.1s ease !important;
+}
+
+/* 避免按鈕內部 Hover 特效干擾 Layout 排版造成卡片狂跳 */
+.mushroom-card button:hover {
+    transform: scale(1.03) !important; /* 按鈕自身輕微放大即可，絕不更動高寬 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
