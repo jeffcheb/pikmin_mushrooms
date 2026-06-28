@@ -596,6 +596,56 @@ footer {
     width: 100%; 
     font-size: 14px;
 }
+/* ==========================================================================
+           🎨 新增：支援 localStorage 的「清單模式」專用 CSS 樣式
+           ========================================================================== */
+
+        /* 當切換到清單模式時，將容器改為垂直單欄排列 */
+        #mushroom-container.list-view {
+            display: block !important; /* 強制取消原本的 grid 網格排版 */
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 10px;
+        }
+
+        /* 將原本的大卡片壓扁成一橫行 */
+        #mushroom-container.list-view .card {
+            display: table; /* 利用 table 特性排成橫列 */
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            background: #ffffff;
+            text-align: left; /* 改為左對齊 */
+            box-sizing: border-box;
+        }
+
+        /* 在清單模式下，卡片內所有子元素都變成水平橫向排列 */
+        #mushroom-container.list-view .card > * {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 0 8px;
+            margin: 0;
+        }
+
+        /* 縮小清單模式下的蘑菇大圖片，像個小圖示即可 */
+        #mushroom-container.list-view .card .card-icon {
+            width: 32px !important;
+            height: 32px !important;
+            max-width: 32px;
+        }
+
+        /* 調整按鈕與文字在橫行中的寬度比例，維持排版整齊 */
+        #mushroom-container.list-view .card h3 { font-size: 14px; width: 18%; text-align: left; }
+        #mushroom-container.list-view .card p { font-size: 13px; width: 35%; text-align: left; }
+        #mushroom-container.list-view .card .countdown { font-size: 13px; width: 20%; font-weight: bold; text-align: left; }
+
+        /* 讓功能按鈕在清單中維持合適大小與間距 */
+        #mushroom-container.list-view .card .pin-btn { width: 4%; text-align: center; font-size: 14px; background: transparent; border: none; }
+        #mushroom-container.list-view .card .quick-edit-btn { width: 8%; white-space: nowrap; }
+        #mushroom-container.list-view .card .notify-me-btn { width: 12%; white-space: nowrap; padding: 4px 8px !important; }
+        #mushroom-container.list-view .card .delete-btn { width: 5%; text-align: center; }
 .time-btn-close:hover { 
     background: #01579b; 
 }
