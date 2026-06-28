@@ -6,7 +6,7 @@
     <title>皮克敏蘑菇即時回報站</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <link rel="stylesheet" href="style.css?v=2026">
+    <link rel="stylesheet" href="style.css?v=2026_final">
 </head>
 <body>
 
@@ -90,7 +90,7 @@
             </form>
         </section>
 
-        <section class="section-box" style="max-width: 900px;">
+        <main>
             <div class="location-select-wrapper">
                 <label>📍 選擇縣市：</label>
                 <select id="filter-city"></select>
@@ -98,20 +98,18 @@
                 <label>行政區：</label>
                 <select id="filter-district"></select>
 
-                <div class="sort-group">
-                    <label>📊 排序：</label>
-                    <select id="card-sort">
-                        <option value="remainingTime">剩餘時間 (最少)</option>
-                        <option value="updateTime">更新時間 (最新)</option>
-                        <option value="totalPlayers">參戰人數 (最多)</option>
-                        <option value="mushroomSize">蘑菇大小 (最大)</option>
-                        <option value="mushroomType">蘑菇種類 (名稱)</option>
-                    </select>
-                </div>
+                <label>📊 排序：</label>
+                <select id="card-sort">
+                    <option value="remainingTime">剩餘時間 (最少)</option>
+                    <option value="updateTime">更新時間 (最新)</option>
+                    <option value="totalPlayers">參戰人數 (最多)</option>
+                    <option value="mushroomSize">蘑菇大小 (最大)</option>
+                    <option value="mushroomType">蘑菇種類 (名稱)</option>
+                </select>
 
                 <button id="geo-btn" class="geo-btn">🎯 自動定位</button>
                 
-                <input type="text" id="search-name" placeholder="🔍 關鍵字搜尋..." style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
+                <input type="text" id="search-name" placeholder="🔍 搜尋關鍵字..." style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
                 <button id="view-toggle-btn" class="geo-btn" style="background-color: #f57c00;">🎴 卡片模式</button>
             </div>
 
@@ -121,7 +119,7 @@
             </div>
 
             <div id="mushroom-container" class="grid-container"></div>
-        </section>
+        </main>
     </main>
 
     <footer>
