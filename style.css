@@ -5,7 +5,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f9f4; /* 療癒系皮克敏草地綠背景 */
+    background-color: #f4f9f4;
     color: #333;
     line-height: 1.5;
 }
@@ -37,7 +37,6 @@ h1 {
     margin: 0;
 }
 
-/* 🧭 導覽列分頁切換樣式 */
 nav {
     display: flex;
     gap: 10px;
@@ -116,7 +115,6 @@ h2 {
     box-sizing: border-box;
 }
 
-/* 🔴🔵🟡 皮克敏顏色單選框美化 */
 .pikmin-select {
     display: flex;
     flex-wrap: wrap;
@@ -152,7 +150,6 @@ h2 {
     object-fit: contain;
 }
 
-/* 右側大型戰力結果看板 */
 .result-box {
     background: #e8f5e9;
     border: 2px dashed #81c784;
@@ -215,7 +212,6 @@ h2 {
     box-sizing: border-box;
 }
 
-/* ⏳ 剩餘時間時分秒群組 */
 .time-input-group {
     display: flex;
     align-items: center;
@@ -272,7 +268,7 @@ h2 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 15px; /* 稍微放大一點間距容納排序欄位 */
+    gap: 15px; 
 }
 
 .location-select-wrapper label {
@@ -280,7 +276,8 @@ h2 {
     font-size: 0.9rem;
 }
 
-.location-select-wrapper select {
+.location-select-wrapper select,
+.location-select-wrapper input {
     padding: 6px 12px;
     font-size: 0.9rem;
     border-radius: 6px;
@@ -288,14 +285,12 @@ h2 {
     background: #fff;
 }
 
-/* 🌟 新增：排序控制群組樣式 */
 .sort-group {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-/* 🎯 GPS定位按鈕 */
 .geo-btn {
     background-color: #2e7d32;
     color: white;
@@ -312,16 +307,13 @@ h2 {
     background-color: #1b5e20;
 }
 
-.geo-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-/* 🎴 蘑菇卡片響應式網格 */
+/* 🎴 蘑菇卡片響應式網格 (你的原版紅格子卡片模式) */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .card {
@@ -359,7 +351,6 @@ h2 {
     color: #555;
 }
 
-/* 📌 釘選按鈕 */
 .pin-btn {
     position: absolute;
     top: 8px;
@@ -374,20 +365,27 @@ h2 {
     transition: all 0.2s;
 }
 
-.pin-btn:hover {
-    opacity: 1;
-    background: #f5f5f5;
+.pin-btn:hover { opacity: 1; background: #f5f5f5; }
+.pin-btn.active { opacity: 1; background: #e8f5e9; border-color: #4CAF50; }
+
+.quick-edit-btn {
+    position: absolute;
+    top: 8px;
+    right: 45px; 
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+    opacity: 0.6;
+    transition: all 0.2s;
 }
 
-.pin-btn.active {
-    opacity: 1;
-    background: #e8f5e9;
-    border-color: #4CAF50;
-}
+.quick-edit-btn:hover { opacity: 1; background: #e3f2fd; border-color: #2196f3; color: #1e88e5; }
 
-/* 🛠️ 開發者模式與下架刪除按鈕 */
 .delete-btn {
-    display: none; /* 預設安全狀態下隱藏 */
+    display: none; 
     position: absolute;
     top: 8px;
     left: 8px;
@@ -401,14 +399,8 @@ h2 {
     cursor: pointer;
 }
 
-.delete-btn:hover {
-    background-color: #c62828;
-    color: white;
-}
-
-.dev-active .delete-btn {
-    display: block; /* 開啟管理員模式後顯示 */
-}
+.delete-btn:hover { background-color: #c62828; color: white; }
+.dev-active .delete-btn { display: block; }
 
 .dev-toolbar {
     max-width: 900px;
@@ -434,19 +426,9 @@ h2 {
     font-size: 0.8rem;
 }
 
-.dev-mode-btn:hover {
-    background-color: #455a64;
-}
+.dev-mode-btn:hover { background-color: #455a64; }
+.dev-status { font-size: 0.8rem; color: #546e7a; font-weight: bold; }
 
-.dev-status {
-    font-size: 0.8rem;
-    color: #546e7a;
-    font-weight: bold;
-}
-
-/* ==========================================
-   🏁 頁尾設定
-   ========================================== */
 footer {
     text-align: center;
     padding: 15px;
@@ -456,241 +438,71 @@ footer {
     margin-top: 40px;
 }
 
-/* 📝 快速編輯按鈕樣式 */
-.quick-edit-btn {
-    position: absolute;
-    top: 8px;
-    right: 45px; /* 剛好排在📌按鈕的左邊 */
-    background: transparent;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-    padding: 2px 6px;
-    opacity: 0.6;
-    transition: all 0.2s;
-}
-
-.quick-edit-btn:hover {
-    opacity: 1;
-    background: #e3f2fd;
-    border-color: #2196f3;
-    color: #1e88e5;
-}
-
-/* 🌟 整合更新面板燈箱樣式 */
-.edit-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 2000;
-}
-
-.edit-modal-window {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    width: 90%; max-width: 420px;
-    padding: 24px;
-    box-sizing: border-box;
-    animation: modalFadeIn 0.3s ease;
-}
-
-@keyframes modalFadeIn {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.edit-modal-header {
-    font-size: 18px; font-weight: bold; color: #2e7d32;
-    margin-bottom: 16px; border-bottom: 2px solid #e8f5e9;
-    padding-bottom: 8px; display: flex; justify-content: space-between;
-}
-
-.edit-modal-close {
-    cursor: pointer; color: #999; font-size: 20px;
-}
-.edit-modal-close:hover { color: #d32f2f; }
-
-.edit-modal-body h4 {
-    margin: 12px 0 6px 0; color: #546e7a; font-size: 14px;
-}
-
-.edit-modal-input-group {
-    display: flex; gap: 8px; margin-bottom: 12px;
-}
-
-.edit-modal-input {
-    width: 100%; padding: 8px 12px;
-    border: 1px solid #cfd8dc; border-radius: 8px;
-    font-size: 14px; box-sizing: border-box;
-}
-
-.edit-modal-input:focus {
-    border-color: #4caf50; outline: none; box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
-}
-
-.edit-modal-footer {
-    margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;
-}
-
-.edit-btn-cancel {
-    background: #eceff1; color: #37474f; border: none;
-    padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold;
-}
-
-.edit-btn-save {
-    background: #4caf50; color: white; border: none;
-    padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;
-    box-shadow: 0 4px 10px rgba(76,175,80,0.3);
-}
-.edit-btn-save:hover { background: #43a047; }
-.edit-btn-cancel:hover { background: #cfd8dc; }
-
 /* ==========================================
-   🌟 10. 新增：最後更新時間 ◉ 專屬獨立面板燈箱樣式
+   📋 清單模式專用排版 (僅在按下模式切換時生效)
    ========================================== */
-.time-modal-window {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    width: 90%; max-width: 350px;
-    padding: 24px;
-    box-sizing: border-box;
-    text-align: center;
-    animation: modalFadeIn 0.25s ease;
-}
-
-.time-modal-clock { 
-    font-size: 46px; 
-    margin: 12px 0; 
-}
-
-.time-modal-timestamp {
-    background: #f5f5f5; 
-    padding: 10px; 
-    border-radius: 8px;
-    font-family: monospace; 
-    font-size: 14px; 
-    color: #37474f; 
-    margin-bottom: 12px;
-}
-
-.time-modal-ago { 
-    font-size: 16px; 
-    color: #ff5722; 
-    font-weight: bold; 
-    margin-bottom: 20px; 
-}
-
-.time-btn-close {
-    background: #0288d1; 
-    color: white; 
-    border: none;
-    padding: 11px 24px; 
-    border-radius: 8px; 
-    cursor: pointer;
-    font-weight: bold; 
-    width: 100%; 
-    font-size: 14px;
-}
-.time-btn-close:hover { 
-    background: #01579b; 
-}
-/* ==========================================================================
-   📋 獨立安全擴充：回報頁面「清單模式」專用樣式 (絕不影響原本的網格與戰力頁)
-   ========================================================================== */
-
-/* 當按鈕切換，JS 為容器加上 .list-view 類別時，強制將網格拉直為單欄垂直排列 */
 .grid-container.list-view {
     display: flex !important;
     flex-direction: column !important;
     max-width: 900px;
-    margin: 20px auto;
-    gap: 10px;
+    margin: 0 auto;
 }
 
-/* 將垂直的大卡片壓扁成一橫列排隊 */
 .grid-container.list-view .card {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    width: 100% !important;
-    padding: 10px 20px !important;
+    padding: 10px 15px !important;
     text-align: left !important;
+    min-height: auto !important;
 }
 
-/* 解除原本卡片內部按鈕的絕對定位(position: absolute)，改在橫列中水平依序排隊 */
-.grid-container.list-view .card .pin-btn,
-.grid-container.list-view .card .quick-edit-btn,
-.grid-container.list-view .card .delete-btn {
-    position: static !important;
-    margin-right: 8px !important;
-    display: inline-block !important;
+.grid-container.list-view .card > * {
+    margin: 0 !important;
 }
 
-/* 縮小清單模式下的蘑菇圖片大小 */
 .grid-container.list-view .card-icon {
-    width: 32px !important;
-    height: 32px !important;
-    margin: 0 10px 0 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    margin-right: 10px !important;
 }
 
-/* 防文字擠壓重疊，給予各欄位彈性伸縮寬度與自動省略號 (...) */
-.grid-container.list-view .card h3 { 
-    font-size: 14px !important; 
-    width: 140px !important; 
-    margin: 0 !important; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
+.grid-container.list-view .card h3 {
+    font-size: 14px !important;
+    width: 150px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.grid-container.list-view .card p { 
-    font-size: 13px !important; 
-    margin: 0 !important; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
+.grid-container.list-view .card p {
+    font-size: 13px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 10px;
 }
 
-/* 讓剩餘時間倒數欄位寬度固定，看起來更整齊 */
-.grid-container.list-view .card .countdown { 
-    width: 150px !important; 
-    font-weight: bold; 
-    text-align: center; 
+.grid-container.list-view .pin-btn,
+.grid-container.list-view .quick-edit-btn,
+.grid-container.list-view .delete-btn {
+    position: static !important;
+    display: inline-block !important;
+    margin-right: 5px !important;
+    flex-shrink: 0;
 }
 
-/* 人數群組固定寬度並置中 */
-.grid-container.list-view .card p:has(.p-count) { 
-    width: 130px !important; 
-    display: flex !important; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 5px;
-}
-
-/* 智慧通知按鈕排版微調 */
-.grid-container.list-view .card .notify-me-btn { 
-    margin: 0 0 0 10px !important; 
-}
-
-/* 📝 核實功能按鈕的原生基礎美化樣式 */
-.verify-fact-btn {
-    background-color: #00bcd4;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    cursor: pointer;
-    font-weight: bold;
-    margin-left: 4px;
-    transition: background 0.2s;
-}
-.verify-fact-btn:hover {
-    background-color: #0097a7;
-}
+/* 彈出視窗樣式 */
+.edit-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.edit-modal-window { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.edit-modal-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+.edit-modal-close { cursor: pointer; font-size: 20px; color: #999; }
+.edit-modal-input { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.edit-modal-input-group { display: flex; gap: 10px; }
+.edit-modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.edit-btn-save { background: #4CAF50; color: #fff; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.time-btn-close { background: #0288d1; color: #fff; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
+.time-modal-clock { font-size: 40px; text-align: center; margin: 10px 0; }
+.time-modal-timestamp { font-size: 18px; font-weight: bold; color: #333; text-align: center; }
+.time-modal-ago { font-size: 16px; color: #d32f2f; font-weight: bold; text-align: center; }
