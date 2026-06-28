@@ -1,6 +1,10 @@
 /* ==========================================================================
-   🟢 基礎全站通用設定 (維持你原本的舒適風格)
+   🟢 基礎全站通用設定 (戰力計算機與回報看板共用)
    ========================================================================== */
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: #f4f6f8;
@@ -9,7 +13,51 @@ body {
     padding: 20px;
 }
 
-/* 蘑菇卡片容器：預設為 RWD 網格卡片模式 */
+/* 表單與控制面板通用樣式 (戰力計算、回報表單) */
+.form-section, .filter-section {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.filter-section {
+    background: #f1f8e9;
+    max-width: 1200px;
+    text-align: center;
+}
+
+h2 {
+    color: #2e7d32;
+    text-align: center;
+}
+
+/* 網頁通用按鈕與輸入框 */
+input, select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+}
+
+input:focus, select:focus {
+    border-color: #2e7d32;
+}
+
+button {
+    transition: all 0.2s;
+}
+
+button:hover {
+    filter: brightness(0.95);
+}
+
+/* ==========================================================================
+   🍄 預設：蘑菇卡片網格模式 (Grid Mode)
+   ========================================================================== */
 #mushroom-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -18,9 +66,6 @@ body {
     margin: 20px auto;
 }
 
-/* ==========================================================================
-   🎴 預設：標準卡片樣式 (Grid Mode)
-   ========================================================================== */
 .card {
     background: #ffffff;
     border: 1px solid #e0e0e0;
@@ -37,12 +82,12 @@ body {
     box-shadow: 0 6px 12px rgba(0,0,0,0.08);
 }
 
-/* 卡片內各元件基礎樣式 */
 .card .card-icon {
     width: 80px;
     height: 80px;
     object-fit: contain;
     margin: 0 auto 10px auto;
+    display: block;
 }
 
 .card h3 {
@@ -57,7 +102,7 @@ body {
     color: #555;
 }
 
-/* 頂部三個絕對定位按鈕 */
+/* 絕對定位的控制按鈕 (網格模式下) */
 .card .pin-btn {
     position: absolute;
     top: 12px;
@@ -67,8 +112,8 @@ body {
     font-size: 16px;
     cursor: pointer;
     opacity: 0.4;
-    transition: opacity 0.2s;
 }
+
 .card .pin-btn.active, .card .pin-btn:hover {
     opacity: 1;
 }
@@ -96,7 +141,7 @@ body {
     padding: 2px 6px;
     font-size: 11px;
     cursor: pointer;
-    display: none; /* 開發者模式啟動時才會由 body.dev-active 顯示 */
+    display: none;
 }
 
 body.dev-active .card .delete-btn {
@@ -104,108 +149,162 @@ body.dev-active .card .delete-btn {
 }
 
 /* ==========================================================================
-   📋 核心修復：當網頁開啟「📋 清單模式」時的覆蓋樣式 (Flexbox 絕不跑版)
+   📋 獨立擴充：回報看板「清單模式」專用樣式
    ========================================================================== */
-
-/* 1. 強制把網格容器壓成單欄垂直排列 */
-#mushroom-container.list-view {
-    display: flex !important;
-    flex-direction: column !important;
-    max-width: 850px;
-    margin: 20px auto !important;
-    gap: 10px !important;
+#mushroom-container.list-view { 
+    display: flex !important; 
+    flex-direction: column !important; 
+    max-width: 900px !important; 
+    gap: 10px !important; 
+    margin: 20px auto !important; 
+    padding: 0 10px; 
 }
 
-/* 2. 把大方形卡片強行扁平化成一橫條 */
-#mushroom-container.list-view .card {
-    display: flex !important;
-    flex-direction: row !important;      /* 橫向一整列 */
-    align-items: center !important;      /* 垂直居中對齊 */
-    justify-content: space-between !important; /* 元件撐開兩端對齊 */
-    width: 100% !important;
-    min-height: auto !important;
-    padding: 8px 16px !important;
-    margin: 0 !important;
-    text-align: left !important;
+#mushroom-container.list-view .card { 
+    display: flex !important; 
+    flex-direction: row !important; 
+    align-items: center !important; 
+    justify-content: space-between !important; 
+    width: 100% !important; 
+    min-height: auto !important; 
+    padding: 10px 15px !important; 
+    margin: 0 !important; 
+    text-align: left !important; 
 }
 
-/* 3. 清單模式下的三個控制按鈕回歸正常文件流，不使用絕對定位 */
-#mushroom-container.list-view .card .pin-btn,
-#mushroom-container.list-view .card .quick-edit-btn,
-#mushroom-container.list-view .card .delete-btn {
-    position: static !important;
-    margin: 0 4px !important;
-    flex-shrink: 0;
+#mushroom-container.list-view .card .pin-btn, 
+#mushroom-container.list-view .card .quick-edit-btn, 
+#mushroom-container.list-view .card .delete-btn { 
+    position: static !important; 
+    margin: 0 4px !important; 
+    flex-shrink: 0; 
 }
 
-/* 4. 縮小左側的蘑菇大圖片 */
-#mushroom-container.list-view .card .card-icon {
-    width: 36px !important;
-    height: 36px !important;
-    margin: 0 12px 0 0 !important;
-    flex-shrink: 0;
+#mushroom-container.list-view .card .card-icon { 
+    width: 36px !important; 
+    height: 36px !important; 
+    margin: 0 10px 0 0 !important; 
+    flex-shrink: 0; 
 }
 
-/* 5. 限制文字與倒數欄位寬度，防擠壓、防重疊 */
-#mushroom-container.list-view .card h3 {
-    font-size: 14px !important;
-    margin: 0 !important;
-    width: 130px !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+#mushroom-container.list-view .card h3 { 
+    font-size: 14px !important; 
+    margin: 0 !important; 
+    width: 140px !important; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    flex-shrink: 0; 
 }
 
-#mushroom-container.list-view .card p {
-    font-size: 13px !important;
-    margin: 0 !important;
-    flex-grow: 1 !important; /* 讓地點名稱佔據剩餘的所有空間 */
-    padding: 0 10px !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+#mushroom-container.list-view .card p { 
+    font-size: 13px !important; 
+    margin: 0 !important; 
+    flex-grow: 1 !important; 
+    padding: 0 10px !important; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
 }
 
-/* 倒數計時欄位固定寬度 */
-#mushroom-container.list-view .card .countdown {
-    font-size: 13px !important;
-    margin: 0 !important;
-    width: 150px !important;
-    text-align: center !important;
-    flex-shrink: 0;
+#mushroom-container.list-view .card .countdown { 
+    font-size: 13px !important; 
+    margin: 0 !important; 
+    width: 150px !important; 
+    text-align: center !important; 
+    flex-shrink: 0; 
 }
 
-/* 人數群組固定寬度 */
-#mushroom-container.list-view .card p:has(.p-count) {
-    width: 120px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0;
+#mushroom-container.list-view .card p:has(.p-count) { 
+    width: 130px !important; 
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+    flex-shrink: 0; 
+    gap: 5px !important;
 }
 
-/* 6. 最右側的通知按鈕外觀微調 */
-#mushroom-container.list-view .card .notify-me-btn {
-    margin: 0 0 0 10px !important;
-    padding: 4px 12px !important;
-    font-size: 11px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0;
+#mushroom-container.list-view .card .notify-me-btn { 
+    margin: 0 0 0 10px !important; 
+    flex-shrink: 0; 
+    padding: 4px 10px !important; 
+    font-size: 12px !important; 
 }
 
 /* ==========================================================================
-   彈出視窗等其餘通用 UI 樣式
+   🔧 彈出視窗與互動模態框 (更新、時間核實等)
    ========================================================================== */
-.edit-modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;
+.edit-modal-overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    z-index: 9999; 
 }
-.edit-modal-window {
-    background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px;
+
+.edit-modal-window { 
+    background: white; 
+    padding: 20px; 
+    border-radius: 8px; 
+    width: 90%; 
+    max-width: 400px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
-.edit-modal-input {
-    width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box;
+
+.edit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
 }
-.edit-modal-input-group {
-    display: flex; gap: 5px;
+
+.edit-modal-close {
+    cursor: pointer;
+    font-size: 20px;
+    color: #999;
 }
+
+.edit-modal-input { 
+    width: 100%; 
+    padding: 8px; 
+    margin: 8px 0; 
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.edit-modal-input-group { 
+    display: flex; 
+    gap: 10px; 
+}
+
+.edit-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.edit-btn-cancel, .edit-btn-save, .time-btn-close {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.edit-btn-cancel { background: #e0e0e0; color: #333; }
+.edit-btn-save { background: #2e7d32; color: #fff; }
+.time-btn-close { background: #0288d1; color: #fff; width: 100%; margin-top: 15px; }
+
+.time-modal-clock { font-size: 40px; text-align: center; margin: 10px 0; }
+.time-modal-timestamp { font-size: 18px; font-weight: bold; color: #333; text-align: center; }
+.time-modal-ago { font-size: 16px; color: #d32f2f; font-weight: bold; text-align: center; }
