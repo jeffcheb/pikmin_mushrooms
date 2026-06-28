@@ -1,13 +1,9 @@
-/* ==========================================================================
-   🎨 1. 完全還原：最原始的基礎排版與背景設定
-   ========================================================================== */
 body {
     font-family: "Microsoft JhengHei", Arial, sans-serif;
     background-color: #f4f7f6;
     color: #333;
     margin: 0;
     padding: 20px;
-    /* 💡 完全移除 flex 佈局，讓網頁元件照最原本的上下順序乖乖排好，不與圖片衝突 */
 }
 
 h1, h2, h3 {
@@ -15,12 +11,9 @@ h1, h2, h3 {
     text-align: center;
 }
 
-/* ==========================================================================
-   📦 2. 原始儲存庫容器與表單樣式
-   ========================================================================== */
 .container {
     max-width: 1000px;
-    margin: 20px auto; /* 🌟 讓區塊自動居中，並與上下自然推開距離，不壓迫圖片 */
+    margin: 0 auto;
     background: #ffffff;
     padding: 24px;
     border-radius: 16px;
@@ -55,9 +48,6 @@ select {
     gap: 10px;
 }
 
-/* ==========================================================================
-   🔘 3. 按鈕基本樣式
-   ========================================================================== */
 button.btn-submit {
     background-color: #4caf50;
     color: white;
@@ -84,9 +74,6 @@ button.btn-submit {
     cursor: pointer;
 }
 
-/* ==========================================================================
-   🍓 4. 皮克敏單選鈕清單
-   ========================================================================== */
 .pikmin-select {
     display: flex;
     flex-wrap: wrap;
@@ -119,9 +106,6 @@ button.btn-submit {
     object-fit: contain;
 }
 
-/* ==========================================================================
-   🍄 5. 原始卡片佈局
-   ========================================================================== */
 .grid-container {
     display: flex;
     flex-wrap: wrap;
@@ -160,7 +144,6 @@ button.btn-submit {
     color: #546e7a;
 }
 
-/* 📌 釘選、📝 更新與 ❌ 刪除按鈕定位 */
 .pin-btn {
     position: absolute;
     top: 8px;
@@ -171,7 +154,9 @@ button.btn-submit {
     cursor: pointer;
     opacity: 0.4;
 }
-.pin-btn.active { opacity: 1; }
+.pin-btn.active { 
+    opacity: 1; 
+}
 
 .quick-edit-btn {
     position: absolute;
@@ -198,99 +183,12 @@ button.btn-submit {
     font-size: 12px;
     cursor: pointer;
 }
-body.dev-active .delete-btn { display: block; }
+body.dev-active .delete-btn { 
+    display: block; 
+}
 
 .dev-zone {
     margin: 40px auto;
     text-align: center;
     max-width: 1000px;
-}
-
-/* ==========================================================================
-   🌟 6. 新增：獨立外掛式「精美更新/最後更新面板」燈箱
-   ========================================================================== */
-.edit-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; 
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 9999; /* 絕對置頂，不影響網頁原本結構 */
-}
-
-.edit-modal-window {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-    width: 90%; max-width: 400px;
-    padding: 24px;
-    box-sizing: border-box;
-}
-
-.time-modal-window {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-    width: 90%; max-width: 350px;
-    padding: 24px;
-    box-sizing: border-box;
-    text-align: center;
-}
-
-.edit-modal-header {
-    font-size: 18px; font-weight: bold; color: #2e7d32;
-    margin-bottom: 16px; border-bottom: 2px solid #e8f5e9;
-    padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
-}
-
-.time-modal-header {
-    font-size: 18px; font-weight: bold; color: #0288d1;
-    margin-bottom: 14px; padding-bottom: 8px;
-    border-bottom: 2px solid #e1f5fe;
-}
-
-.edit-modal-close {
-    cursor: pointer; color: #b0bec5; font-size: 24px; line-height: 1;
-}
-
-.edit-modal-body h4 {
-    margin: 14px 0 6px 0; color: #546e7a; font-size: 14px; text-align: left;
-}
-
-.edit-modal-input-group {
-    display: flex; gap: 8px; margin-bottom: 12px;
-}
-
-.edit-modal-input {
-    width: 100%; padding: 10px 12px;
-    border: 1px solid #cfd8dc; border-radius: 8px;
-    font-size: 14px; box-sizing: border-box;
-}
-
-.edit-modal-footer {
-    margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;
-}
-
-.edit-btn-cancel {
-    background: #eceff1; color: #37474f; border: none;
-    padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold;
-}
-
-.edit-btn-save {
-    background: #4caf50; color: white; border: none;
-    padding: 10px 22px; border-radius: 8px; cursor: pointer; font-weight: bold;
-}
-
-.time-modal-clock { font-size: 46px; margin: 12px 0; }
-.time-modal-timestamp {
-    background: #f5f5f5; padding: 10px; border-radius: 8px;
-    font-family: monospace; font-size: 14px; color: #37474f; margin-bottom: 12px;
-}
-.time-modal-ago { font-size: 16px; color: #ff5722; font-weight: bold; margin-bottom: 20px; }
-.time-btn-close {
-    background: #0288d1; color: white; border: none;
-    padding: 11px 24px; border-radius: 8px; cursor: pointer;
-    font-weight: bold; width: 100%; font-size: 14px;
 }
