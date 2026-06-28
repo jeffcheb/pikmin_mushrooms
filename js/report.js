@@ -264,8 +264,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const item = localMushroomsData[id];
             
             // 🔍 進行條件篩選
-            if (cityFilter !== "all" && item.city !== cityFilter) return;
-            if (distFilter !== "all" && item.district !== distFilter) return;
+            // ========================================================
+// 🎯 👉 進階修改：支援跨行政區可見的模糊比對篩選
+// ========================================================
+if (cityFilter !== "all" && item.city !== cityFilter) return;
+
+if (distFilter !== "all") {
+    // 檢查一：回報時選定的主行政區是否相符
+    const matchPrimaryDistrict = item.district === distFilter;
+    
+    // 檢查二：具體地點名稱是否有提及該行政區 (例如名稱打：捷運站-大安/信義交界)
+    const matchLocationText = item.locationName.includes(distFilter);
+    
+    // 只要主行政區符合，或者地點名稱有提到，就代表該區玩家看得到！
+    if (!matchPrimaryDistrict && !matchLocationText) return;
+}
+// ========================================================
             if (keyword !== "") {
                 const matchLocation = item.locationName.toLowerCase().includes(keyword);
                 const matchType = item.type.toLowerCase().includes(keyword);
