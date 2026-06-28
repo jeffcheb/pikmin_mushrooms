@@ -1,4 +1,362 @@
-/* 🌟 最後更新時間專屬面板樣式 */
+/* ==========================================================================
+   🎨 1. 全域基礎樣式與主題設定
+   ========================================================================== */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
+    background-color: #f4f7f6;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1, h2, h3 {
+    color: #2e7d32;
+    text-align: center;
+}
+
+/* ==========================================================================
+   📦 2. 佈局容器 (Container)
+   ========================================================================== */
+.container {
+    max-width: 1000px;
+    width: 100%;
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    box-sizing: border-box;
+}
+
+/* ==========================================================================
+   📋 3. 表單元件樣式 (Form Controls)
+   ========================================================================== */
+.form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #455a64;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    padding: 10px 12px;
+    border: 1px solid #cfd8dc;
+    border-radius: 8px;
+    font-size: 15px;
+    box-sizing: border-box;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+    border-color: #4caf50;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(76,175,80,0.15);
+}
+
+.time-inline {
+    display: flex;
+    gap: 10px;
+}
+
+/* ==========================================================================
+   🔘 4. 按鈕樣式 (Buttons)
+   ========================================================================== */
+button.btn-submit {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(76,175,80,0.2);
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+button.btn-submit:hover {
+    background-color: #43a047;
+}
+
+button.btn-submit:active {
+    transform: scale(0.98);
+}
+
+#geo-btn {
+    background-color: #0288d1;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(2,136,209,0.2);
+}
+#geo-btn:hover {
+    background-color: #01579b;
+}
+
+/* ==========================================================================
+   🍓 5. 戰力計算器專用：皮克敏種類單選鈕
+   ========================================================================== */
+.pikmin-select {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.pikmin-select label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f9f9f9;
+    border: 2px solid #eceff1;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.pikmin-select input[type="radio"] {
+    display: none;
+}
+
+.pikmin-select label:hover {
+    background: #f1f8e9;
+    border-color: #c5e1a5;
+}
+
+.pikmin-select input[type="radio"]:checked + img,
+.pikmin-select label:has(input:checked) {
+    background: #e8f5e9;
+    border-color: #4caf50;
+    box-shadow: 0 2px 8px rgba(76,175,80,0.15);
+}
+
+.pikmin-select img {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 4px;
+    object-fit: contain;
+}
+
+/* ==========================================================================
+   🍄 6. 蘑菇情報現況卡片佈局 (Mushroom Cards)
+   ========================================================================== */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin-top: 16px;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid #e0e0e0;
+    position: relative;
+    box-sizing: border-box;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.card-icon {
+    width: 50px;
+    height: 50px;
+    float: right;
+    object-fit: contain;
+}
+
+.card h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    color: #37474f;
+    text-align: left;
+    padding-right: 40px;
+}
+
+.card p {
+    margin: 6px 0;
+    font-size: 14px;
+    color: #546e7a;
+}
+
+.countdown {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+/* 📌 釘選、📝 更新與 ❌ 刪除按鈕 */
+.pin-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+.pin-btn.active, .pin-btn:hover {
+    opacity: 1;
+}
+
+.quick-edit-btn {
+    position: absolute;
+    top: 8px;
+    right: 45px;
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+.quick-edit-btn:hover {
+    opacity: 1;
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #1e88e5;
+}
+
+.delete-btn {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+body.dev-active .delete-btn {
+    display: block;
+}
+
+/* ==========================================================================
+   🛠️ 7. 開發者維護後台
+   ========================================================================== */
+.dev-zone {
+    margin-top: 40px;
+    padding: 16px;
+    border-top: 2px dashed #cfd8dc;
+    text-align: center;
+    width: 100%;
+    max-width: 1000px;
+}
+#dev-mode-btn {
+    background: #546e7a;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+#dev-status {
+    font-size: 13px;
+    margin-top: 6px;
+    color: #78909c;
+}
+
+/* ==========================================================================
+   🌟 8. 網頁內嵌「快速更新現況面板」燈箱 (Modal)
+   ========================================================================== */
+.edit-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000;
+}
+
+.edit-modal-window {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    width: 90%; max-width: 420px;
+    padding: 24px;
+    box-sizing: border-box;
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.edit-modal-header {
+    font-size: 18px; font-weight: bold; color: #2e7d32;
+    margin-bottom: 16px; border-bottom: 2px solid #e8f5e9;
+    padding-bottom: 8px; display: flex; justify-content: space-between;
+}
+
+.edit-modal-close {
+    cursor: pointer; color: #999; font-size: 20px;
+}
+.edit-modal-close:hover { color: #d32f2f; }
+
+.edit-modal-body h4 {
+    margin: 12px 0 6px 0; color: #546e7a; font-size: 14px;
+}
+
+.edit-modal-input-group {
+    display: flex; gap: 8px; margin-bottom: 12px;
+}
+
+.edit-modal-input {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid #cfd8dc; border-radius: 8px;
+    font-size: 14px; box-sizing: border-box;
+}
+
+.edit-modal-input:focus {
+    border-color: #4caf50; outline: none; box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
+}
+
+.edit-modal-footer {
+    margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;
+}
+
+.edit-btn-cancel {
+    background: #eceff1; color: #37474f; border: none;
+    padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold;
+}
+
+.edit-btn-save {
+    background: #4caf50; color: white; border: none;
+    padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;
+    box-shadow: 0 4px 10px rgba(76,175,80,0.3);
+}
+.edit-btn-save:hover { background: #43a047; }
+.edit-btn-cancel:hover { background: #cfd8dc; }
+
+/* ==========================================================================
+   🌟 9. 網頁內嵌「最後更新時間 ◉」專屬面板樣式
+   ========================================================================== */
 .time-modal-window {
     background: #ffffff;
     border-radius: 16px;
@@ -9,22 +367,27 @@
     text-align: center;
     animation: modalFadeIn 0.25s ease;
 }
+
 .time-modal-header {
     font-size: 18px; font-weight: bold; color: #0288d1;
     margin-bottom: 14px; padding-bottom: 8px;
     border-bottom: 2px solid #e1f5fe;
 }
+
 .time-modal-clock {
     font-size: 42px; margin: 10px 0;
 }
+
 .time-modal-timestamp {
     background: #f5f5f5; padding: 8px 12px;
     border-radius: 8px; font-family: monospace;
     font-size: 14px; color: #37474f; margin-bottom: 12px;
 }
+
 .time-modal-ago {
     font-size: 16px; color: #ff5722; font-weight: bold; margin-bottom: 20px;
 }
+
 .time-btn-close {
     background: #0288d1; color: white; border: none;
     padding: 10px 24px; border-radius: 8px; cursor: pointer;
