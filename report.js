@@ -31,7 +31,7 @@ let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]'
 let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
 // ==========================================
-// 📡 2. Firebase 初始化
+// 📡 2. Firebase 初始化與資料庫
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
@@ -49,10 +49,8 @@ if (!firebase.apps.length) {
 const database = firebase.database();
 const dbRef = database.ref('mushrooms');
 
-// ==========================================
-// 🗺️ 3. 全台灣 22 縣市完整行政區資料庫 (修正語法錯誤)
-// ==========================================
-const TaiwanData = {
+// 全台灣 22 縣市完整行政區資料庫 (精準修正上版遺漏引號語法錯誤)
+const allTaiwanDistricts = {
     "基隆市": ["仁愛", "信義", "中正", "中山", "安樂", "暖暖", "七堵"],
     "臺北市": ["中正", "大同", "中山", "松山", "大安", "萬華", "信義", "士林", "北投", "內湖", "南港", "文山"],
     "新北市": ["板橋", "三重", "中和", "永和", "新莊", "新店", "樹林", "鶯歌", "三峽", "淡水", "汐止", "瑞芳", "土城", "蘆洲", "五股", "泰山", "林口", "深坑", "石碇", "坪林", "三芝", "石門", "八里", "平溪", "雙溪", "貢寮", "金山", "萬里", "烏來"],
@@ -78,10 +76,10 @@ const TaiwanData = {
 };
 
 // ==========================================
-// ⚙️ 4. 下拉選單連動與初始化
+// ⚙️ 3. 下拉選單連動控制與大小限制
 // ==========================================
 function initCityDropdowns() {
-    const cities = Object.keys(TaiwanData);
+    const cities = Object.keys(allTaiwanDistricts);
     formCitySelect.innerHTML = '';
     cities.forEach(city => {
         const opt = document.createElement('option');
@@ -108,8 +106,8 @@ function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = f
         defaultOpt.value = 'all'; defaultOpt.innerText = '顯示所有行政區';
         districtSelect.appendChild(defaultOpt);
     }
-    if (TaiwanData[selectedCity]) {
-        TaiwanData[selectedCity].forEach(dist => {
+    if (allTaiwanDistricts[selectedCity]) {
+        allTaiwanDistricts[selectedCity].forEach(dist => {
             const opt = document.createElement('option');
             opt.value = dist;
             let suffix = '區';
@@ -142,7 +140,7 @@ function updateCountLimitConstraint() {
 }
 
 // ==========================================
-// 🎴 5. 檢視模式控制與按鈕文字切換
+// 🎴 4. 清單/網格模式控制切換 (與 CSS 類別連動)
 // ==========================================
 function updateViewToggleBtnText() {
     if (!viewToggleBtn) return;
@@ -165,7 +163,7 @@ if (viewToggleBtn) {
 }
 
 // ==========================================
-// 🎯 6. 真・自動定位反查模組 (修復功能)
+// 🎯 5. 真・自動定位反查模組
 // ==========================================
 if (geoBtn) {
     geoBtn.addEventListener('click', () => {
@@ -182,13 +180,12 @@ if (geoBtn) {
                     const data = await response.json();
                     const address = data.display_name || "";
                     
-                    const normalizedAddress = address.toLowerCase().replace(/臺/g, "臺");
+                    const normalizedAddress = address.replace(/臺/g, "臺");
                     let matchedCity = null;
                     let matchedDistrict = null;
                     
-                    // 1. 先比對縣市
-                    for (let city of Object.keys(TaiwanData)) {
-                        if (normalizedAddress.includes(city)) {
+                    for (let city of Object.keys(allTaiwanDistricts)) {
+                        if (normalizedAddress.includes(city) || normalizedAddress.includes(city.replace('臺','台'))) {
                             matchedCity = city;
                             break;
                         }
@@ -198,8 +195,7 @@ if (geoBtn) {
                         filterCitySelect.value = matchedCity;
                         updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
                         
-                        // 2. 再比對行政區
-                        for (let dist of TaiwanData[matchedCity]) {
+                        for (let dist of allTaiwanDistricts[matchedCity]) {
                             if (normalizedAddress.includes(dist)) {
                                 matchedDistrict = dist;
                                 break;
@@ -208,13 +204,13 @@ if (geoBtn) {
 
                         if (matchedDistrict) {
                             filterDistrictSelect.value = matchedDistrict;
-                            alert(`🎯 定位成功！您目前位於：[${matchedCity} ${matchedDistrict}]`);
+                            alert(`🎯 定位成功！您目前位於：[${matchedCity} ${matchedDistrict}區]`);
                         } else {
                             filterDistrictSelect.value = "all";
-                            alert(`🎯 定位到縣市：[${matchedCity}]，但找不到精確行政區，已為您開啟全區顯示。`);
+                            alert(`🎯 定位到城市：[${matchedCity}]，但找不到細部行政區，已切換至全區顯示。`);
                         }
                     } else {
-                        alert("定位成功，但找不到對應的台灣縣市資料，已開啟全部顯示。");
+                        alert("定位成功，但找不到相符的台灣縣市，已自動切換為全區看版。");
                         filterCitySelect.value = "all";
                         filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>';
                     }
@@ -222,14 +218,14 @@ if (geoBtn) {
                     filterAndSortMushroomCards();
                     geoBtn.innerText = "🎯 自動定位";
                 } catch (error) {
-                    alert("網路請求失敗，無法解析 GPS 座標。");
+                    alert("網路連線逾時，無法反查行政區。");
                     geoBtn.innerText = "🎯 自動定位";
                 } finally {
                     geoBtn.disabled = false;
                 }
             },
             (error) => {
-                alert("GPS 定位獲取失敗，請確認是否允許瀏覽器位置權限。");
+                alert("瀏覽器 GPS 定位讀取失敗。請確認是否提供位置授權。");
                 geoBtn.innerText = "🎯 自動定位";
                 geoBtn.disabled = false;
             },
@@ -239,7 +235,7 @@ if (geoBtn) {
 }
 
 // ==========================================
-// 📊 7. 核心篩選、排序與卡片生成
+// 📊 6. 看板數據篩選、排序與卡片渲染 (修復所有隱形按鈕)
 // ==========================================
 function filterAndSortMushroomCards() {
     const selectedCity = filterCitySelect.value;
@@ -252,7 +248,7 @@ function filterAndSortMushroomCards() {
         if (!data) return false;
         const cardDistricts = Array.isArray(data.district) ? data.district : [data.district];
         const matchCity = (selectedCity === 'all' || data.city === selectedCity);
-        const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict));
+        const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict) || cardDistricts.includes(selectedDistrict.replace('區','').replace('鄉','').replace('鎮','')));
         const matchKeyword = (!searchKeyword || data.name.toLowerCase().includes(searchKeyword) || data.title.toLowerCase().includes(searchKeyword));
         return matchCity && matchDistrict && matchKeyword;
     });
@@ -310,10 +306,10 @@ function renderMushroomCard(id, data) {
         <button class="quick-edit-btn" title="更新">📝 更新</button>
         <button class="delete-btn" title="刪除">❌</button>
         <img src="picture/${data.img}" alt="菇" class="card-icon" onerror="this.src='picture/mushroom_red.png'">
-        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" style="cursor:pointer;">◉</span></h3>
+        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" style="cursor:pointer;color:#0288d1;font-weight:bold;">◉</span></h3>
         <p>📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
         <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="font-weight:bold;">⏳ 計算中...</p>
-        <p>👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
+        <p>👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;background:#2196f3;color:#fff;border:none;padding:2px 6px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:bold;margin-left:4px;">✅ 核實</button></p>
         <button class="notify-me-btn" style="border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">${notifyBtnText}</button>
     `;
     
@@ -361,8 +357,144 @@ function updateCountdowns() {
 }
 
 // ==========================================
-// 📌 8. 功能組件與 Firebase 交互
+// 📌 7. 彈出互動視窗按鈕綁定控制核心
 // ==========================================
+function setupCardClicks() {
+    mushroomContainer.addEventListener('click', (e) => {
+        const currentCard = e.target.closest('.card');
+        if (!currentCard) return;
+        const firebaseId = currentCard.getAttribute('data-id');
+
+        // 📝 快速更新彈出視窗功能綁定
+        if (e.target.classList.contains('quick-edit-btn')) {
+            dbRef.child(firebaseId).once('value', (snapshot) => {
+                const currentData = snapshot.val(); if (!currentData) return;
+                const maxLimit = getCountLimit(currentData.size);
+                let currentDists = Array.isArray(currentData.district) ? currentData.district.join(" ") : currentData.district;
+
+                const modalOverlay = document.createElement('div');
+                modalOverlay.className = 'edit-modal-overlay';
+                modalOverlay.innerHTML = `
+                    <div class="edit-modal-window">
+                        <div class="edit-modal-header"><span>📝 快速更新蘑菇現況</span><span class="edit-modal-close">&times;</span></div>
+                        <div class="edit-modal-body">
+                            <h4>目前人數：</h4>
+                            <input type="number" id="modal-pcount" class="edit-modal-input" value="${currentData.pCount}" min="0" max="${maxLimit}">
+                            <h4>倒數剩餘時間：</h4>
+                            <div class="edit-modal-input-group">
+                                <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours}">
+                                <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes}">
+                                <input type="number" id="modal-seconds" class="edit-modal-input" value="${currentData.seconds || 0}">
+                            </div>
+                            <h4>具體地點名稱：</h4>
+                            <input type="text" id="modal-dists" class="edit-modal-input" value="${currentData.name || ''}">
+                        </div>
+                        <div class="edit-modal-footer">
+                            <button class="edit-btn-cancel">取消</button>
+                            <button class="edit-btn-save">儲存更新</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modalOverlay);
+                
+                const closeBtn = modalOverlay.querySelector('.edit-modal-close');
+                const cancelBtn = modalOverlay.querySelector('.edit-btn-cancel');
+                const saveBtn = modalOverlay.querySelector('.edit-btn-save');
+                
+                const closeModal = () => modalOverlay.remove();
+                closeBtn.addEventListener('click', closeModal);
+                cancelBtn.addEventListener('click', closeModal);
+                
+                saveBtn.addEventListener('click', () => {
+                    const newCount = parseInt(document.getElementById('modal-pcount').value) || 0;
+                    const h = parseInt(document.getElementById('modal-hours').value) || 0;
+                    const m = parseInt(document.getElementById('modal-minutes').value) || 0;
+                    const s = parseInt(document.getElementById('modal-seconds').value) || 0;
+                    const nameRaw = document.getElementById('modal-dists').value.trim();
+                    const now = new Date();
+                    const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+                    
+                    dbRef.child(firebaseId).update({ 
+                        pCount: newCount, 
+                        hours: h, 
+                        minutes: m, 
+                        seconds: s, 
+                        name: nameRaw, 
+                        reportTime: newReportTime 
+                    }).then(() => closeModal());
+                });
+            });
+        }
+
+        // ⏰ 最後更新歷史時間按鈕功能綁定
+        if (e.target.classList.contains('time-info-btn')) {
+            const reportTimeStr = e.target.getAttribute('data-time');
+            if (!reportTimeStr) return;
+            const reportTimestamp = Date.parse(reportTimeStr.replace(/-/g, '/'));
+            const now = Date.now();
+            let timeAgoText = "未知";
+            if (!isNaN(reportTimestamp)) {
+                const diffMins = Math.floor((now - reportTimestamp) / 1000 / 60);
+                if (diffMins < 1) timeAgoText = "剛剛";
+                else if (diffMins < 60) timeAgoText = `${diffMins} 分鐘前`;
+                else timeAgoText = `${Math.floor(diffMins/60)} 小時 ${diffMins%60} 分鐘前`;
+            }
+            const timeOverlay = document.createElement('div');
+            timeOverlay.className = 'edit-modal-overlay'; 
+            timeOverlay.innerHTML = `
+                <div class="time-modal-window">
+                    <div class="time-modal-clock">⏰</div>
+                    <div class="time-modal-timestamp">${reportTimeStr}</div>
+                    <div class="time-modal-ago">${timeAgoText}更新</div>
+                    <button class="time-btn-close">我知道了</button>
+                </div>
+            `;
+            document.body.appendChild(timeOverlay);
+            timeOverlay.querySelector('.time-btn-close').addEventListener('click', () => timeOverlay.remove());
+        }
+
+        // ✅ 核實功能功能綁定
+        if (e.target.classList.contains('verify-fact-btn')) {
+            dbRef.child(firebaseId).once('value', (snapshot) => {
+                const currentData = snapshot.val(); if (!currentData) return;
+                const countdownEl = currentCard.querySelector('.countdown');
+                const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
+                let timeLeftMs = targetTime - Date.now();
+                let h = parseInt(currentData.hours), m = parseInt(currentData.minutes), s = parseInt(currentData.seconds || 0);
+                if (timeLeftMs > 0) {
+                    s = Math.floor((timeLeftMs / 1000) % 60); m = Math.floor((timeLeftMs / (1000 * 60)) % 60); h = Math.floor((timeLeftMs / (1000 * 60 * 60)) % 24);
+                }
+                const d = new Date();
+                const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${format(d.getDate())} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
+                dbRef.child(firebaseId).update({ hours: h, minutes: m, seconds: s, reportTime: newReportTime }).then(() => {
+                    alert("✅ 核實成功！已將情報時效更新為當前最新狀態。");
+                });
+            });
+        }
+    });
+}
+
+// 開發者模式功能控制
+function setupDeveloperMode() {
+    devModeBtn.addEventListener('click', () => {
+        if (!isDevMode) {
+            if (prompt("🔐 請輸入驗證密碼：") === "admin123") {
+                isDevMode = true; document.body.classList.add('dev-active'); devModeBtn.innerText = "🔒 關閉編輯模式";
+                devStatusText.innerText = "🔓 開發者模式：點擊卡片 ❌ 可下架蘑菇";
+            }
+        } else {
+            isDevMode = false; document.body.classList.remove('dev-active'); devModeBtn.innerText = "🛠️ 開啟開發者模式";
+            devStatusText.innerText = "🔒 安全瀏覽模式";
+        }
+    });
+    mushroomContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn') && confirm("⚠️ 確定要從全雲端看板下架此蘑菇嗎？")) {
+            dbRef.child(e.target.closest('.card').getAttribute('data-id')).remove();
+        }
+    });
+}
+
+// 📌 釘選按鈕點擊追蹤
 function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
@@ -405,8 +537,10 @@ filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
 if (cardSortSelect) cardSortSelect.addEventListener('change', filterAndSortMushroomCards);
 if (searchNameInput) searchNameInput.addEventListener('input', filterAndSortMushroomCards);
 
-// 全面初始化
+// 全站初始化啟動
 initCityDropdowns();
 setupPinFeature();
+setupCardClicks();
+setupDeveloperMode();
 listenToCloudDatabase();
 setInterval(updateCountdowns, 1000);
