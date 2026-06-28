@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皮克敏高階工具站 | 戰力模擬器</title>
+    <title>皮克敏高階工具站 | 戰力即時模擬器</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/simulator.css">
 </head>
@@ -16,73 +16,83 @@
             </div>
             <ul class="nav-links">
                 <li><a href="index.html" class="active">戰力模擬器</a></li>
-                <li><a href="report.html">蘑菇情報</a></li>
+                <li><a href="report.html">開源看板</a></li>
             </ul>
         </div>
     </nav>
 
     <main class="main-container">
-        <div class="card">
-            <h2>🍄 單隻戰力預估模擬器</h2>
-            <p class="description">請選擇您的皮克敏狀態與目標蘑菇，系統將為您即時計算預估破壞力。</p>
-
-            <form id="simulator-form" class="simulator-form">
+        <section class="card">
+            <h2>📊 戰力即時模擬器</h2>
+            <form id="simulator-form" class="simulator-form" onsubmit="return false;">
+                
                 <div class="form-group">
-    <label for="target-mushroom">目標蘑菇種類：</label>
-    <select id="target-mushroom" name="targetMushroom">
-        <option value="normal">一般蘑菇</option>
-        <option value="fire">🔥 火蘑菇</option>
-        <option value="water">💧 水蘑菇</option>
-        <option value="crystal">💎 水晶蘑菇</option>
-        <option value="poison">☠️ 毒蘑菇</option>
-        <option value="electric">⚡ 電蘑菇</option>
-        <option value="monthly_special">✨ 每月特殊蘑菇</option>
-    </select>
-</div>
+                    <label for="target-mushroom">目標蘑菇種類：</label>
+                    <select id="target-mushroom" name="targetMushroom">
+                        <option value="normal" selected>一般蘑菇 / 巨大蘑菇</option>
+                        <option value="fire">🔥 火蘑菇</option>
+                        <option value="water">💧 水蘑菇</option>
+                        <option value="crystal">💎 水晶蘑菇</option>
+                        <option value="poison">☠️ 毒蘑菇</option>
+                        <option value="electric">⚡ 電蘑菇</option>
+                        <option value="monthly_special">✨ 每月特殊蘑菇</option>
+                    </select>
+                </div>
 
-<div class="form-group">
-    <label for="flower-status">頭頂花朵狀態：</label>
-    <select id="flower-status" name="flowerStatus">
-        <option value="bare">禿頭 (+0)</option>
-        <option value="leaf">葉子頭 (+1)</option>
-        <option value="bud">花苞頭 (+2)</option>
-        <option value="normal_flower">普花頭 (+3)</option>
-        <option value="special_flower">特殊花 / 當月副花 (+4)</option>
-        <option value="monthly_main_flower">當月主花 (+5)</option>
-    </select>
-</div>
+                <div class="form-group">
+                    <label for="pikmin-color">皮克敏顏色 / 種類：</label>
+                    <select id="pikmin-color" name="pikminColor">
+                        <option value="purple">🟣 紫色皮克敏 (基礎戰力: 6)</option>
+                        <option value="rock">🪨 岩石皮克敏 (基礎戰力: 5)</option>
+                        <option value="red" selected>🔴 紅色皮克敏 (基礎戰力: 4)</option>
+                        <option value="yellow">🟡 黃色皮克敏 (基礎戰力: 3)</option>
+                        <option value="blue">🔵 藍色皮克敏 (基礎戰力: 3)</option>
+                        <option value="white">⚪ 白色皮克敏 (基礎戰力: 2)</option>
+                        <option value="winged">🪽 羽翅皮克敏 (基礎戰力: 2)</option>
+                    </select>
+                </div>
 
-<div class="form-group">
-    <label for="decor-status">飾品狀態：</label>
-    <select id="decor-status" name="decorStatus">
-        <option value="none">無飾品 (+0)</option>
-        <option value="normal_decor">一般飾品 (+4)</option>
-        <option value="monthly_main_decor">🎒 本月主飾品 (+4，打當月菇+300)</option>
-        <option value="monthly_sub_decor">🎖️ 本月副飾品 (+4，打當月菇+100)</option>
-    </select>
-</div>
+                <div class="form-group">
+                    <label for="flower-status">頭頂花朵狀態：</label>
+                    <select id="flower-status" name="flowerStatus">
+                        <option value="bare">基礎戰力 / 禿頭 (+0)</option>
+                        <option value="leaf">🌱 葉子頭 (+1)</option>
+                        <option value="bud">🟢 花苞頭 (+2)</option>
+                        <option value="normal_flower" selected>🌸 普花頭 (+3)</option>
+                        <option value="special_flower">🌹 特殊花 / 當月副花 (+4)</option>
+                        <option value="monthly_main_flower">🌻 當月主花 (+5)</option>
+                    </select>
+                </div>
 
-<div class="form-row">
-    <div class="form-group">
-        <label for="red-hearts">紅色愛心數量 (0-4)：</label>
-        <input type="number" id="red-hearts" min="0" max="4" value="4">
-    </div>
-    <div class="form-group">
-        <label for="gold-hearts">金色愛心數量 (0-4)：</label>
-        <input type="number" id="gold-hearts" min="0" max="4" value="0">
-    </div>
-</div>
+                <div class="form-group">
+                    <label for="decor-status">飾品狀態：</label>
+                    <select id="decor-status" name="decorStatus">
+                        <option value="none">無飾品 (+0)</option>
+                        <option value="normal_decor" selected>🎒 一般飾品 (+4)</option>
+                        <option value="monthly_main_decor">🎒 本月主飾品 (+4，打當月菇外加 +300)</option>
+                        <option value="monthly_sub_decor">🎖️ 本月副飾品 (+4，打當月菇外加 +100)</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="red-hearts">❤️ 紅色愛心數量 (0-4)：</label>
+                        <input type="number" id="red-hearts" min="0" max="4" value="4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gold-hearts">💛 金色愛心數量 (0-4)：</label>
+                        <input type="number" id="gold-hearts" min="0" max="4" value="0" required>
+                    </div>
+                </div>
+
             </form>
 
             <div class="result-section">
-                <h3>預估破壞力</h3>
-                <div id="power-result" class="power-value">--</div>
-                
-                <div id="error-message" class="error-message" style="display: none;">
-                    ❌ 禁止參戰：皮克敏屬性不符！
-                </div>
+                <h3>模擬單隻計算結果</h3>
+                <div id="power-result" class="power-value">0</div>
+                <div id="error-message" class="error-message" style="display: none;">❌ 屬性不符，禁止參戰！</div>
             </div>
-        </div>
+        </section>
     </main>
 
     <script src="js/common.js"></script>
