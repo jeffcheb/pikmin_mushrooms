@@ -76,11 +76,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const seconds = parseInt(document.getElementById("time-seconds").value) || 0;
 
             // 依種類指派 picture/ 資料夾對應的圖片
-            let iconPath = "picture/mushroom_normal.png"; 
-            if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
-            if (type.includes("水")) iconPath = "picture/mushroom_water.png";
-            if (type.includes("水晶")) iconPath = "picture/mushroom_crystal.png";
-            if (type.includes("毒")) iconPath = "picture/mushroom_poison.png";
+            // 在 js/report.js 中找到指派 iconPath 的地方，修改為：
+
+let iconPath = "picture/mushroom_normal.png"; // 預設圖片
+
+// 元素蘑菇判斷
+if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
+else if (type.includes("水")) iconPath = "picture/mushroom_water.png";
+else if (type.includes("水晶")) iconPath = "picture/mushroom_crystal.png";
+else if (type.includes("毒")) iconPath = "picture/mushroom_poison.png";
+else if (type.includes("電")) iconPath = "picture/mushroom_electric.png";
+
+// 普通顏色蘑菇判斷
+else if (type.includes("紅")) iconPath = "picture/shroom_red.png";
+else if (type.includes("藍")) iconPath = "picture/shroom_blue.png";
+else if (type.includes("黃")) iconPath = "picture/shroom_yellow.png";
+else if (type.includes("紫")) iconPath = "picture/shroom_purple.png";
+else if (type.includes("白")) iconPath = "picture/shroom_white.png";
+else if (type.includes("灰")) iconPath = "picture/shroom_gray.png";
+else if (type.includes("粉紅")) iconPath = "picture/shroom_pink.png";
+
+// 每月特殊蘑菇判斷
+else if (type.includes("每月特殊蘑菇")) {
+    iconPath = "picture/mushroom_monthly_special.png";
+}
 
             const nowTimestamp = Date.now();
 
