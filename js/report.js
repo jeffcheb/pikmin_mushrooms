@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🌍 核心新增一：即時看板「全台行政區篩選選單」初始化與連動
+    // 🌍 看板功能：即時看板「全台行政區篩選選單」初始化與連動
     // ========================================================
     function initFilterDistricts() {
         if (!filterCity || !filterDistrict || !window.taiwanData) return;
@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🎯 核心新增二：地理位置自動定位功能 (GPS 經緯度逆查縣市行政區)
+    // 🎯 定位功能：地理位置自動定位功能 (GPS 經緯度逆查縣市行政區)
     // ========================================================
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
@@ -108,26 +108,35 @@ document.addEventListener("DOMContentLoaded", () => {
                     const lon = position.coords.longitude;
 
                     try {
-                        // 使用開放免費的 OpenStreetMap Nominatim API 進行逆地理編碼
-                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`);
+                        // 使用 OpenStreetMap Nominatim API，並加上符合 GitHub Pages 規範的 User-Agent 識別標頭
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`,
+                            {
+                                headers: {
+                                    'User-Agent': 'PikminMushroomHub/1.0 (jeffcheb.github.io)'
+                                }
+                            }
+                        );
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP 錯誤！狀態碼: ${response.status}`);
+                        }
+
                         const data = await response.json();
                         
                         if (data && data.address) {
-                            // 撈取 API 回傳的城市與鄉鎮市區名稱
                             const city = data.address.city || data.address.town || data.address.county || "";
                             const suburb = data.address.suburb || data.address.district || data.address.village || "";
 
-                            // 格式化字串以符合台灣格式（去雜質、統一繁體）
+                            // 格式化字串，統一繁體名稱以對照字典
                             let detectCity = city.replace("臺", "台");
                             let detectDistrict = suburb.replace("臺", "台");
 
-                            // 對照看看是否有在我們的字典裡
                             let foundCity = Object.keys(window.taiwanData).find(c => detectCity.includes(c));
                             
                             if (foundCity) {
                                 filterCity.value = foundCity;
-                                // 觸發 Change 事件讓行政區下拉選單生成
-                                filterCity.dispatchEvent(new Event('change'));
+                                filterCity.dispatchEvent(new Event('change')); // 觸發行政區生成
 
                                 let foundDist = window.taiwanData[foundCity].find(d => detectDistrict.includes(d) || d.includes(detectDistrict));
                                 if (foundDist) {
@@ -135,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 }
                                 
                                 alert(`🎯 定位成功：已自動為您切換至【${foundCity} ${filterDistrict.value}】`);
-                                renderBoard(); // 重新渲染
+                                renderBoard(); 
                             } else {
                                 alert(`雖然定位成功，但找不到對應的台灣縣市名（偵測到：${detectCity}），請手動選取。`);
                             }
@@ -178,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const minutes = parseInt(document.getElementById("time-minutes").value) || 0;
             const seconds = parseInt(document.getElementById("time-seconds").value) || 0;
 
+            // 🌟 精準圖片指派邏輯 (包含普通、元素、當月特殊菇)
             let iconPath = "picture/mushroom_normal.png"; 
             if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
             else if (type.includes("水")) iconPath = "picture/mushroom_water.png";
@@ -222,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
             localMushroomsData = snapshot.val() || {};
             renderBoard();
         });
-        setInterval(renderBoard, 1000);
+        setInterval(renderBoard, 1000); // 每秒觸發一次以更新倒數秒數
     }
 
     function renderBoard() {
@@ -231,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let htmlContent = "";
         const keys = Object.keys(localMushroomsData);
 
-        // 取得當前的篩選值
+        // 撈取篩選與搜尋欄位數值
         const cityFilter = filterCity?.value || "all";
         const distFilter = filterDistrict?.value || "all";
         const keyword = searchKeyword?.value.trim().toLowerCase() || "";
@@ -262,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!matchLocation && !matchType) return;
             }
 
-            // 計算時間倒數
+            // 計算精準時間倒數
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
             const expireTime = item.createdAt + totalReportedMs;
             const msLeft = expireTime - Date.now();
@@ -277,21 +287,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 const s = totalSec % 60;
                 timeString = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
             } else {
-                const bufferLeft = 300000 + msLeft; 
+                const bufferLeft = 300000 + msLeft; // 5分鐘重生緩衝 (300,000 毫秒)
                 if (bufferLeft > 0) {
                     const totalSec = Math.floor(bufferLeft / 1000);
                     const m = Math.floor(totalSec / 60);
                     const s = totalSec % 60;
                     timeString = `🔄 下次出現倒數：${m}分${s}秒`;
-                    statusClass = "countdown-text buffer-period";
+                    statusClass = "countdown-text buffer-period"; // 變為紅色樣式
                 } else {
-                    return; // 超過重生緩衝 5 分鐘，直接過期隱藏
+                    return; // 超過緩衝期，過期不予渲染
                 }
             }
 
             renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
-            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
+            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 📌 釘選";
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}">
@@ -303,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </div>
                     <div class="card-body">
-                        <p>👥 參戰人數：<strong>${item.currentPlayers} / ${item.maxPlayers}</strong> 人</p>
+                        <p>👥 👥 參戰人數：<strong>${item.currentPlayers} / ${item.maxPlayers}</strong> 人</p>
                         <p class="${statusClass}">${timeString}</p>
                     </div>
                     <div class="card-footer">
@@ -343,12 +353,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // 確保等全域的地區字典與 Firebase 都好之後，同步啟動
+    // 確保 Firebase、全台行政區字典都成功載入後，再行掛載核心功能
     const checkFbInterval = setInterval(() => {
         if (window.fbDB && window.taiwanData) {
             clearInterval(checkFbInterval);
-            initFilterDistricts(); // 啟動篩選器選單生成
-            startBoardSync();      // 啟動雲端即時載入
+            initFilterDistricts(); 
+            startBoardSync();      
         }
     }, 200);
 });
