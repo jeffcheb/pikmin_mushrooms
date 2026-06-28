@@ -1,5 +1,5 @@
 /* ==========================================================================
-   🟢 基礎全站通用設定 (戰力計算機與回報看板共用)
+   🟢 基礎全站通用設定
    ========================================================================== */
 * {
     box-sizing: border-box;
@@ -13,19 +13,36 @@ body {
     padding: 20px;
 }
 
-/* 表單與控制面板通用樣式 (戰力計算、回報表單) */
-.form-section, .filter-section {
+/* ==========================================================================
+   🍄 1. 表單區與綠色篩選列 (修復擠在一起、高低不平的問題)
+   ========================================================================== */
+.form-section {
     background: #ffffff;
     border-radius: 8px;
     padding: 20px;
     margin: 20px auto;
+    max-width: 600px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .filter-section {
     background: #f1f8e9;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px auto;
     max-width: 1200px;
-    text-align: center;
+    /* 讓篩選列變成彈性盒子，自動置中、保持間距、不會亂跑 */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 h2 {
@@ -33,14 +50,16 @@ h2 {
     text-align: center;
 }
 
-/* 網頁通用按鈕與輸入框 */
-input, select {
+/* 輸入框、下拉選單與按鈕的統一高度與外觀 */
+input, select, button {
+    font-family: inherit;
+    font-size: 14px;
     padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 14px;
     outline: none;
-    transition: border 0.2s;
+    transition: all 0.2s;
+    height: 38px; /* 強制統一高度，解決高低不平 */
 }
 
 input:focus, select:focus {
@@ -48,7 +67,8 @@ input:focus, select:focus {
 }
 
 button {
-    transition: all 0.2s;
+    cursor: pointer;
+    border-radius: 20px; /* 圓角按鈕 */
 }
 
 button:hover {
@@ -56,7 +76,7 @@ button:hover {
 }
 
 /* ==========================================================================
-   🍄 預設：蘑菇卡片網格模式 (Grid Mode)
+   🍄 2. 預設：蘑菇卡片網格模式 (Grid Mode)
    ========================================================================== */
 #mushroom-container {
     display: grid;
@@ -90,74 +110,24 @@ button:hover {
     display: block;
 }
 
-.card h3 {
-    margin: 10px 0;
-    font-size: 18px;
-    color: #1b5e20;
-}
+.card h3 { margin: 10px 0; font-size: 18px; color: #1b5e20; }
+.card p { margin: 6px 0; font-size: 14px; color: #555; }
 
-.card p {
-    margin: 6px 0;
-    font-size: 14px;
-    color: #555;
-}
-
-/* 絕對定位的控制按鈕 (網格模式下) */
-.card .pin-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: transparent;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    opacity: 0.4;
-}
-
-.card .pin-btn.active, .card .pin-btn:hover {
-    opacity: 1;
-}
-
-.card .quick-edit-btn {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    background: #f5f5f5;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.card .delete-btn {
-    position: absolute;
-    top: 12px;
-    left: 60px;
-    background: #ffebee;
-    border: 1px solid #ffcdd2;
-    color: #c62828;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    cursor: pointer;
-    display: none;
-}
-
-body.dev-active .card .delete-btn {
-    display: block;
-}
+/* 卡片上的漂浮按鈕 */
+.card .pin-btn { position: absolute; top: 12px; right: 12px; background: transparent; border: none; font-size: 16px; opacity: 0.4; padding: 0; width: auto; height: auto; }
+.card .pin-btn.active, .card .pin-btn:hover { opacity: 1; }
+.card .quick-edit-btn { position: absolute; top: 12px; left: 12px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 11px; height: auto; }
+.card .delete-btn { position: absolute; top: 12px; left: 65px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; border-radius: 4px; padding: 4px 8px; font-size: 11px; height: auto; display: none; }
+body.dev-active .card .delete-btn { display: block; }
 
 /* ==========================================================================
-   📋 獨立擴充：回報看板「清單模式」專用樣式
+   📋 3. 獨立擴充：回報看板「清單模式」專用樣式
    ========================================================================== */
 #mushroom-container.list-view { 
     display: flex !important; 
     flex-direction: column !important; 
     max-width: 900px !important; 
     gap: 10px !important; 
-    margin: 20px auto !important; 
-    padding: 0 10px; 
 }
 
 #mushroom-container.list-view .card { 
@@ -229,82 +199,28 @@ body.dev-active .card .delete-btn {
     flex-shrink: 0; 
     padding: 4px 10px !important; 
     font-size: 12px !important; 
+    height: auto !important;
 }
 
 /* ==========================================================================
-   🔧 彈出視窗與互動模態框 (更新、時間核實等)
+   🔧 4. 彈出視窗與互動模態框 (更新、時間核實等)
    ========================================================================== */
 .edit-modal-overlay { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0,0,0,0.5); 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    z-index: 9999; 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; 
 }
-
 .edit-modal-window { 
-    background: white; 
-    padding: 20px; 
-    border-radius: 8px; 
-    width: 90%; 
-    max-width: 400px; 
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
-
-.edit-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 16px;
-    font-weight: bold;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-
-.edit-modal-close {
-    cursor: pointer;
-    font-size: 20px;
-    color: #999;
-}
-
-.edit-modal-input { 
-    width: 100%; 
-    padding: 8px; 
-    margin: 8px 0; 
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.edit-modal-input-group { 
-    display: flex; 
-    gap: 10px; 
-}
-
-.edit-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.edit-btn-cancel, .edit-btn-save, .time-btn-close {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
+.edit-modal-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+.edit-modal-close { cursor: pointer; font-size: 20px; color: #999; }
+.edit-modal-input { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+.edit-modal-input-group { display: flex; gap: 10px; }
+.edit-modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.edit-btn-cancel, .edit-btn-save, .time-btn-close { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: auto; }
 .edit-btn-cancel { background: #e0e0e0; color: #333; }
 .edit-btn-save { background: #2e7d32; color: #fff; }
 .time-btn-close { background: #0288d1; color: #fff; width: 100%; margin-top: 15px; }
-
 .time-modal-clock { font-size: 40px; text-align: center; margin: 10px 0; }
 .time-modal-timestamp { font-size: 18px; font-weight: bold; color: #333; text-align: center; }
 .time-modal-ago { font-size: 16px; color: #d32f2f; font-weight: bold; text-align: center; }
