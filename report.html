@@ -6,7 +6,7 @@
     <title>皮克敏蘑菇即時回報站</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <link rel="stylesheet" href="style.css?v=2026_perfect_fix">
+    <link rel="stylesheet" href="style.css?v=2026_ultimate_fix">
 </head>
 <body>
 
@@ -73,7 +73,7 @@
                     <div class="form-cell">
                         <label>👥 目前參戰人數：</label>
                         <input type="number" id="form-count" value="0" min="0">
-                        <span id="count-hint"></span>
+                        <span id="count-hint" style="font-size: 12px; color: #78909c; display: block; margin-top: 4px;"></span>
                     </div>
                 </div>
                 <div class="form-row">
@@ -123,9 +123,9 @@
             <button id="geo-btn">🎯 自動定位</button>
         </div>
 
-        <div style="text-align: center; margin: 20px 0;">
-            <button id="dev-mode-btn">🛠️ 開啟開發者模式</button>
-            <p id="dev-status">🔒 安全瀏覽模式</p>
+        <div class="dev-toolbar">
+            <button id="dev-mode-btn" class="dev-mode-btn">🛠️ 開啟開發者模式</button>
+            <span id="dev-status" class="dev-status">🔒 安全瀏覽模式</span>
         </div>
 
         <div id="mushroom-container"></div>
