@@ -363,21 +363,49 @@ document.addEventListener("DOMContentLoaded", () => {
     // ========================================================
     // 🚀 終極非同步修正：初始化與 Firebase 解耦
     // ========================================================
-    if (window.taiwanData) {
-        initFilterDistricts();
-    } else {
-        const checkDataInterval = setInterval(() => {
-            if (window.taiwanData) {
-                clearInterval(checkDataInterval);
-                initFilterDistricts();
-            }
-        }, 50);
+    // ========================================================
+    // 🚀 終極非同步修正：多軌輪詢機制，保證抓到台灣行政區資料
+    // ========================================================
+    function bootstrapFilter() {
+        // 同時檢查 window.taiwanData 與內建的保底資料
+        const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
+        
+        if (availableData) {
+            // 如果成功抓到資料，確保將其綁定到全域以便定位按鈕共用
+            window.taiwanData = availableData;
+            initFilterDistricts();
+            console.log("✅ [成功] 台灣行政區資料已成功導入即時看板選單。");
+            return true;
+        }
+        return false;
     }
 
+    // 軌道一：立刻執行嘗試
+    if (!bootstrapFilter()) {
+        // 軌道二：若失敗，開啟每 30 毫秒一次的高速輪詢檢查，直到成功為止
+        const forceLoadInterval = setInterval(() => {
+            if (bootstrapFilter()) {
+                clearInterval(forceLoadInterval);
+            }
+        }, 30);
+        
+        // 軌道三：設定一個 3 秒的超時防呆，若真的全丟包，強制生出最基礎的選單
+        setTimeout(() => {
+            clearInterval(forceLoadInterval);
+            if (!window.taiwanData || Object.keys(window.taiwanData).length === 0) {
+                console.warn("⚠️ 觸發保底機制：未能讀取到外部檔案，已自動為您掛載保底基礎縣市選單。");
+                window.taiwanData = { "台北市": ["大安區"], "新北市": ["板橋區"], "高雄市": ["前鎮區", "苓雅區"] };
+                initFilterDistricts();
+            }
+        }, 3000);
+    }
+
+    // 4. Firebase 監聽單獨走自己的軌道，互不干擾
     const checkFbInterval = setInterval(() => {
         if (window.fbDB) {
             clearInterval(checkFbInterval);
             startBoardSync(); 
+            console.log("🔥 [成功] Firebase 看板同步模組已上線。");
         }
-    }, 200);
+    }, 150);
 });
