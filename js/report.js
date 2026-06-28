@@ -15,27 +15,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let localMushroomsData = {};
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
+    
+    // 🔔 新增：本地儲存玩家開啟「重生提醒」的卡片 ID 清單
+    let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
+    // 🔔 新增：記錄已經發過通知的卡片 ID，避免在一分鐘內重複彈出通知
+    let firedAlerts = {};
 
-    // ========================================================
-    // 👥 人數動態限制：完美同步最新蘑菇上限規則
-    // ========================================================
+    // 請求瀏覽器通知權限
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    // 人數動態限制：完美同步最新蘑菇上限規則
     if (mushroomSize && currentPlayers) {
         const updateMaxPlayers = () => {
             const size = mushroomSize.value;
-            let maxVal = 30; // 預設一般
+            let maxVal = 30; 
             if (size === "小型") maxVal = 25;
             else if (size === "普通" || size === "一般") maxVal = 30;
             else if (size === "大型") maxVal = 35;
             else if (size === "巨大") maxVal = 40;
             
             currentPlayers.max = maxVal;
-            // 提示防呆：如果目前輸入的人數大於剛切換的上限，自動修正
             if (parseInt(currentPlayers.value) > maxVal) {
                 currentPlayers.value = maxVal;
             }
         };
         mushroomSize.addEventListener("change", updateMaxPlayers);
-        // 初始化時先跑一次
         updateMaxPlayers();
     }
 
@@ -206,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const minutes = parseInt(document.getElementById("time-minutes").value) || 0;
             const seconds = parseInt(document.getElementById("time-seconds").value) || 0;
 
-            // 根據大小動態計算最高上限存入資料庫
             let maxPlayersVal = 30;
             if (size === "小型") maxPlayersVal = 25;
             else if (size === "普通" || size === "一般") maxPlayersVal = 30;
@@ -243,7 +248,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(() => {
                     reportForm.reset();
                     document.getElementById("district").disabled = true;
-                    // 發佈後重新調校人數最大值
                     if (updateMaxPlayers) updateMaxPlayers();
                     alert("🎉 情報發佈成功！");
                 })
@@ -263,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🛠️ 核心修改：過期轉灰色「待現場更新」看板渲染引擎
+    // 🛠️ 看板渲染引擎 + 🔔 重生前 1 分鐘提醒核心邏輯
     // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
@@ -311,9 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let timeString = "";
             let statusClass = "countdown-text";
-            let expiredCardClass = ""; // 用來控制變灰色的 CSS 類別
+            let expiredCardClass = ""; 
 
-            // 重新校正動態最大參戰人數（相容舊資料）
             let displayMaxPlayers = item.maxPlayers || 30;
             if (item.size === "小型") displayMaxPlayers = 25;
             else if (item.size === "普通" || item.size === "一般") displayMaxPlayers = 30;
@@ -321,32 +324,44 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.size === "巨大") displayMaxPlayers = 40;
 
             if (msLeft > 0) {
-                // 🟢 進行中：顯示正常倒數
+                // 🟢 進行中
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
                 const s = totalSec % 60;
                 timeString = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
             } else {
-                const bufferLeft = 300000 + msLeft; // 5分鐘（300,000毫秒）
+                const bufferLeft = 300000 + msLeft; // 5分鐘
                 if (bufferLeft > 0) {
-                    // 🔴 5分鐘內：顯示轉生倒數
+                    // 🔴 5分鐘重生倒數
                     const totalSec = Math.floor(bufferLeft / 1000);
                     const m = Math.floor(totalSec / 60);
                     const s = totalSec % 60;
                     timeString = `🔄 下次出現倒數：${m}分${s}秒`;
                     statusClass = "countdown-text buffer-period"; 
+
+                    // 🔔 【核心：重生前 1 分鐘通知觸發點】 🔔
+                    // 如果剩餘秒數在 50~60 秒之間 (重生前1分鐘左右)，且玩家有開啟該卡片的提醒，且該輪未觸發過
+                    if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
+                        firedAlerts[id] = true; // 鎖定防重複
+                        triggerWebNotification(item);
+                    }
                 } else {
-                    // 🔘 超過5分鐘：【核心更動】卡片不消失，強制轉為灰色「待更新」狀態！
+                    // 🔘 超過5分鐘，轉灰色待更新
                     timeString = `🔄 待現場玩家更新 (新菇已出生)`;
                     statusClass = "countdown-text need-update-period";
-                    expiredCardClass = "card-expired-mode"; // 用於加入灰色濾鏡與樣式
+                    expiredCardClass = "card-expired-mode"; 
                 }
             }
 
             renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
+            
+            // 🔔 檢查本地狀態，決定提醒按鈕的樣式與文字
+            const isAlertEnabled = alertEnabledList.includes(id);
+            const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 關閉提醒";
+            const alertBtnClass = isAlertEnabled ? "btn-alert-on" : "btn-alert-off";
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
@@ -363,6 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
+                        <button class="btn-sm btn-alert ${alertBtnClass}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
                         <button class="btn-sm" onclick="quickJoin('${id}')" ${expiredCardClass ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>➕ 人數+1</button>
                     </div>
                 </div>
@@ -373,6 +389,44 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
         } else {
             mushroomBoard.innerHTML = htmlContent;
+        }
+    }
+
+    // 🔔 點擊切換個別卡片的提醒狀態 (本地存取)
+    window.toggleAlert = (id) => {
+        if ("Notification" in window && Notification.permission === "denied") {
+            alert("❌ 您已封鎖瀏覽器通知權限，請至網址列左側鎖頭開啟，否則無法收到重生提醒喔！");
+            return;
+        }
+        
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                if (permission !== "granted") return;
+            });
+        }
+
+        const index = alertEnabledList.indexOf(id);
+        if (index > -1) {
+            alertEnabledList.splice(index, 1);
+            delete firedAlerts[id]; // 重設警報發送標記
+        } else {
+            alertEnabledList.push(id);
+        }
+        
+        localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
+        renderBoard(); // 即時重新渲染按鈕狀態
+    };
+
+    // 🔔 觸發原生瀏覽器通知
+    function triggerWebNotification(item) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            const title = "🍄 皮克敏蘑菇轉生預告！";
+            const options = {
+                body: `📍【${item.city}${item.district} - ${item.locationName}】的蘑菇將在 1 分鐘後原地出生，準備卡位！`,
+                icon: item.mushroomIcon || "picture/mushroom_normal.png",
+                requireInteraction: true // 通知會一直停留在畫面上，直到玩家手動關閉或點擊
+            };
+            new Notification(title, options);
         }
     }
 
