@@ -7,7 +7,7 @@ const formDistrictSelect = document.getElementById('form-district');
 const filterCitySelect = document.getElementById('filter-city');
 const filterDistrictSelect = document.getElementById('filter-district');
 
-// 🌟 新增：排序下拉選單的 DOM 節點 (請確保你的 html 中有 id="card-sort" 的 select 元素)
+// 排序下拉選單
 const cardSortSelect = document.getElementById('card-sort') || document.createElement('select');
 
 const formTypeSelect = document.getElementById('form-type');
@@ -19,7 +19,7 @@ const devModeBtn = document.getElementById('dev-mode-btn');
 const devStatusText = document.getElementById('dev-status');
 let isDevMode = false;
 
-// 儲存目前從雲端抓取到的所有蘑菇原始資料，方便隨時即時排序
+// 儲存目前從雲端抓取到的所有蘑菇原始資料
 let globalMushroomList = [];
 
 // 🛜 完美對齊你的美國資料庫設定
@@ -123,15 +123,11 @@ function updateCountLimitConstraint() {
     if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
 }
 
-// 🎯 ===================================================
-// 📊 核心新功能：處理五大維度卡片排序與行政區聯動篩選
-// ===================================================
 function filterAndSortMushroomCards() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
-    const sortWay = cardSortSelect.value; // 取得目前選取的排序方式
+    const sortWay = cardSortSelect.value;
 
-    // 1. 先進行地區過濾
     let filteredList = globalMushroomList.filter(item => {
         const data = item.data;
         const cardDistricts = Array.isArray(data.district) ? data.district : [data.district];
@@ -140,57 +136,42 @@ function filterAndSortMushroomCards() {
         return matchCity && matchDistrict;
     });
 
-    // 2. 進行權重定義 (用於大小與種類的文字排序排序)
     const sizeWeight = { "巨型": 4, "大": 3, "普通": 2, "小": 1 };
 
-    // 3. 核心排序算法
     filteredList.sort((a, b) => {
         const dataA = a.data;
         const dataB = b.data;
 
         if (sortWay === "updateTime") {
-            // A. 更新時間排序 (精準度：毫秒比較，最新上報的排在最前面)
             const timeA = Date.parse(dataA.reportTime.replace(/-/g, '/')) || 0;
             const timeB = Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0;
             return timeB - timeA;
-
         } else if (sortWay === "remainingTime") {
-            // B. 剩餘倒數時間排序 (時間最少、快打完的蘑菇優先排在最前面)
             const now = Date.now();
             const getMsLeft = (d) => {
                 const repTime = Date.parse(d.reportTime.replace(/-/g, '/')) || 0;
                 const totalDur = ((parseInt(d.hours) || 0) * 3600 + (parseInt(d.minutes) || 0) * 60 + (parseInt(d.seconds) || 0)) * 1000;
                 return (repTime + totalDur) - now;
             };
-            // 已過期的移到最後面
             const leftA = getMsLeft(dataA);
             const leftB = getMsLeft(dataB);
             if (leftA <= 0) return 1;
             if (leftB <= 0) return -1;
             return leftA - leftB;
-
         } else if (sortWay === "totalPlayers") {
-            // C. 總人數排序 (在場人數最多的优先排前面)
             return (dataB.pCount || 0) - (dataA.pCount || 0);
-
         } else if (sortWay === "mushroomSize") {
-            // D. 蘑菇大小排序 (巨型 > 大 > 普通 > 小)
             const wA = sizeWeight[dataA.size] || 0;
             const wB = sizeWeight[dataB.size] || 0;
             return wB - wA;
-
         } else if (sortWay === "mushroomType") {
-            // E. 蘑菇種類排序 (按標題中文字元或種類代碼拼音排序)
             return dataA.title.localeCompare(dataB.title, 'zh-Hant');
         }
         return 0;
     });
 
-    // 4. 清空容器並依照排序完的順序重新渲染卡片
     mushroomContainer.innerHTML = '';
-    filteredList.forEach(item => {
-        renderMushroomCard(item.id, item.data);
-    });
+    filteredList.forEach(item => { renderMushroomCard(item.id, item.data); });
 }
 
 function setupPinFeature() {
@@ -199,7 +180,7 @@ function setupPinFeature() {
             const currentCard = e.target.closest('.card');
             e.target.classList.toggle('active');
             if (e.target.classList.contains('active')) { mushroomContainer.prepend(currentCard); }
-            else { filterAndSortMushroomCards(); } // 取消釘選時，恢復本來的排序
+            else { filterAndSortMushroomCards(); }
         }
     });
 }
@@ -209,11 +190,9 @@ function setupTimeInfoFeature() {
         if (e.target.classList.contains('time-info-btn')) {
             const reportTimeStr = e.target.getAttribute('data-time');
             if (!reportTimeStr) return;
-            
             const reportTimestamp = Date.parse(reportTimeStr.replace(/-/g, '/'));
             const now = Date.now();
             const diffMs = now - reportTimestamp;
-            
             let timeAgoText = "未知";
             if (!isNaN(reportTimestamp)) {
                 const diffMins = Math.floor(diffMs / 1000 / 60);
@@ -245,12 +224,54 @@ function setupTimeInfoFeature() {
     });
 }
 
+// 🎯 ===================================================
+// 📝 核心優化：整合「快速更新面板」與「一鍵核實符合事實」功能
+// ===================================================
 function setupQuickEditFeature() {
     mushroomContainer.addEventListener('click', (e) => {
+        const currentCard = e.target.closest('.card');
+        if (!currentCard) return;
+        const firebaseId = currentCard.getAttribute('data-id');
+
+        // 🔥 功能 A：點擊「✅ 核實」按鈕，直接刷新最後更新時間
+        if (e.target.classList.contains('verify-fact-btn')) {
+            dbRef.child(firebaseId).once('value', (snapshot) => {
+                const currentData = snapshot.val();
+                if (!currentData) return;
+
+                // 讀取目前卡片上的倒數計時元素，動態捕捉當下的真實精確剩餘時間
+                const countdownEl = currentCard.querySelector('.countdown');
+                const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
+                const now = Date.now();
+                let timeLeftMs = targetTime - now;
+
+                let h = parseInt(currentData.hours);
+                let m = parseInt(currentData.minutes);
+                let s = parseInt(currentData.seconds || 0);
+
+                // 如果還在倒數中，就直接重新計算精確的時間寫回，校正時差！
+                if (timeLeftMs > 0) {
+                    s = Math.floor((timeLeftMs / 1000) % 60);
+                    m = Math.floor((timeLeftMs / (1000 * 60)) % 60);
+                    h = Math.floor((timeLeftMs / (1000 * 60 * 60)) % 24);
+                }
+
+                const d = new Date();
+                const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${format(d.getDate())} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
+
+                // 原封不動地把數據包裝，只刷新上報時間與精準剩餘倒數
+                dbRef.child(firebaseId).update({
+                    hours: h, minutes: m, seconds: s,
+                    reportTime: newReportTime
+                }).then(() => {
+                    alert("✅ 訊息核實完畢！最後更新時間已刷新為剛剛，警示已被解除！");
+                });
+            });
+            return;
+        }
+
+        // 🛠️ 功能 B：點擊「📝 更新」按鈕，彈出燈箱面板修改資料
         if (e.target.classList.contains('quick-edit-btn')) {
-            const currentCard = e.target.closest('.card');
-            const firebaseId = currentCard.getAttribute('data-id');
-            
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val();
                 if (!currentData) return;
@@ -307,16 +328,9 @@ function setupQuickEditFeature() {
                     const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
 
                     dbRef.child(firebaseId).update({
-                        pCount: newCount,
-                        hours: h,
-                        minutes: m,
-                        seconds: s,
-                        district: distArray,
-                        reportTime: newReportTime
-                    }).then(() => {
-                        alert("🚀 現況已即時全台同步更新！");
-                        closeModal();
-                    });
+                        pCount: newCount, hours: h, minutes: m, seconds: s,
+                        district: distArray, reportTime: newReportTime
+                    }).then(() => { alert("🚀 現況已即時全台同步更新！"); closeModal(); });
                 });
             });
         }
@@ -364,9 +378,11 @@ function renderMushroomCard(id, data) {
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
+    // 🌟 在卡片右上角釘選旁，多挖一粒「✅ 核實」按鈕
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
-        <button class="quick-edit-btn" title="快速原地更新資料">📝 更新</button>
+        <button class="quick-edit-btn" title="快速原地修改人數時間">📝 更新</button>
+        <button class="verify-fact-btn" title="現場勘查無誤！一鍵刷新回報時間" style="position:absolute; top:8px; right:95px; background:#e8f5e9; border:1px solid #81c784; border-radius:4px; cursor:pointer; font-size:12px; padding:2px 6px; color:#2e7d32;">✅ 核實</button>
         <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
         <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
         <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" title="查看最後更新時間" style="cursor:pointer; color:#0288d1; margin-left:5px;">◉</span></h3>
@@ -379,7 +395,7 @@ function renderMushroomCard(id, data) {
         <p>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</p>
     `;
     initSingleCountdown(newCard.querySelector('.countdown'));
-    mushroomContainer.appendChild(newCard); // 按照 sort 的順序塞入
+    mushroomContainer.appendChild(newCard);
 }
 
 function setupReportForm() {
@@ -392,15 +408,14 @@ function setupReportForm() {
         if (pCount < 0 || pCount > limit) { alert(`❌ 人數超出當前限制 (0-${limit}人)。`); return; }
 
         const city = formCitySelect.value;
-        const district = [formDistrictSelect.value]; 
+        const district = formDistrictSelect.value; 
         const name = document.getElementById('form-name').value.trim();
         const type = formTypeSelect.value;
         const hours = parseInt(document.getElementById('form-hours').value) || 0;
         const minutes = parseInt(document.getElementById('form-minutes').value) || 0;
         const seconds = parseInt(document.getElementById('form-seconds').value) || 0; 
 
-        const now = new Date();
-        const reportTimeString = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+        if (!name) { alert("❌ 請輸入具體地點名稱！"); return; }
 
         const typeMapping = {
             red: { title: "紅色蘑菇", img: "mushroom_red.png" },
@@ -420,53 +435,74 @@ function setupReportForm() {
         };
         const mInfo = typeMapping[type] || { title: "未知蘑菇", img: "mushroom_red.png" };
 
-        dbRef.once('value', (snapshot) => {
-            let existingKey = null;
-            snapshot.forEach((childSnapshot) => {
-                const val = childSnapshot.val();
-                if (val.city === city && val.name === name) { existingKey = childSnapshot.key; }
+        const confirmOverlay = document.createElement('div');
+        confirmOverlay.className = 'edit-modal-overlay'; 
+        confirmOverlay.innerHTML = `
+            <div class="edit-modal-window" style="max-width: 380px;">
+                <div class="edit-modal-header" style="color: #e65100; border-bottom: 2px solid #fff3e0;">
+                    <span>🔍 檢查並確認蘑菇訊息</span>
+                </div>
+                <div class="edit-modal-body" style="text-align: left; font-size: 14px; color: #37474f; line-height: 1.8;">
+                    <p style="margin: 8px 0; border-bottom: 1px dashed #eceff1; padding-bottom: 6px;"><strong>📍 所在位置：</strong>${city} ${district}</p>
+                    <p style="margin: 8px 0; border-bottom: 1px dashed #eceff1; padding-bottom: 6px;"><strong>🏢 地點名稱：</strong>${name}</p>
+                    <p style="margin: 8px 0; border-bottom: 1px dashed #eceff1; padding-bottom: 6px;"><strong>🍄 蘑菇種類：</strong>${mInfo.title} (${size})</p>
+                    <p style="margin: 8px 0; border-bottom: 1px dashed #eceff1; padding-bottom: 6px;"><strong>👥 目前人數：</strong><span style="color: #2e7d32; font-weight: bold;">${pCount}</span> / ${limit} 人</p>
+                    <p style="margin: 8px 0; padding-bottom: 6px;"><strong>⏳ 剩餘時間：</strong>${hours} 小時 ${minutes} 分 ${seconds} 秒</p>
+                </div>
+                <div class="edit-modal-footer">
+                    <button class="edit-btn-cancel" id="confirm-back-btn">返回修改</button>
+                    <button class="edit-btn-save" id="confirm-submit-btn" style="background: #e65100; box-shadow: 0 4px 10px rgba(230,81,0,0.3);">訊息無誤，送出</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(confirmOverlay);
+
+        confirmOverlay.querySelector('#confirm-back-btn').addEventListener('click', () => confirmOverlay.remove());
+        confirmOverlay.querySelector('#confirm-submit-btn').addEventListener('click', () => {
+            confirmOverlay.remove();
+            const now = new Date();
+            const reportTimeString = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+
+            dbRef.once('value', (snapshot) => {
+                let existingKey = null;
+                snapshot.forEach((childSnapshot) => {
+                    const val = childSnapshot.val();
+                    if (val.city === city && val.name === name) { existingKey = childSnapshot.key; }
+                });
+
+                let finalDistricts = [district];
+                if (existingKey && snapshot.child(existingKey).val().district) {
+                    const oldDist = snapshot.child(existingKey).val().district;
+                    const oldDistArray = Array.isArray(oldDist) ? oldDist : [oldDist];
+                    finalDistricts = Array.from(new Set([...oldDistArray, district]));
+                }
+
+                const targetData = { city, district: finalDistricts, name, size, title: mInfo.title, img: mInfo.img, reportTime: reportTimeString, hours, minutes, seconds, pCount, limit };
+
+                if (existingKey) { dbRef.child(existingKey).set(targetData).then(() => alert("🔄 偵測到相同地點！已合併情報並刷新校準時間！")); }
+                else { dbRef.push(targetData).then(() => alert("🚀 蘑菇情報已成功同步至雲端！")); }
+
+                filterCitySelect.value = city;
+                updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
+                filterDistrictSelect.value = finalDistricts[0];
+
+                mushroomForm.reset();
+                document.getElementById('form-seconds').value = "0"; 
+                updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
+                updateCountLimitConstraint(); 
+                filterAndSortMushroomCards();
             });
-
-            let finalDistricts = district;
-            if (existingKey && snapshot.child(existingKey).val().district) {
-                const oldDist = snapshot.child(existingKey).val().district;
-                const oldDistArray = Array.isArray(oldDist) ? oldDist : [oldDist];
-                finalDistricts = Array.from(new Set([...oldDistArray, ...district]));
-            }
-
-            const targetData = { city, district: finalDistricts, name, size, title: mInfo.title, img: mInfo.img, reportTime: reportTimeString, hours, minutes, seconds, pCount, limit };
-
-            if (existingKey) {
-                dbRef.child(existingKey).set(targetData).then(() => alert("🔄 情報合併與時間校準完畢！"));
-            } else {
-                dbRef.push(targetData).then(() => alert("🚀 蘑菇成功同步至雲端資料庫！"));
-            }
-
-            filterCitySelect.value = city;
-            updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
-            filterDistrictSelect.value = finalDistricts[0];
-
-            mushroomForm.reset();
-            document.getElementById('form-seconds').value = "0"; 
-            updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
-            updateCountLimitConstraint(); 
         });
     });
 }
 
-// 🎯 ===================================================
-// 💾 從 Firebase 監聽：每次資料庫更新，重新跑過濾與排序
-// ===================================================
 function listenToCloudDatabase() {
     dbRef.on('value', (snapshot) => {
-        globalMushroomList = []; // 重設清單
+        globalMushroomList = [];
         snapshot.forEach((childSnapshot) => {
-            globalMushroomList.push({
-                id: childSnapshot.key,
-                data: childSnapshot.val()
-            });
+            globalMushroomList.push({ id: childSnapshot.key, data: childSnapshot.val() });
         });
-        filterAndSortMushroomCards(); // 即時重排
+        filterAndSortMushroomCards();
     });
 }
 
@@ -528,15 +564,12 @@ function updateCountdowns() {
         const h3Title = currentCard.querySelector('h3');
         const reportTimeString = el.getAttribute('data-report-time');
         
-        // 1. 🔍 判定「許久未更新」警示 (例如超過 15 分鐘 = 900,000 毫秒)
         const reportTimestamp = Date.parse(reportTimeString.replace(/-/g, '/'));
-        const alertThreshold = 15 * 60 * 1000; // 15 分鐘，你可以自由改成 10 或 20
+        const alertThreshold = 15 * 60 * 1000; // 15 分鐘未更新警示
         
-        // 先檢查是不是已經有警示標籤了，避免重覆塞進去
         let existWarning = h3Title.querySelector('.time-warning-tag');
         
         if (!isNaN(reportTimestamp) && (now - reportTimestamp > alertThreshold)) {
-            // 超過 15 分鐘未更新：如果還沒有驚嘆號，就補上一個漂亮的黃色驚嘆號
             if (!existWarning) {
                 const warningSpan = document.createElement('span');
                 warningSpan.className = 'time-warning-tag';
@@ -546,11 +579,9 @@ function updateCountdowns() {
                 h3Title.appendChild(warningSpan);
             }
         } else {
-            // 如果後來有人點擊更新了（時差回到 15 分鐘內）：就把驚嘆號移除
             if (existWarning) { existWarning.remove(); }
         }
 
-        // 2. ⏳ 原本的倒數計時顯示邏輯 (完全保留)
         const targetTime = parseInt(el.getAttribute('data-target'));
         const respawnTime = parseInt(el.getAttribute('data-respawn'));
         let timeLeft = targetTime - now;
@@ -567,7 +598,6 @@ function updateCountdowns() {
             if (respawnTime - now > 0) {
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
-                // 既然都已經打完了，過期警示也就順便拔掉
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
             } else {
                 el.innerText = `⌛ 狀態：新蘑菇待更新...`;
@@ -578,7 +608,7 @@ function updateCountdowns() {
         }
     });
 }
-// 監聽器設定
+
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
     if (filterCitySelect.value === 'all') {
@@ -586,7 +616,7 @@ filterCitySelect.addEventListener('change', () => {
     } else { updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true); filterAndSortMushroomCards(); }
 });
 filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
-cardSortSelect.addEventListener('change', filterAndSortMushroomCards); // 🌟 當切換排序選項時，立刻即時排序
+cardSortSelect.addEventListener('change', filterAndSortMushroomCards);
 
 formTypeSelect.addEventListener('change', updateCountLimitConstraint);
 formSizeSelect.addEventListener('change', updateCountLimitConstraint);
