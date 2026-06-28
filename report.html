@@ -110,20 +110,24 @@
                 <h2>🌍 即時蘑菇看板</h2>
                 
                 <div class="board-controls">
-                    <div class="filters">
-                        <input type="text" id="search-keyword" placeholder="🔍 搜尋地點或種類...">
-                        <select id="filter-city">
-                            <option value="all">所有縣市</option>
-                            <option value="台北市">台北市</option>
-                            <option value="新北市">新北市</option>
-                            <option value="高雄市">高雄市</option>
-                            </select>
-                    </div>
-                    <div class="view-toggles">
-                        <button id="btn-grid-view" class="active" title="網格模式">🔲</button>
-                        <button id="btn-list-view" title="清單模式">📄</button>
-                    </div>
-                </div>
+    <div class="filters">
+        <input type="text" id="search-keyword" placeholder="🔍 搜尋地點或種類...">
+        
+        <select id="filter-city">
+            <option value="all">所有縣市</option>
+            </select>
+        
+        <select id="filter-district" disabled>
+            <option value="all">所有行政區</option>
+            </select>
+
+        <button id="btn-auto-location" class="btn-sm" type="button" title="自動定位目前區域">🎯 定位</button>
+    </div>
+    <div class="view-toggles">
+        <button id="btn-grid-view" class="active" title="網格模式">🔲</button>
+        <button id="btn-list-view" title="清單模式">📄</button>
+    </div>
+</div>
             </div>
 
             <div id="mushroom-board" class="board-container grid-view">
