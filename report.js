@@ -149,32 +149,55 @@ function setupPinFeature() {
     });
 }
 
+// 🎯 ===================================================
+// ◉ 核心改動：最後更新時間也全面升級為「精美彈出面板」
+// ===================================================
 function setupTimeInfoFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('time-info-btn')) {
             const reportTimeStr = e.target.getAttribute('data-time');
             if (!reportTimeStr) return;
+            
             const reportTimestamp = Date.parse(reportTimeStr.replace(/-/g, '/'));
             const now = Date.now();
             const diffMs = now - reportTimestamp;
-            if (isNaN(reportTimestamp)) { alert(`📝 最後更新時間：${reportTimeStr}`); return; }
-            const diffMins = Math.floor(diffMs / 1000 / 60);
-            let timeAgoText = "";
-            if (diffMins < 1) { timeAgoText = "剛剛（1 分鐘內）"; }
-            else if (diffMins < 60) { timeAgoText = `${diffMins} 分鐘前`; }
-            else {
-                const diffHours = Math.floor(diffMins / 60);
-                const remainMins = diffMins % 60;
-                timeAgoText = `${diffHours} 小時 ${remainMins} 分鐘前`;
+            
+            let timeAgoText = "未知";
+            if (!isNaN(reportTimestamp)) {
+                const diffMins = Math.floor(diffMs / 1000 / 60);
+                if (diffMins < 1) { timeAgoText = "剛剛（1 分鐘內）"; }
+                else if (diffMins < 60) { timeAgoText = `${diffMins} 分鐘前`; }
+                else {
+                    const diffHours = Math.floor(diffMins / 60);
+                    const remainMins = diffMins % 60;
+                    timeAgoText = `${diffHours} 小時 ${remainMins} 分鐘前`;
+                }
+            } else {
+                timeAgoText = reportTimeStr;
             }
-            alert(`⏰ 蘑菇情報最後更新時間：\n👉 ${reportTimeStr}\n歷史時差：大約在 ${timeAgoText} 進行了資料同步。`);
+
+            // 🏗️ 動態建立精美的時間面板 HTML
+            const timeOverlay = document.createElement('div');
+            timeOverlay.className = 'edit-modal-overlay'; // 沿用遮罩模糊底色
+            timeOverlay.innerHTML = `
+                <div class="time-modal-window">
+                    <div class="time-modal-header">⏰ 情報最後更新歷史</div>
+                    <div class="time-modal-clock">🕒</div>
+                    <p style="font-size:14px; color:#546e7a; margin:4px 0 10px 0;">上報同步時間點：</p>
+                    <div class="time-modal-timestamp">${reportTimeStr}</div>
+                    <p style="font-size:14px; color:#546e7a; margin:14px 0 4px 0;">距離現在已過去：</p>
+                    <div class="time-modal-ago">${timeAgoText}</div>
+                    <button class="time-btn-close">我知道了</button>
+                </div>
+            `;
+            document.body.appendChild(timeOverlay);
+
+            // 🛑 點擊按鈕關閉
+            timeOverlay.querySelector('.time-btn-close').addEventListener('click', () => timeOverlay.remove());
         }
     });
 }
 
-// 🎯 ===================================================
-// 📝 核心改動：升級為全內嵌「精美整合更新面板」
-// ===================================================
 function setupQuickEditFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('quick-edit-btn')) {
@@ -188,7 +211,6 @@ function setupQuickEditFeature() {
                 const maxLimit = getCountLimit(currentData.size);
                 let currentDists = Array.isArray(currentData.district) ? currentData.district.join(" ") : currentData.district;
 
-                // 🏗️ 動態建立精美面板 DOM 節點
                 const modalOverlay = document.createElement('div');
                 modalOverlay.className = 'edit-modal-overlay';
                 modalOverlay.innerHTML = `
@@ -222,12 +244,10 @@ function setupQuickEditFeature() {
 
                 document.body.appendChild(modalOverlay);
 
-                // 🛑 點擊取消或打叉關閉面板
                 const closeModal = () => modalOverlay.remove();
                 modalOverlay.querySelector('.edit-modal-close').addEventListener('click', closeModal);
                 modalOverlay.querySelector('.edit-btn-cancel').addEventListener('click', closeModal);
 
-                // 💾 點擊儲存寫入 Firebase 雲端
                 modalOverlay.querySelector('.edit-btn-save').addEventListener('click', () => {
                     const newCount = parseInt(document.getElementById('modal-pcount').value);
                     const h = parseInt(document.getElementById('modal-hours').value);
@@ -235,16 +255,14 @@ function setupQuickEditFeature() {
                     const s = parseInt(document.getElementById('modal-seconds').value);
                     const distsRaw = document.getElementById('modal-dists').value.trim();
 
-                    // 資料驗證
                     if (isNaN(newCount) || newCount < 0 || newCount > maxLimit) { alert(`❌ 人數超出範圍 (0-${maxLimit})！`); return; }
-                    if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || m > 59 || s < 0 || s > 59) { alert("❌ 時間格式錯誤，分與秒必須在 0-59 之間！"); return; }
+                    if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || m > 59 || s < 0 || s > 59) { alert("❌ 時間格式錯誤！"); return; }
                     if (!distsRaw) { alert("❌ 行政區不能留空喔！"); return; }
 
                     const distArray = distsRaw.split(/\s+/);
                     const now = new Date();
                     const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
 
-                    // 一鍵封裝同步雲端
                     dbRef.child(firebaseId).update({
                         pCount: newCount,
                         hours: h,
@@ -437,7 +455,6 @@ function setupGeolocation() {
 
 const format = (num) => String(num).padStart(2, '0');
 
-// 錨點校正
 function initSingleCountdown(el) {
     const reportTimeString = el.getAttribute('data-report-time');
     const initialHours = parseInt(el.getAttribute('data-initial-hours')) || 0;
