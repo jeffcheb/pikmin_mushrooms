@@ -54,42 +54,53 @@ document.addEventListener("DOMContentLoaded", () => {
     // ========================================================
     // 🌍 看板功能：即時看板「全台行政區篩選選單」初始化與連動
     // ========================================================
-    function initFilterDistricts() {
-        if (!filterCity || !filterDistrict || !window.taiwanData) return;
+    // 🔍 請在 js/report.js 中找到 function initFilterDistricts() 並整段取代為：
 
-        // 將全台縣市塞入看板篩選器
-        Object.keys(window.taiwanData).forEach(city => {
-            const option = document.createElement("option");
-            option.value = city;
-            option.textContent = city;
-            filterCity.appendChild(option);
-        });
+function initFilterDistricts() {
+    if (!filterCity || !filterDistrict || !window.taiwanData) return;
 
-        // 監聽看板篩選器的縣市切換
-        filterCity.addEventListener("change", () => {
-            const selectedCity = filterCity.value;
+    // 清空並初始化縣市選單
+    filterCity.innerHTML = '<option value="all">所有縣市</option>';
+    Object.keys(window.taiwanData).forEach(city => {
+        const option = document.createElement("option");
+        option.value = city;
+        option.textContent = city;
+        filterCity.appendChild(option);
+    });
+
+    // 🌟 修正核心：讓行政區一開始就預設開放，或者隨縣市狀態完美切換
+    filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+    filterDistrict.disabled = true; // 預設沒選縣市時，行政區顯示所有
+
+    // 監聽看板篩選器的縣市切換
+    filterCity.addEventListener("change", () => {
+        const selectedCity = filterCity.value;
+        
+        // 每次切換縣市，重置行政區選單
+        filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+        
+        if (selectedCity === "all") {
+            filterDistrict.value = "all";
+            filterDistrict.disabled = true; // 選回所有縣市時，行政區鎖定為所有
+        } else {
+            filterDistrict.disabled = false; // 選了特定縣市，立刻解鎖行政區
             
-            filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
-            
-            if (selectedCity === "all") {
-                filterDistrict.disabled = true;
-            } else {
-                filterDistrict.disabled = false;
-                const districts = window.taiwanData[selectedCity] || [];
-                districts.forEach(dist => {
-                    const option = document.createElement("option");
-                    option.value = dist;
-                    option.textContent = dist;
-                    filterDistrict.appendChild(option);
-                });
-            }
-            renderBoard(); // 切換篩選，即時重新渲染看板
-        });
+            // 💡 注入該城市專屬的所有行政區
+            const districts = window.taiwanData[selectedCity] || [];
+            districts.forEach(dist => {
+                const option = document.createElement("option");
+                option.value = dist;
+                option.textContent = dist;
+                filterDistrict.appendChild(option);
+            });
+        }
+        renderBoard(); // 變更縣市，立刻刷新看板
+    });
 
-        filterDistrict.addEventListener("change", renderBoard);
-        searchKeyword?.addEventListener("input", renderBoard);
-    }
-
+    // 監聽行政區切換與關鍵字輸入
+    filterDistrict.addEventListener("change", renderBoard);
+    searchKeyword?.addEventListener("input", renderBoard);
+}
     // ========================================================
     // 🎯 定位功能：地理位置自動定位功能 (GPS 經緯度逆查縣市行政區)
     // ========================================================
