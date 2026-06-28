@@ -17,9 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
     let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
     let firedAlerts = {};
-
-    // 🌟 【解決閃退核心】紀錄目前哪一張卡片的哪一個面板被點開了
-    // 格式會像是： { "mushroom_id_1": { edit: true, history: false } }
     let activePanels = {};
 
     // 人數動態限制
@@ -236,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🌍 看板渲染引擎（支援記憶開關狀態，杜絕一秒閃退）
+    // 🌍 看板渲染引擎（新增：過期驚嘆號、核實按鈕面板）
     // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
@@ -320,20 +317,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            // 🌟 核心計算：檢查這張卡片是否「許久未更新（超過15分鐘）」
+            const lastUpdatedTime = item.updatedAt || item.createdAt;
+            const msSinceLastUpdate = Date.now() - lastUpdatedTime;
+            const isStale = msSinceLastUpdate > 900000; // 15分鐘 = 900,000 毫秒
+
             renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
             const isAlertEnabled = alertEnabledList.includes(id);
             const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
 
-            const lastUpdatedDate = new Date(item.updatedAt || item.createdAt);
+            const lastUpdatedDate = new Date(lastUpdatedTime);
             const formattedTime = `${lastUpdatedDate.getMonth()+1}/${lastUpdatedDate.getDate()} ${lastUpdatedDate.getHours().toString().padStart(2,'0')}:${lastUpdatedDate.getMinutes().toString().padStart(2,'0')}:${lastUpdatedDate.getSeconds().toString().padStart(2,'0')}`;
 
-            // 🌟 核心修復：從記憶體中拿回這張卡片此時此刻的面板開關狀態（若無，預設為隱藏 none）
             const isEditOpen = activePanels[id]?.edit ? "block" : "none";
             const isHistoryOpen = activePanels[id]?.history ? "block" : "none";
 
-            // 💡 如果目前面板是打開的，輸入框內的數值就要在重繪時，保留玩家剛才輸入到一半的值，而不是每秒被洗掉
             const inputPlayersVal = document.getElementById(`edit-players-${id}`) ? document.getElementById(`edit-players-${id}`).value : item.currentPlayers;
             const inputHVal = document.getElementById(`edit-h-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-h-${id}`).value : curH;
             const inputMVal = document.getElementById(`edit-m-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-m-${id}`).value : curM;
@@ -341,6 +341,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
+                    
+                    ${isStale && !showQuickPanel ? `
+                    <div class="stale-warning-badge" title="這份情報已超過 15 分鐘未更新，狀態可能不準確。">
+                        ⚠️ 許久未更新
+                    </div>
+                    ` : ''}
+
                     <div class="card-header">
                         <img src="${item.mushroomIcon}" class="shroom-img" alt="${item.type}" onerror="this.src='https://via.placeholder.com/50x50?text=🍄'">
                         <div class="shroom-info">
@@ -396,6 +403,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
                         <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
                         <button class="btn-sm btn-edit-trigger" onclick="toggleEditPanel('${id}')" ${showQuickPanel ? 'style="display:none;"' : ''}>✏️ 更新狀態</button>
+                        
+                        ${isStale && !showQuickPanel ? `
+                        <button class="btn-sm btn-verify" onclick="verifyMushroomStatus('${id}')">✅ 核實狀態</button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -408,26 +419,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🌟 更新歷史面板開關狀態並紀錄到記憶體中
-    window.toggleHistoryPanel = (id) => {
-        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
-        activePanels[id].history = !activePanels[id].history;
-        renderBoard(); // 點擊瞬間手動重新渲染，反應畫面
-    };
-
-    // 🌟 更新編輯面板開關狀態並紀錄到記憶體中
-    window.toggleEditPanel = (id) => {
-        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
-        activePanels[id].edit = !activePanels[id].edit;
-        renderBoard(); // 點擊瞬間手動重新渲染，反應畫面
-    };
-
-    // ✏️ 儲存覆蓋狀態
-    window.saveStatusEdit = (id) => {
+    // 🌟 核心功能：一鍵核實按鈕處理程序
+    window.verifyMushroomStatus = (id) => {
         if (!window.fbDB) return;
         const item = localMushroomsData[id];
         if (!item) return;
 
+        // 計算因為時間流逝，目前應該扣除的賸餘時間，再重新存進去，保持倒數完全不中斷！
+        const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
+        const expireTime = item.createdAt + totalReportedMs;
+        const msLeft = expireTime - Date.now();
+
+        if (msLeft <= 0) return; // 安全機制：過期就不給核實了
+
+        const totalSec = Math.floor(msLeft / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+
+        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+        const now = Date.now();
+
+        // 重新注入最新時間與印章，洗掉驚嘆號！
+        window.fbUpdate(shroomRef, {
+            timeReported: { hours: h, minutes: m, seconds: s },
+            createdAt: now,
+            updatedAt: now // 更新印章
+        }).then(() => {
+            alert("✅ 核實成功！已同步通知社群：目前該點情報 100% 準確！");
+        }).catch(err => alert("核實失敗：" + err.message));
+    };
+
+    window.toggleHistoryPanel = (id) => {
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        activePanels[id].history = !activePanels[id].history;
+        renderBoard();
+    };
+
+    window.toggleEditPanel = (id) => {
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        activePanels[id].edit = !activePanels[id].edit;
+        renderBoard();
+    };
+
+    window.saveStatusEdit = (id) => {
+        if (!window.fbDB) return;
         const newPlayers = parseInt(document.getElementById(`edit-players-${id}`).value) || 0;
         const h = parseInt(document.getElementById(`edit-h-${id}`).value) || 0;
         const m = parseInt(document.getElementById(`edit-m-${id}`).value) || 0;
@@ -443,13 +479,11 @@ document.addEventListener("DOMContentLoaded", () => {
             updatedAt: now
         }).then(() => {
             alert("💾 狀態更新成功！");
-            // 成功儲存後，將該卡片的編輯狀態關閉
             if (activePanels[id]) activePanels[id].edit = false;
             delete firedAlerts[id];
         }).catch(err => alert("更新失敗：" + err.message));
     };
 
-    // 🔄 快速回報新菇
     window.quickUpdateStatus = (id, type, size, hours) => {
         if (!window.fbDB) return;
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
@@ -535,7 +569,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // 多軌輪詢
     function bootstrapFilter() {
         const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
         if (availableData) {
