@@ -162,8 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 情報發佈 (寫入 Firebase)
-    // --- F3: 情報發佈 (🔥 升級版：自動防重複、原地覆蓋更新機制) ---
+    // 情報發佈 (防重複、原地更新)
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -188,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
 
-            // 📦 準備要寫入或更新的資料內容
             const mushroomData = {
                 city, district, locationName, type, size,
                 mushroomIcon: iconPath,
@@ -198,63 +196,62 @@ document.addEventListener("DOMContentLoaded", () => {
                 updatedAt: nowTimestamp
             };
 
-            // 🔍 核心檢查：遍歷目前本機已快取的 localMushroomsData，比對有沒有完全相同的菇
             let existingId = null;
             for (const [id, item] of Object.entries(localMushroomsData)) {
                 if (item.city === city && item.district === district && item.locationName === locationName) {
-                    existingId = id; // 找到了！抓到重複的地點了
+                    existingId = id;
                     break;
                 }
             }
 
             if (existingId) {
-                // 🔄 狀況 A：地點重複，不新增卡片，直接原地「覆蓋更新」原卡片！
                 const targetRef = window.fbRef(window.fbDB, `mushrooms/${existingId}`);
                 window.fbUpdate(targetRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
                         document.getElementById("district").disabled = true;
-                        // 清除通知鎖，讓新覆蓋的蘑菇倒數能再次觸發推播
                         delete firedAlerts[existingId];
-                        alert(`🔄 偵測到相同地點！已成功為您更新【${locationName}】的蘑菇狀態，防重複卡卡！`);
+                        alert(`🔄 偵測到相同地點！已成功為您更新【${locationName}】的蘑菇狀態！`);
                     })
                     .catch((error) => alert("更新失敗：" + error.message));
             } else {
-                // ➕ 狀況 B：全新地點，正常建立新卡片
                 const shroomRef = window.fbRef(window.fbDB, "mushrooms");
                 window.fbPush(shroomRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
                         document.getElementById("district").disabled = true;
-                        alert("🎉 全新地點！情報已順利發佈成功！");
+                        alert("🎉 新情報發佈成功！");
                     })
                     .catch((error) => alert("發佈失敗：" + error.message));
             }
         });
     }
 
+    // 🌟 【超級防呆校正版圖片路徑抓取引擎】 🌟
     function getIconPath(type) {
-    if (type.includes("火")) return "picture/mushroom_fire.png";
-    if (type.includes("水")) return "picture/mushroom_water.png";
-    if (type.includes("水晶")) return "picture/mushroom_crystal.png";
-    if (type.includes("毒")) return "picture/mushroom_poison.png";
-    if (type.includes("電")) return "picture/mushroom_electric.png";
-    
-    // 🥶 完美支援「冰蘑菇」與社群愛用的「冰藍蘑菇」關鍵字！
-    if (type.includes("冰") || type.includes("冰藍")) return "picture/mushroom_ice.png"; 
-    
-    // 🎨 普通/巨大蘑菇系列
-    if (type.includes("紅")) return "picture/mushroom_red.png";
-    if (type.includes("藍")) return "picture/mushroom_blue.png";
-    if (type.includes("黃")) return "picture/mushroom_yellow.png";
-    if (type.includes("紫")) return "picture/mushroom_purple.png";
-    if (type.includes("白")) return "picture/mushroom_white.png";
-    if (type.includes("灰") || type.includes("岩石")) return "picture/mushroom_rock.png"; 
-    if (type.includes("粉紅") || type.includes("羽翅")) return "picture/mushroom_wing.png"; 
-    
-    // 🌟 預設保底或當月限定
-    return "picture/mushroom_monthly_special.png"; 
-}
+        if (!type) return "picture/mushroom_monthly_special.png";
+        
+        // 強制轉型成字串，防止任何型態錯誤
+        const typeStr = String(type);
+
+        if (typeStr.includes("火")) return "picture/mushroom_fire.png";
+        if (typeStr.includes("水")) return "picture/mushroom_water.png";
+        if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
+        if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
+        if (typeStr.includes("電")) return "picture/mushroom_electric.png";
+        if (typeStr.includes("冰")) return "picture/mushroom_ice.png"; 
+        
+        // 🎨 完美精準配對你的普通蘑菇圖片名稱 (mushroom_顏色.png)
+        if (typeStr.includes("紅")) return "picture/mushroom_red.png";
+        if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
+        if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
+        if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
+        if (typeStr.includes("白")) return "picture/mushroom_white.png";
+        if (typeStr.includes("灰") || typeStr.includes("岩石")) return "picture/mushroom_rock.png"; 
+        if (typeStr.includes("粉紅") || typeStr.includes("羽翅")) return "picture/mushroom_wing.png"; 
+        
+        return "picture/mushroom_monthly_special.png"; 
+    }
 
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
@@ -266,9 +263,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(renderBoard, 1000); 
     }
 
-    // ========================================================
-    // 🌍 看板渲染引擎（新增：過期驚嘆號、核實按鈕面板）
-    // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
         
@@ -351,14 +345,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // 🌟 核心計算：檢查這張卡片是否「許久未更新（超過15分鐘）」
             const lastUpdatedTime = item.updatedAt || item.createdAt;
             const msSinceLastUpdate = Date.now() - lastUpdatedTime;
-            const isStale = msSinceLastUpdate > 900000; // 15分鐘 = 900,000 毫秒
+            const isStale = msSinceLastUpdate > 900000; 
 
             renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
-            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
+            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 📌 釘選";
             const isAlertEnabled = alertEnabledList.includes(id);
             const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
 
@@ -373,17 +366,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const inputMVal = document.getElementById(`edit-m-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-m-${id}`).value : curM;
             const inputSVal = document.getElementById(`edit-s-${id}`) && isEditOpen === "block" ? document.getElementById(`edit-s-${id}`).value : curS;
 
+            // 🌟 核心修正：動態校正舊資料或任何回報中可能遺留的錯誤圖片連結
+            const dynamicImgSrc = getIconPath(item.type);
+
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
                     
                     ${isStale && !showQuickPanel ? `
-                    <div class="stale-warning-badge" title="這份情報已超過 15 分鐘未更新，狀態可能不準確。">
-                        ⚠️ 許久未更新
-                    </div>
+                    <div class="stale-warning-badge">⚠️ 許久未更新</div>
                     ` : ''}
 
                     <div class="card-header">
-                        <img src="${item.mushroomIcon}" class="shroom-img" alt="${item.type}" onerror="this.src='https://via.placeholder.com/50x50?text=🍄'">
+                        <img src="${dynamicImgSrc}" class="shroom-img" alt="${item.type}" onerror="this.src='picture/mushroom_monthly_special.png'">
                         <div class="shroom-info">
                             <h4>[${item.size}] ${item.type}</h4>
                             <p>📍 ${item.city}${item.district} - ${item.locationName}</p>
@@ -453,18 +447,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🌟 核心功能：一鍵核實按鈕處理程序
+    // 核實按鈕
     window.verifyMushroomStatus = (id) => {
         if (!window.fbDB) return;
         const item = localMushroomsData[id];
         if (!item) return;
 
-        // 計算因為時間流逝，目前應該扣除的賸餘時間，再重新存進去，保持倒數完全不中斷！
         const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
         const expireTime = item.createdAt + totalReportedMs;
         const msLeft = expireTime - Date.now();
 
-        if (msLeft <= 0) return; // 安全機制：過期就不給核實了
+        if (msLeft <= 0) return; 
 
         const totalSec = Math.floor(msLeft / 1000);
         const h = Math.floor(totalSec / 3600);
@@ -474,14 +467,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
         const now = Date.now();
 
-        // 重新注入最新時間與印章，洗掉驚嘆號！
         window.fbUpdate(shroomRef, {
             timeReported: { hours: h, minutes: m, seconds: s },
             createdAt: now,
-            updatedAt: now // 更新印章
-        }).then(() => {
-            alert("✅ 核實成功！已同步通知社群：目前該點情報 100% 準確！");
-        }).catch(err => alert("核實失敗：" + err.message));
+            updatedAt: now 
+        }).then(() => alert("✅ 核實成功！已重整情報新鮮度！"));
     };
 
     window.toggleHistoryPanel = (id) => {
@@ -524,8 +514,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (type === "暫無蘑菇") {
             window.fbRemove(shroomRef)
-                .then(() => alert("❌ 已同步回報：該點目前無蘑菇，卡片已下架。"))
-                .catch(err => alert("更新失敗：" + err.message));
+                .then(() => alert("❌ 已同步回報：卡片已下架。"))
+                .catch(err => err);
             return;
         }
 
@@ -549,8 +539,8 @@ document.addEventListener("DOMContentLoaded", () => {
             updatedAt: now
         }).then(() => {
             delete firedAlerts[id];
-            alert(`🎉 快速更新成功！已同步此處為【${size} ${type}】`);
-        }).catch(err => alert("更新失敗：" + err.message));
+            alert(`🎉 快速更新成功！`);
+        }).catch(err => err);
     };
 
     window.toggleAlert = (id) => {
@@ -568,8 +558,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function triggerWebNotification(item) {
         if ("Notification" in window && Notification.permission === "granted") {
             new Notification("🍄 皮克敏蘑菇轉生預告！", {
-                body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生，準備卡位！`,
-                icon: item.mushroomIcon || "picture/mushroom_normal.png",
+                body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
+                icon: getIconPath(item.type),
                 requireInteraction: true
             });
         }
@@ -592,10 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
         else if (item.size === "大型") currentMax = 35;
         else if (item.size === "巨大") currentMax = 40;
 
-        if (item.currentPlayers >= currentMax) {
-            alert("該蘑菇人數已滿！");
-            return;
-        }
+        if (item.currentPlayers >= currentMax) return;
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
         window.fbUpdate(shroomRef, {
             currentPlayers: item.currentPlayers + 1,
