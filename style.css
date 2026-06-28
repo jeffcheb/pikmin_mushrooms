@@ -1,15 +1,13 @@
 /* ==========================================================================
-   🎨 1. 全域基礎與 Reset 設定 (確保所有瀏覽器看都一樣)
+   🎨 1. 完全還原：最原始的基礎排版與背景設定
    ========================================================================== */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
+    font-family: "Microsoft JhengHei", Arial, sans-serif;
     background-color: #f4f7f6;
     color: #333;
     margin: 0;
     padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    /* 💡 完全移除 flex 佈局，讓網頁元件照最原本的上下順序乖乖排好，不與圖片衝突 */
 }
 
 h1, h2, h3 {
@@ -18,30 +16,24 @@ h1, h2, h3 {
 }
 
 /* ==========================================================================
-   📦 2. 佈局容器 (Container)
+   📦 2. 原始儲存庫容器與表單樣式
    ========================================================================== */
 .container {
     max-width: 1000px;
-    width: 95%; /* 稍微縮小一點點，在手機上看才不會貼邊 */
+    margin: 20px auto; /* 🌟 讓區塊自動居中，並與上下自然推開距離，不壓迫圖片 */
     background: #ffffff;
     padding: 24px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    margin-top: 30px;    /* 🌟 重點：把表單往下推，這樣就不會跟上方的皮克敏插圖黏在一起了！ */
-    margin-bottom: 24px;
     box-sizing: border-box;
 }
 
-/* ==========================================================================
-   📋 3. 表單元件樣式 (Form Controls)
-   ========================================================================== */
 .form-group {
     margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
 }
 
 label {
+    display: block;
     font-weight: bold;
     margin-bottom: 6px;
     color: #455a64;
@@ -56,13 +48,6 @@ select {
     font-size: 15px;
     box-sizing: border-box;
     width: 100%;
-    transition: border-color 0.2s;
-}
-
-input:focus, select:focus {
-    border-color: #4caf50;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(76,175,80,0.15);
 }
 
 .time-inline {
@@ -71,7 +56,7 @@ input:focus, select:focus {
 }
 
 /* ==========================================================================
-   🔘 4. 按鈕基本樣式 (Buttons)
+   🔘 3. 按鈕基本樣式
    ========================================================================== */
 button.btn-submit {
     background-color: #4caf50;
@@ -84,25 +69,27 @@ button.btn-submit {
     cursor: pointer;
     width: 100%;
     box-shadow: 0 4px 12px rgba(76,175,80,0.2);
-    transition: background-color 0.2s, transform 0.1s;
 }
-
-button.btn-submit:hover { background-color: #43a047; }
-button.btn-submit:active { transform: scale(0.98); }
 
 #geo-btn {
     background-color: #0288d1;
     margin-bottom: 16px;
-    box-shadow: 0 4px 12px rgba(2,136,209,0.2);
+    width: 100%;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
 }
-#geo-btn:hover { background-color: #01579b; }
 
 /* ==========================================================================
-   🍓 5. 戰力計算器專用：皮克敏種類單選鈕
+   🍓 4. 皮克敏單選鈕清單
    ========================================================================== */
 .pikmin-select {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 16px;
 }
@@ -111,24 +98,18 @@ button.btn-submit:active { transform: scale(0.98); }
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     background: #f9f9f9;
     border: 2px solid #eceff1;
     padding: 10px;
     border-radius: 12px;
     cursor: pointer;
     font-size: 13px;
-    transition: all 0.2s;
+    width: 90px;
+    box-sizing: border-box;
 }
 
-.pikmin-select input[type="radio"] { display: none; }
-.pikmin-select label:hover { background: #f1f8e9; border-color: #c5e1a5; }
-
-.pikmin-select input[type="radio"]:checked + img,
-.pikmin-select label:has(input:checked) {
-    background: #e8f5e9;
-    border-color: #4caf50;
-    box-shadow: 0 2px 8px rgba(76,175,80,0.15);
+.pikmin-select input[type="radio"] {
+    display: none;
 }
 
 .pikmin-select img {
@@ -139,15 +120,14 @@ button.btn-submit:active { transform: scale(0.98); }
 }
 
 /* ==========================================================================
-   🍄 6. 蘑菇情報現況卡片佈局 (網格排列，防止歪斜擠壓)
+   🍄 5. 原始卡片佈局
    ========================================================================== */
 .grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 20px;
-    width: 100%;
+    justify-content: center;
     margin-top: 16px;
-    box-sizing: border-box;
 }
 
 .card {
@@ -157,22 +137,14 @@ button.btn-submit:active { transform: scale(0.98); }
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     border: 1px solid #e0e0e0;
     position: relative;
+    width: 280px;
     box-sizing: border-box;
-    transition: transform 0.2s, box-shadow 0.2s;
-    overflow: hidden; /* 確保內容不爆出去 */
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
 }
 
 .card-icon {
     width: 50px;
     height: 50px;
     float: right;
-    object-fit: contain;
-    margin-left: 10px;
 }
 
 .card h3 {
@@ -180,62 +152,44 @@ button.btn-submit:active { transform: scale(0.98); }
     font-size: 18px;
     color: #37474f;
     text-align: left;
-    padding-right: 75px; /* 給右上角按鈕留空間 */
-    line-height: 1.3;
 }
 
 .card p {
-    margin: 8px 0;
+    margin: 6px 0;
     font-size: 14px;
     color: #546e7a;
-    text-align: left;
-    clear: none;
 }
 
-.countdown {
-    font-weight: bold;
-    font-size: 15px;
-}
-
-/* 📌 釘選、📝 更新與 ❌ 刪除按鈕精確定位 */
+/* 📌 釘選、📝 更新與 ❌ 刪除按鈕定位 */
 .pin-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 8px;
+    right: 8px;
     background: none;
     border: none;
     font-size: 16px;
     cursor: pointer;
     opacity: 0.4;
-    transition: opacity 0.2s;
-    padding: 0;
 }
-.pin-btn.active, .pin-btn:hover { opacity: 1; }
+.pin-btn.active { opacity: 1; }
 
 .quick-edit-btn {
     position: absolute;
-    top: 10px;
-    right: 42px;
+    top: 8px;
+    right: 40px;
     background: #ffffff;
-    border: 1px solid #cfd8dc;
+    border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    padding: 3px 8px;
-    color: #546e7a;
-    transition: all 0.2s;
-}
-.quick-edit-btn:hover {
-    background: #e3f2fd;
-    border-color: #2196f3;
-    color: #1e88e5;
+    padding: 2px 6px;
 }
 
 .delete-btn {
     display: none;
     position: absolute;
-    bottom: 12px;
-    right: 12px;
+    top: 8px;
+    left: 8px;
     background: #ffebee;
     color: #c62828;
     border: 1px solid #ffcdd2;
@@ -246,43 +200,24 @@ button.btn-submit:active { transform: scale(0.98); }
 }
 body.dev-active .delete-btn { display: block; }
 
-/* ==========================================================================
-   🛠️ 7. 開發者維護後台
-   ========================================================================== */
 .dev-zone {
-    margin-top: 40px;
-    padding: 16px;
-    border-top: 2px dashed #cfd8dc;
+    margin: 40px auto;
     text-align: center;
-    width: 100%;
     max-width: 1000px;
-}
-#dev-mode-btn {
-    background: #546e7a;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-#dev-status {
-    font-size: 13px;
-    margin-top: 6px;
-    color: #78909c;
 }
 
 /* ==========================================================================
-   🌟 8. 網頁內嵌「快速更新/最後更新」專屬面板燈箱 (解決直接暴露問題)
+   🌟 6. 新增：獨立外掛式「精美更新/最後更新面板」燈箱
    ========================================================================== */
 .edit-modal-overlay {
     position: fixed;
     top: 0; left: 0; 
-    width: 100vw; height: 100vh;
+    width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     display: flex; justify-content: center; align-items: center;
-    z-index: 9999; /* 確保在最上層 */
+    z-index: 9999; /* 絕對置頂，不影響網頁原本結構 */
 }
 
 .edit-modal-window {
@@ -292,7 +227,6 @@ body.dev-active .delete-btn { display: block; }
     width: 90%; max-width: 400px;
     padding: 24px;
     box-sizing: border-box;
-    animation: modalFadeIn 0.25s ease-out;
 }
 
 .time-modal-window {
@@ -303,12 +237,6 @@ body.dev-active .delete-btn { display: block; }
     padding: 24px;
     box-sizing: border-box;
     text-align: center;
-    animation: modalFadeIn 0.25s ease-out;
-}
-
-@keyframes modalFadeIn {
-    from { transform: translateY(15px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
 }
 
 .edit-modal-header {
@@ -326,7 +254,6 @@ body.dev-active .delete-btn { display: block; }
 .edit-modal-close {
     cursor: pointer; color: #b0bec5; font-size: 24px; line-height: 1;
 }
-.edit-modal-close:hover { color: #d32f2f; }
 
 .edit-modal-body h4 {
     margin: 14px 0 6px 0; color: #546e7a; font-size: 14px; text-align: left;
@@ -341,9 +268,6 @@ body.dev-active .delete-btn { display: block; }
     border: 1px solid #cfd8dc; border-radius: 8px;
     font-size: 14px; box-sizing: border-box;
 }
-.edit-modal-input:focus {
-    border-color: #4caf50; outline: none; box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
-}
 
 .edit-modal-footer {
     margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;
@@ -351,18 +275,14 @@ body.dev-active .delete-btn { display: block; }
 
 .edit-btn-cancel {
     background: #eceff1; color: #37474f; border: none;
-    padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;
+    padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold;
 }
-.edit-btn-cancel:hover { background: #cfd8dc; }
 
 .edit-btn-save {
     background: #4caf50; color: white; border: none;
-    padding: 10px 22px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;
-    box-shadow: 0 4px 10px rgba(76,175,80,0.3);
+    padding: 10px 22px; border-radius: 8px; cursor: pointer; font-weight: bold;
 }
-.edit-btn-save:hover { background: #43a047; }
 
-/* 時間面板專屬小元件 */
 .time-modal-clock { font-size: 46px; margin: 12px 0; }
 .time-modal-timestamp {
     background: #f5f5f5; padding: 10px; border-radius: 8px;
@@ -373,13 +293,4 @@ body.dev-active .delete-btn { display: block; }
     background: #0288d1; color: white; border: none;
     padding: 11px 24px; border-radius: 8px; cursor: pointer;
     font-weight: bold; width: 100%; font-size: 14px;
-    box-shadow: 0 4px 10px rgba(2,136,209,0.3);
-}
-.time-btn-close:hover { background: #01579b; }
-/* 確保最上方的皮克敏背景圖不會過大或過小 */
-img.banner, .top-banner { 
-    width: 100%;
-    max-width: 1000px;
-    height: auto;
-    border-radius: 0 0 16px 16px; /* 讓圖片下方有一點圓角會更漂亮 */
 }
