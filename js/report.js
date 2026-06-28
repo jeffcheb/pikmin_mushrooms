@@ -106,6 +106,8 @@ function initFilterDistricts() {
     // ========================================================
 // 🔍 請在 js/report.js 中，找到 btnAutoLocation 的 addEventListener 區塊，整段取代為：
 
+// 🔍 請在 js/report.js 中，找到 btnAutoLocation 的 addEventListener 區塊，整段取代為：
+
 if (btnAutoLocation) {
     btnAutoLocation.addEventListener("click", () => {
         if (!navigator.geolocation) {
@@ -116,78 +118,80 @@ if (btnAutoLocation) {
         btnAutoLocation.textContent = "⌛ 定位中";
         
         navigator.geolocation.getCurrentPosition(
-            async (position) => {
+            (position) => {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
 
-                // 🌟 防呆保底：如果真的卡住，至少能自動幫忙切換到預設區域或提示
-                let foundCity = "高雄市"; // 預設測試保底
-                let foundDist = "前鎮區";
+                // 🗺️ 台灣主要縣市中心點概略經緯度 (免呼叫外部 API，直接在前端秒配對)
+                const TaiwanCityCoordinates = {
+                    "台北市": { lat: 25.0339, lon: 121.5644, defaultDist: "大安區" },
+                    "新北市": { lat: 25.0169, lon: 121.4627, defaultDist: "板橋區" },
+                    "桃園市": { lat: 24.9936, lon: 121.3009, defaultDist: "桃園區" },
+                    "台中市": { lat: 24.1477, lon: 120.6736, defaultDist: "西屯區" },
+                    "台南市": { lat: 22.9908, lon: 120.2133, defaultDist: "中西區" },
+                    "高雄市": { lat: 22.6273, lon: 120.3014, defaultDist: "前鎮區" },
+                    "基隆市": { lat: 25.1283, lon: 121.7391, defaultDist: "仁愛區" },
+                    "新竹市": { lat: 24.8138, lon: 120.9674, defaultDist: "東區" },
+                    "嘉義市": { lat: 23.4800, lon: 120.4491, defaultDist: "西區" },
+                    "新竹縣": { lat: 24.8383, lon: 121.0117, defaultDist: "竹北市" },
+                    "苗栗縣": { lat: 24.5601, lon: 120.8207, defaultDist: "苗栗市" },
+                    "彰化縣": { lat: 24.0516, lon: 120.5161, defaultDist: "彰化市" },
+                    "南投縣": { lat: 23.9155, lon: 120.6868, defaultDist: "南投市" },
+                    "雲林縣": { lat: 23.7092, lon: 120.4313, defaultDist: "斗六市" },
+                    "嘉義縣": { lat: 23.4592, lon: 120.2931, defaultDist: "太保市" },
+                    "屏東縣": { lat: 22.6660, lon: 120.4860, defaultDist: "屏東市" },
+                    "宜蘭縣": { lat: 24.7570, lon: 121.7530, defaultDist: "宜蘭市" },
+                    "花蓮縣": { lat: 23.9870, lon: 121.6010, defaultDist: "花蓮市" },
+                    "台東縣": { lat: 22.7560, lon: 121.1520, defaultDist: "台東市" },
+                    "澎湖縣": { lat: 23.5710, lon: 119.5790, defaultDist: "馬公市" }
+                };
 
-                try {
-                    // 使用更穩定的國際地理編碼備用服務
-                    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`);
+                let closestCity = "高雄市"; // 預設保底
+                let minDistance = Infinity;
+
+                // 📐 使用畢氏定理在前端計算與哪一個台灣縣市的距離最近
+                for (const [cityName, coord] of Object.entries(TaiwanCityCoordinates)) {
+                    const dLat = lat - coord.lat;
+                    const dLon = lon - coord.lon;
+                    const distance = Math.sqrt(dLat * dLat + dLon * dLon);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestCity = cityName;
+                    }
+                }
+
+                const matchedData = TaiwanCityCoordinates[closestCity];
+                const foundDist = matchedData.defaultDist;
+
+                // 🛠️ 強制渲染看板的下拉選單
+                if (filterCity && filterDistrict) {
+                    const districtsData = window.taiwanData || boardTaiwanData || {}; 
                     
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data) {
-                            // 撈出 API 回傳的所有可能地名欄位，全部轉繁體
-                            let rawCity = (data.principalSubdivision || data.adminAdministrativeArea || "").replace("臺", "台");
-                            let rawDist = (data.locality || data.city || "").replace("臺", "台");
+                    filterCity.value = closestCity;
+                    
+                    // 注入行政區
+                    filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+                    filterDistrict.disabled = false;
+                    
+                    const districts = districtsData[closestCity] || [];
+                    districts.forEach(dist => {
+                        const option = document.createElement("option");
+                        option.value = dist;
+                        option.textContent = dist;
+                        filterDistrict.appendChild(option);
+                    });
 
-                            // 在我們的台灣 368 區資料庫中進行嚴格比對
-                            const citiesInDict = Object.keys(window.taiwanData);
-                            const matchedCity = citiesInDict.find(c => rawCity.includes(c) || c.includes(rawCity));
-                            
-                            if (matchedCity) {
-                                foundCity = matchedCity;
-                                const distsInCity = window.taiwanData[foundCity];
-                                const matchedDist = distsInCity.find(d => rawDist.includes(d) || d.includes(rawDist));
-                                if (matchedDist) {
-                                    foundDist = matchedDist;
-                                }
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.warn("外部逆查 API 異常，啟用瀏覽器本地權限校正...", err);
-                } finally {
-                    // ========================================================
-                    // 🛠️ 核心修正：強制瀏覽器 DOM 執行變更與事件排程
-                    // ========================================================
-                    if (filterCity && filterDistrict) {
-                        // 1. 強制改變縣市下拉選單的值
-                        filterCity.value = foundCity;
-                        
-                        // 2. ⚠️ 手動呼叫我們寫好的連動更新邏輯（重整行政區 options）
-                        filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
-                        filterDistrict.disabled = false;
-                        
-                        const districts = window.taiwanData[foundCity] || [];
-                        districts.forEach(dist => {
-                            const option = document.createElement("option");
-                            option.value = dist;
-                            option.textContent = dist;
-                            filterDistrict.appendChild(option);
-                        });
-
-                        // 3. 強制改變行政區下拉選單的值
-                        filterDistrict.value = foundDist;
-
-                        // 4. 變更按鈕狀態並刷新看板資料
-                        btnAutoLocation.textContent = "🎯 定位";
-                        alert(`🎯 定位成功：已自動為您跳轉至【${foundCity} ${foundDist}】看板`);
-                        
-                        // 5. 重新渲染畫面
-                        renderBoard();
-                    }
+                    filterDistrict.value = foundDist;
+                    btnAutoLocation.textContent = "🎯 定位";
+                    alert(`🎯 定位成功：依據您的 GPS 座標，已為您秒速切換至鄰近的【${closestCity} ${foundDist}】看板！`);
+                    renderBoard();
                 }
             },
             (error) => {
                 btnAutoLocation.textContent = "🎯 定位";
-                alert("GPS 定位取得失敗，請檢查手機/電腦的瀏覽器是否已開啟位置存取權限！");
+                alert("GPS 定位取得失敗，請檢查手機或瀏覽器是否給予網頁「位置存取權限」！");
             },
-            { enableHighAccuracy: true, timeout: 6000 }
+            { enableHighAccuracy: false, timeout: 5000 } // 調低精確度以換取極速回應，避免過期卡死
         );
     });
 }
