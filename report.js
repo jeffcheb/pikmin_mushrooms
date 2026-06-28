@@ -385,11 +385,17 @@ function setupNotificationFeature() {
         if (e.target.classList.contains('notify-me-btn')) {
             const currentCard = e.target.closest('.card');
             const firebaseId = currentCard.getAttribute('data-id');
+            const countdownEl = currentCard.querySelector('.countdown');
+            
+            // 判斷目前卡片是「正在打」還是「冷卻中」，以決定提醒類型
+            const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
+            const now = Date.now();
+            const isCurrentlyFighting = (targetTime - now > 0);
 
             // 1. 檢查是否已經訂閱過，如果已經訂閱，則執行「關閉提醒」
             if (activeReminders.includes(firebaseId)) {
                 toggleSubscription(firebaseId, e.target, "🔔 提醒我");
-                alert("🔕 已成功關閉並取消該蘑菇的出生提醒。");
+                alert("🔕 已成功關閉並取消該蘑菇的通知提醒。");
                 return;
             }
 
@@ -403,8 +409,9 @@ function setupNotificationFeature() {
 
                 Notification.requestPermission().then((permission) => {
                     if (permission === "granted") {
-                        toggleSubscription(firebaseId, e.target, "🔔 已設提醒");
-                        alert("✅ 設定成功！本網頁在背景執行時，該蘑菇出生前 1 分鐘會自動跳出通知提醒您！");
+                        const successText = isCurrentlyFighting ? "🔔 結束提醒" : "🔔 出生提醒";
+                        toggleSubscription(firebaseId, e.target, successText);
+                        alert(`✅ 設定成功！本網頁開著時，該蘑菇${isCurrentlyFighting ? '打完前' : '出生前'} 1 分鐘會自動跳出通知提醒您！`);
                     } else {
                         toggleSubscription(firebaseId, e.target, "🎵 音效提醒");
                         alert("🎵 已為您自動切換為【音效提醒模式】！只要不關閉網頁分頁，時間到時網頁會播放嗶嗶聲提醒您！");
@@ -413,7 +420,7 @@ function setupNotificationFeature() {
             } else {
                 // 🍎 iOS Chrome 保底
                 toggleSubscription(firebaseId, e.target, "🎵 音效提醒");
-                alert("🎵 偵測到您的瀏覽器不支援系統推播。系統已自動啟動【網頁音效提醒】！只要保持網頁開啟，出生前 1 分鐘網頁就會發出聲音喔！");
+                alert(`🎵 偵測到您的瀏覽器不支援系統推播。系統已自動啟動【網頁音效提醒】！只要保持網頁開啟，結束/出生前 1 分鐘網頁就會發出聲音喔！`);
             }
         }
     });
@@ -450,6 +457,7 @@ function renderMushroomCard(id, data) {
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
+    // 初步動態判定按鈕顯示狀態
     const isSubscribed = activeReminders.includes(id);
     let notifyBtnText = "🔔 提醒我";
     let subClass = "";
@@ -477,7 +485,7 @@ function renderMushroomCard(id, data) {
             <span>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</span>
             <button class="verify-fact-btn" title="現場勘查無誤！一鍵刷新回報時間" style="display: none; background: #e8f5e9; border: 1px solid #81c784; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 6px; color: #2e7d32; font-weight: bold;">✅ 核實</button>
         </p>
-        <button class="notify-me-btn${subClass}" style="${btnStyle} border-radius: 20px; padding: 4px 14px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s;" title="冷卻倒數前 1 分鐘傳送推播提醒">${notifyBtnText}</button>
+        <button class="notify-me-btn${subClass}" style="${btnStyle} border-radius: 20px; padding: 4px 14px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s;" title="時間截止前 1 分鐘傳送提醒">${notifyBtnText}</button>
     `;
     initSingleCountdown(newCard.querySelector('.countdown'));
     mushroomContainer.appendChild(newCard);
@@ -624,7 +632,7 @@ function updateCountdowns() {
         const h3Title = currentCard.querySelector('h3');
         const reportTimeString = el.getAttribute('data-report-time');
         const verifyBtn = currentCard.querySelector('.verify-fact-btn');
-        const notifyBtn = currentCard.querySelector('.notify-me-btn'); // 抓取提醒按鈕
+        const notifyBtn = currentCard.querySelector('.notify-me-btn'); 
         
         const reportTimestamp = Date.parse(reportTimeString.replace(/-/g, '/'));
         const alertThreshold = 15 * 60 * 1000; 
@@ -648,16 +656,51 @@ function updateCountdowns() {
         const respawnTime = parseInt(el.getAttribute('data-respawn'));
         let timeLeft = targetTime - now;
 
+        const isSubscribed = activeReminders.includes(cardId);
+        const hasNotificationPermission = ("Notification" in window && Notification.permission === "granted");
+
         if (timeLeft > 0) {
-            // ⏳ 正在被摧毀倒數中：顯示核實按鈕，且完全隱藏提醒按鈕 (打完冷卻中才能用提醒)
+            // ==========================================
+            // A. ⏳ 正在被摧毀倒數中（剩餘時間）
+            // ==========================================
             if (verifyBtn) verifyBtn.style.display = 'inline-block';
-            if (notifyBtn) notifyBtn.style.display = 'none';
+            
+            // 🌟 核心規則：此狀態需要顯示提醒按鈕
+            if (notifyBtn) {
+                notifyBtn.style.display = 'inline-block';
+                if (!isSubscribed) {
+                    notifyBtn.innerText = "🔔 提醒我";
+                    notifyBtn.style.background = "#fff8e1"; notifyBtn.style.color = "#b78103"; notifyBtn.style.borderColor = "#ffe082";
+                } else {
+                    notifyBtn.innerText = hasNotificationPermission ? "🔔 結束提醒" : "🎵 音效提醒";
+                }
+            }
 
             let seconds = Math.floor((timeLeft / 1000) % 60);
             let minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
             let hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
             el.innerText = `⏳ 剩餘時間：${format(hours)}:${format(minutes)}:${format(seconds)}`;
             el.style.color = "#333";
+
+            // 🔔 【通知判定】打完前 1 分鐘提醒我上線看新蘑菇
+            if (isSubscribed && !sentNotifications.has(cardId + "_end")) {
+                const totalFightSecondsLeft = Math.floor(timeLeft / 1000);
+                if (totalFightSecondsLeft <= 60 && totalFightSecondsLeft > 0) {
+                    sentNotifications.add(cardId + "_end");
+
+                    const mTitle = h3Title ? h3Title.innerText.replace(/◉|⚠️/g, '').trim() : "新蘑菇";
+                    const mLoc = currentCard.querySelector('p') ? currentCard.querySelector('p').innerText.replace('📍 地點：', '').trim() : "未知地點";
+
+                    if (hasNotificationPermission) {
+                        new Notification("⚔️ 皮克敏戰鬥即將結束！", {
+                            body: `📍 位置：${mLoc}\n【${mTitle}】將在 1 分鐘內打完並進入冷卻，準備搶下一輪吧！`,
+                            icon: "picture/mushroom_event.png"
+                        });
+                    }
+                    playBeepSound();
+                }
+            }
+
         } else {
             if (verifyBtn) verifyBtn.style.display = 'none';
 
@@ -666,50 +709,46 @@ function updateCountdowns() {
             let rMinutes = Math.floor((respawnLeftMs / (1000 * 60)) % 60);
             
             if (respawnLeftMs > 0) {
-                // 🔄 下次出現倒數中（冷卻期）：這時才強制開啟「提醒我」按鈕！
-                if (notifyBtn) notifyBtn.style.display = 'inline-block';
+                // ==========================================
+                // B. 🔄 下次出現倒數中（冷卻期）
+                // ==========================================
+                if (notifyBtn) {
+                    notifyBtn.style.display = 'inline-block';
+                    if (!isSubscribed) {
+                        notifyBtn.innerText = "🔔 提醒我";
+                        notifyBtn.style.background = "#fff8e1"; notifyBtn.style.color = "#b78103"; notifyBtn.style.borderColor = "#ffe082";
+                    } else {
+                        notifyBtn.innerText = hasNotificationPermission ? "🔔 出生提醒" : "🎵 音效提醒";
+                    }
+                }
 
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
 
-                // 🔔 推播判定
-                if (activeReminders.includes(cardId) && !sentNotifications.has(cardId)) {
+                // 🔔 【通知判定】出生前 1 分鐘提醒我卡位
+                if (isSubscribed && !sentNotifications.has(cardId + "_spawn")) {
                     const totalCooldownSecondsLeft = Math.floor(respawnLeftMs / 1000);
                     if (totalCooldownSecondsLeft <= 60 && totalCooldownSecondsLeft > 0) {
-                        sentNotifications.add(cardId);
+                        sentNotifications.add(cardId + "_spawn");
 
                         const mTitle = h3Title ? h3Title.innerText.replace(/◉|⚠️/g, '').trim() : "新蘑菇";
                         const mLoc = currentCard.querySelector('p') ? currentCard.querySelector('p').innerText.replace('📍 地點：', '').trim() : "未知地點";
 
-                        if ("Notification" in window && Notification.permission === "granted") {
+                        if (hasNotificationPermission) {
                             new Notification("🍄 皮克敏孵化準備！", {
                                 body: `📍 位置：${mLoc}\n【${mTitle}】即將在 1 分鐘後出生，請立刻上線卡位！`,
                                 icon: "picture/mushroom_event.png"
                             });
                         }
-
-                        try {
-                            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                            [0, 200, 400].forEach(delay => {
-                                setTimeout(() => {
-                                    const oscillator = audioCtx.createOscillator();
-                                    const gainNode = audioCtx.createGain();
-                                    oscillator.type = 'sine';
-                                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-                                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                                    oscillator.connect(gainNode);
-                                    gainNode.connect(audioCtx.destination);
-                                    oscillator.start();
-                                    oscillator.stop(audioCtx.currentTime + 0.15);
-                                }, delay);
-                            });
-                        } catch (audioErr) { console.log(audioErr); }
+                        playBeepSound();
                     }
                 }
 
             } else {
-                // 🌟 【重大優化】：進入「待更新」狀態，徹底將提醒按鈕隱藏 (display: none)
+                // ==========================================
+                // C. ⌛ 狀態：新蘑菇待更新...（唯獨此狀態要隱藏）
+                // ==========================================
                 if (notifyBtn) notifyBtn.style.display = 'none';
 
                 el.innerText = `⌛ 狀態：新蘑菇待更新...`;
@@ -717,8 +756,10 @@ function updateCountdowns() {
                 el.style.fontWeight = "bold";
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
                 
-                if (sentNotifications.has(cardId)) {
-                    sentNotifications.delete(cardId);
+                // 完全過期，自動清洗歷史訂閱快取
+                if (sentNotifications.has(cardId + "_end")) sentNotifications.delete(cardId + "_end");
+                if (sentNotifications.has(cardId + "_spawn")) sentNotifications.delete(cardId + "_spawn");
+                if (isSubscribed) {
                     const remIndex = activeReminders.indexOf(cardId);
                     if (remIndex !== -1) {
                         activeReminders.splice(remIndex, 1);
@@ -728,6 +769,26 @@ function updateCountdowns() {
             }
         }
     });
+}
+
+// 🔊 封裝音效產生器 (免 mp3 檔案保底蜂鳴)
+function playBeepSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        [0, 200, 400].forEach(delay => {
+            setTimeout(() => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.15);
+            }, delay);
+        });
+    } catch (audioErr) { console.log("音效播放攔截:", audioErr); }
 }
 
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
