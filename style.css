@@ -22,11 +22,12 @@ h1, h2, h3 {
    ========================================================================== */
 .container {
     max-width: 1000px;
-    width: 100%;
+    width: 95%; /* 稍微縮小一點點，在手機上看才不會貼邊 */
     background: #ffffff;
     padding: 24px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-top: 30px;    /* 🌟 重點：把表單往下推，這樣就不會跟上方的皮克敏插圖黏在一起了！ */
     margin-bottom: 24px;
     box-sizing: border-box;
 }
@@ -375,3 +376,10 @@ body.dev-active .delete-btn { display: block; }
     box-shadow: 0 4px 10px rgba(2,136,209,0.3);
 }
 .time-btn-close:hover { background: #01579b; }
+/* 確保最上方的皮克敏背景圖不會過大或過小 */
+img.banner, .top-banner { 
+    width: 100%;
+    max-width: 1000px;
+    height: auto;
+    border-radius: 0 0 16px 16px; /* 讓圖片下方有一點圓角會更漂亮 */
+}
