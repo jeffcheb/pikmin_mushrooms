@@ -520,8 +520,37 @@ function initSingleCountdown(el) {
 
 function updateCountdowns() {
     const now = Date.now();
+    
     document.querySelectorAll('.countdown').forEach(el => {
         if (!document.body.contains(el)) return;
+        
+        const currentCard = el.closest('.card');
+        const h3Title = currentCard.querySelector('h3');
+        const reportTimeString = el.getAttribute('data-report-time');
+        
+        // 1. 🔍 判定「許久未更新」警示 (例如超過 15 分鐘 = 900,000 毫秒)
+        const reportTimestamp = Date.parse(reportTimeString.replace(/-/g, '/'));
+        const alertThreshold = 15 * 60 * 1000; // 15 分鐘，你可以自由改成 10 或 20
+        
+        // 先檢查是不是已經有警示標籤了，避免重覆塞進去
+        let existWarning = h3Title.querySelector('.time-warning-tag');
+        
+        if (!isNaN(reportTimestamp) && (now - reportTimestamp > alertThreshold)) {
+            // 超過 15 分鐘未更新：如果還沒有驚嘆號，就補上一個漂亮的黃色驚嘆號
+            if (!existWarning) {
+                const warningSpan = document.createElement('span');
+                warningSpan.className = 'time-warning-tag';
+                warningSpan.innerHTML = ' ⚠️';
+                warningSpan.title = '注意：此情報已超過 15 分鐘未更新，準確性可能降低！';
+                warningSpan.style.cursor = 'help';
+                h3Title.appendChild(warningSpan);
+            }
+        } else {
+            // 如果後來有人點擊更新了（時差回到 15 分鐘內）：就把驚嘆號移除
+            if (existWarning) { existWarning.remove(); }
+        }
+
+        // 2. ⏳ 原本的倒數計時顯示邏輯 (完全保留)
         const targetTime = parseInt(el.getAttribute('data-target'));
         const respawnTime = parseInt(el.getAttribute('data-respawn'));
         let timeLeft = targetTime - now;
@@ -538,15 +567,17 @@ function updateCountdowns() {
             if (respawnTime - now > 0) {
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
+                // 既然都已經打完了，過期警示也就順便拔掉
+                if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
             } else {
                 el.innerText = `⌛ 狀態：新蘑菇待更新...`;
                 el.style.color = "#c62828";
                 el.style.fontWeight = "bold";
+                if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
             }
         }
     });
 }
-
 // 監聽器設定
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
