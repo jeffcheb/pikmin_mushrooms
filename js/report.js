@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
     let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
     let firedAlerts = {};
+
     // 人數動態限制
     if (mushroomSize && currentPlayers) {
         const updateMaxPlayers = () => {
@@ -231,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🌍 看板渲染引擎（整合歷史時間、更多快速更新選擇面板）
+    // 🌍 看板渲染引擎（整合即時狀態修改面板與歷史面板）
     // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
@@ -278,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let timeString = "";
             let statusClass = "countdown-text";
             let expiredCardClass = ""; 
-            let showQuickPanel = false; // 是否顯示快速更新選單
+            let showQuickPanel = false; 
 
             let displayMaxPlayers = item.maxPlayers || 30;
             if (item.size === "小型") displayMaxPlayers = 25;
@@ -286,12 +287,14 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.size === "大型") displayMaxPlayers = 35;
             else if (item.size === "巨大") displayMaxPlayers = 40;
 
+            let curH = 0, curM = 0, curS = 0;
+
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
-                const h = Math.floor(totalSec / 3600);
-                const m = Math.floor((totalSec % 3600) / 60);
-                const s = totalSec % 60;
-                timeString = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
+                curH = Math.floor(totalSec / 3600);
+                curM = Math.floor((totalSec % 3600) / 60);
+                curS = totalSec % 60;
+                timeString = `⏳ 剩餘時間：${curH}時${curM}分${curS}秒`;
             } else {
                 const bufferLeft = 300000 + msLeft; 
                 if (bufferLeft > 0) {
@@ -306,7 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         triggerWebNotification(item);
                     }
                 } else {
-                    // 🔘 超過五分鐘，進入灰色待更新狀態，開啟快速更新面板
                     timeString = `🔄 待現場玩家更新 (新菇已出生)`;
                     statusClass = "countdown-text need-update-period";
                     expiredCardClass = "card-expired-mode"; 
@@ -318,9 +320,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
             const isAlertEnabled = alertEnabledList.includes(id);
-            const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 關閉提醒";
+            const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
 
-            // 格式化上次更新時間 (◎ 面板用)
             const lastUpdatedDate = new Date(item.updatedAt || item.createdAt);
             const formattedTime = `${lastUpdatedDate.getMonth()+1}/${lastUpdatedDate.getDate()} ${lastUpdatedDate.getHours().toString().padStart(2,'0')}:${lastUpdatedDate.getMinutes().toString().padStart(2,'0')}:${lastUpdatedDate.getSeconds().toString().padStart(2,'0')}`;
 
@@ -344,6 +345,26 @@ document.addEventListener("DOMContentLoaded", () => {
                         <p class="${statusClass}">${timeString}</p>
                     </div>
 
+                    <div id="edit-panel-${id}" class="edit-status-panel" style="display:none;">
+                        <h5>✏️ 修改目前即時狀態：</h5>
+                        <div class="edit-row">
+                            <label>👥 人數：</label>
+                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${item.currentPlayers}">
+                        </div>
+                        <div class="edit-row">
+                            <label>⏳ 時間：</label>
+                            <div class="edit-time-inputs">
+                                <input type="number" id="edit-h-${id}" min="0" max="23" value="${curH}" placeholder="時">:
+                                <input type="number" id="edit-m-${id}" min="0" max="59" value="${curM}" placeholder="分">:
+                                <input type="number" id="edit-s-${id}" min="0" max="59" value="${curS}" placeholder="秒">
+                            </div>
+                        </div>
+                        <div class="edit-actions">
+                            <button class="btn-save" onclick="saveStatusEdit('${id}')">💾 儲存送出</button>
+                            <button class="btn-cancel" onclick="toggleEditPanel('${id}')">取消</button>
+                        </div>
+                    </div>
+
                     ${showQuickPanel ? `
                     <div class="quick-update-panel">
                         <h5>⚡ 快速回報現場新菇：</h5>
@@ -360,7 +381,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
                         <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
-                        <button class="btn-sm" onclick="quickJoin('${id}')" ${expiredCardClass ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>➕ 人數+1</button>
+                        
+                        <button class="btn-sm btn-edit-trigger" onclick="toggleEditPanel('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>✏️ 更新狀態</button>
                     </div>
                 </div>
             `;
@@ -376,17 +398,47 @@ document.addEventListener("DOMContentLoaded", () => {
     // ◎ 歷史紀錄面板切換
     window.toggleHistoryPanel = (id) => {
         const panel = document.getElementById(`history-panel-${id}`);
-        if (panel) {
-            panel.style.display = panel.style.display === "none" ? "block" : "none";
-        }
+        if (panel) panel.style.display = panel.style.display === "none" ? "block" : "none";
     };
 
-    // 🔄 快速回報多重選擇處理器
+    // ✏️ 修改面板顯示/隱藏切換
+    window.toggleEditPanel = (id) => {
+        const panel = document.getElementById(`edit-panel-${id}`);
+        if (panel) panel.style.display = panel.style.display === "none" ? "block" : "none";
+    };
+
+    // ✏️ 儲存覆蓋狀態並寫入 Firebase
+    window.saveStatusEdit = (id) => {
+        if (!window.fbDB) return;
+        const item = localMushroomsData[id];
+        if (!item) return;
+
+        const newPlayers = parseInt(document.getElementById(`edit-players-${id}`).value) || 0;
+        const h = parseInt(document.getElementById(`edit-h-${id}`).value) || 0;
+        const m = parseInt(document.getElementById(`edit-m-${id}`).value) || 0;
+        const s = parseInt(document.getElementById(`edit-s-${id}`).value) || 0;
+
+        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+        const now = Date.now();
+
+        // 核心更新：直接覆蓋雲端的人數與重設計算時間起點
+        window.fbUpdate(shroomRef, {
+            currentPlayers: newPlayers,
+            timeReported: { hours: h, minutes: m, seconds: s },
+            createdAt: now, // 重設基準時間戳，讓所有人的倒數重新對齊新剩餘時間
+            updatedAt: now
+        }).then(() => {
+            alert("💾 狀態更新成功！已同步發佈至即時看板。");
+            // 如果時間有被大幅微調延長，順便幫他清除通知鎖，讓新倒數能再次通知
+            delete firedAlerts[id];
+        }).catch(err => alert("更新失敗：" + err.message));
+    };
+
+    // 🔄 快速回報新菇
     window.quickUpdateStatus = (id, type, size, hours) => {
         if (!window.fbDB) return;
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
 
-        // 選擇「目前沒長菇」則直接將卡片從 Firebase 移除
         if (type === "暫無蘑菇") {
             window.fbRemove(shroomRef)
                 .then(() => alert("❌ 已同步回報：該點目前無蘑菇，卡片已下架。"))
@@ -394,7 +446,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 計算對應的大小人數上限與新圖片路联
         let maxVal = 30;
         if (size === "小型") maxVal = 25;
         else if (size === "普通") maxVal = 30;
@@ -404,7 +455,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const iconPath = getIconPath(type);
         const now = Date.now();
 
-        // 直接在線上覆蓋更新時間、種類與大小，卡片會立刻「重獲新生」變回正常綠色倒數！
         window.fbUpdate(shroomRef, {
             type: type,
             size: size,
@@ -415,7 +465,6 @@ document.addEventListener("DOMContentLoaded", () => {
             createdAt: now,
             updatedAt: now
         }).then(() => {
-            // 清除該卡片舊的通知鎖定，讓新一輪倒數能重新觸發通知
             delete firedAlerts[id];
             alert(`🎉 快速更新成功！已同步此處為【${size} ${type}】`);
         }).catch(err => alert("更新失敗：" + err.message));
@@ -449,26 +498,6 @@ document.addEventListener("DOMContentLoaded", () => {
         else pinnedList.push(id);
         localStorage.setItem("pinned_mushrooms", JSON.stringify(pinnedList));
         renderBoard();
-    };
-
-    window.quickJoin = (id) => {
-        const item = localMushroomsData[id];
-        if (!item || !window.fbDB) return;
-        let currentMax = 30;
-        if (item.size === "小型") currentMax = 25;
-        else if (item.size === "普通" || item.size === "一般") currentMax = 30;
-        else if (item.size === "大型") currentMax = 35;
-        else if (item.size === "巨大") currentMax = 40;
-
-        if (item.currentPlayers >= currentMax) {
-            alert("該蘑菇人數已滿！");
-            return;
-        }
-        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
-        window.fbUpdate(shroomRef, {
-            currentPlayers: item.currentPlayers + 1,
-            updatedAt: Date.now()
-        });
     };
 
     // 多軌輪詢
