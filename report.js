@@ -123,6 +123,9 @@ function updateCountLimitConstraint() {
     if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
 }
 
+// 🎯 ===================================================
+// 📊 核心新功能：優化「剩餘時間排序」使下次出現倒數（冷卻中）置頂
+// ===================================================
 function filterAndSortMushroomCards() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
@@ -147,17 +150,47 @@ function filterAndSortMushroomCards() {
             const timeB = Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0;
             return timeB - timeA;
         } else if (sortWay === "remainingTime") {
+            // 🔄 全新排序權重邏輯
             const now = Date.now();
-            const getMsLeft = (d) => {
+            
+            // 計算 A 與 B 兩朵菇的「摧毀過期時間點」與「5分鐘冷卻結束點」
+            const getTimes = (d) => {
                 const repTime = Date.parse(d.reportTime.replace(/-/g, '/')) || 0;
                 const totalDur = ((parseInt(d.hours) || 0) * 3600 + (parseInt(d.minutes) || 0) * 60 + (parseInt(d.seconds) || 0)) * 1000;
-                return (repTime + totalDur) - now;
+                const expire = repTime + totalDur;
+                return { expire: expire, respawn: expire + 300000 }; // 300000ms = 5分鐘
             };
-            const leftA = getMsLeft(dataA);
-            const leftB = getMsLeft(dataB);
-            if (leftA <= 0) return 1;
-            if (leftB <= 0) return -1;
-            return leftA - leftB;
+
+            const tA = getTimes(dataA);
+            const tB = getTimes(dataB);
+
+            // 分配狀態代碼：1 = 5分鐘冷卻中（最優先）, 2 = 正在倒數摧毀中（次優先）, 3 = 完全過期待更新（最後）
+            const getStatusRank = (t) => {
+                if (now < t.expire) return 2;             // 正在倒數中
+                if (now >= t.expire && now < t.respawn) return 1; // 5分鐘冷卻中（下次出現倒數）
+                return 3;                                 // 已經完全過期
+            };
+
+            const rankA = getStatusRank(tA);
+            const rankB = getStatusRank(tB);
+
+            // 如果狀態群組不同，群組代碼越小的排越前面（1 優先於 2 優先於 3）
+            if (rankA !== rankB) {
+                return rankA - rankB;
+            }
+
+            // 同群組內的微觀排序：
+            if (rankA === 1) {
+                // 如果兩者都在「下次出現倒數」，冷卻剩餘時間越少（快生出來了）的排前面
+                return tA.respawn - tB.respawn;
+            } else if (rankA === 2) {
+                // 如果兩者都在「正在被摧毀」，剩餘時間越少（快打完了）的排前面
+                return tA.expire - tB.expire;
+            } else {
+                // 如果都完全過期了，依據原本上報時間，新的排前面
+                return tB.expire - tA.expire;
+            }
+
         } else if (sortWay === "totalPlayers") {
             return (dataB.pCount || 0) - (dataA.pCount || 0);
         } else if (sortWay === "mushroomSize") {
@@ -230,7 +263,7 @@ function setupQuickEditFeature() {
         if (!currentCard) return;
         const firebaseId = currentCard.getAttribute('data-id');
 
-        // 🔥 ✅ 核實按鈕連線處理
+        // ✅ 核實按鈕連線處理
         if (e.target.classList.contains('verify-fact-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val();
@@ -261,7 +294,7 @@ function setupQuickEditFeature() {
             return;
         }
 
-        // 🛠️ 📝 更新按鈕彈出面板
+        // 📝 更新按鈕彈出面板
         if (e.target.classList.contains('quick-edit-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val();
@@ -369,7 +402,6 @@ function renderMushroomCard(id, data) {
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
-    // 🌟 原汁原味還原右上角（只有 📌 和 📝 更新），核實按鈕改放至下方人數群組中，並預設 display:none 隱藏
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
         <button class="quick-edit-btn" title="快速原地修改人數時間">📝 更新</button>
@@ -547,7 +579,6 @@ function initSingleCountdown(el) {
     el.setAttribute('data-respawn', expireTime + 300000); 
 }
 
-// ⏳ 核心判定：每秒倒數時，動態決定核實按鈕要不要出現！
 function updateCountdowns() {
     const now = Date.now();
     
@@ -582,7 +613,6 @@ function updateCountdowns() {
         let timeLeft = targetTime - now;
 
         if (timeLeft > 0) {
-            // 🎯 重點 A：只有正在進行摧毀倒數的蘑菇，才讓核實按鈕顯示 (inline-block)
             if (verifyBtn) verifyBtn.style.display = 'inline-block';
 
             let seconds = Math.floor((timeLeft / 1000) % 60);
@@ -591,7 +621,6 @@ function updateCountdowns() {
             el.innerText = `⏳ 剩餘時間：${format(hours)}:${format(minutes)}:${format(seconds)}`;
             el.style.color = "#333";
         } else {
-            // 🎯 重點 B：如果蘑菇已經打完了（進入下次出現倒數、或待更新狀態），一律隱藏核實按鈕！
             if (verifyBtn) verifyBtn.style.display = 'none';
 
             let rSeconds = Math.floor(((respawnTime - now) / 1000) % 60);
