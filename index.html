@@ -28,54 +28,50 @@
 
             <form id="simulator-form" class="simulator-form">
                 <div class="form-group">
-                    <label for="target-mushroom">目標蘑菇種類：</label>
-                    <select id="target-mushroom" name="targetMushroom">
-                        <option value="normal">一般蘑菇</option>
-                        <option value="fire">火蘑菇</option>
-                        <option value="water">水蘑菇</option>
-                        <option value="crystal">水晶蘑菇</option>
-                        <option value="poison">毒蘑菇</option>
-                    </select>
-                </div>
+    <label for="target-mushroom">目標蘑菇種類：</label>
+    <select id="target-mushroom" name="targetMushroom">
+        <option value="normal">一般蘑菇</option>
+        <option value="fire">🔥 火蘑菇</option>
+        <option value="water">💧 水蘑菇</option>
+        <option value="crystal">💎 水晶蘑菇</option>
+        <option value="poison">☠️ 毒蘑菇</option>
+        <option value="electric">⚡ 電蘑菇</option>
+        <option value="monthly_special">✨ 每月特殊蘑菇</option>
+    </select>
+</div>
 
-                <hr class="divider">
+<div class="form-group">
+    <label for="flower-status">頭頂花朵狀態：</label>
+    <select id="flower-status" name="flowerStatus">
+        <option value="bare">禿頭 (+0)</option>
+        <option value="leaf">葉子頭 (+1)</option>
+        <option value="bud">花苞頭 (+2)</option>
+        <option value="normal_flower">普花頭 (+3)</option>
+        <option value="special_flower">特殊花 / 當月副花 (+4)</option>
+        <option value="monthly_main_flower">當月主花 (+5)</option>
+    </select>
+</div>
 
-                <div class="form-group">
-                    <label for="pikmin-color">皮克敏顏色：</label>
-                    <select id="pikmin-color" name="pikminColor">
-                        <option value="red">🔴 紅色皮克敏</option>
-                        <option value="blue">🔵 藍色皮克敏</option>
-                        <option value="yellow">🟡 黃色皮克敏</option>
-                        <option value="purple">🟣 紫色皮克敏</option>
-                        <option value="white">⚪ 白色皮克敏</option>
-                        <option value="rock">🪨 岩石皮克敏</option>
-                        <option value="winged">🪽 羽翅皮克敏</option>
-                    </select>
-                </div>
+<div class="form-group">
+    <label for="decor-status">飾品狀態：</label>
+    <select id="decor-status" name="decorStatus">
+        <option value="none">無飾品 (+0)</option>
+        <option value="normal_decor">一般飾品 (+4)</option>
+        <option value="monthly_main_decor">🎒 本月主飾品 (+4，打當月菇+300)</option>
+        <option value="monthly_sub_decor">🎖️ 本月副飾品 (+4，打當月菇+100)</option>
+    </select>
+</div>
 
-                <div class="form-group">
-                    <label for="friendship-level">友好度等級 (0-8 愛心)：</label>
-                    <input type="number" id="friendship-level" name="friendshipLevel" min="0" max="8" value="4">
-                </div>
-
-                <div class="form-group">
-                    <label for="flower-status">頭頂花朵狀態：</label>
-                    <select id="flower-status" name="flowerStatus">
-                        <option value="bare">禿頭 (無)</option>
-                        <option value="leaf">葉子</option>
-                        <option value="bud">花苞</option>
-                        <option value="normal_flower">一般花朵</option>
-                        <option value="special_flower">特殊花朵</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="decor-status">飾品狀態：</label>
-                    <select id="decor-status" name="decorStatus">
-                        <option value="none">無飾品</option>
-                        <option value="decor">有飾品</option>
-                    </select>
-                </div>
+<div class="form-row">
+    <div class="form-group">
+        <label for="red-hearts">紅色愛心數量 (0-4)：</label>
+        <input type="number" id="red-hearts" min="0" max="4" value="4">
+    </div>
+    <div class="form-group">
+        <label for="gold-hearts">金色愛心數量 (0-4)：</label>
+        <input type="number" id="gold-hearts" min="0" max="4" value="0">
+    </div>
+</div>
             </form>
 
             <div class="result-section">
