@@ -7,7 +7,6 @@ const formDistrictSelect = document.getElementById('form-district');
 const filterCitySelect = document.getElementById('filter-city');
 const filterDistrictSelect = document.getElementById('filter-district');
 
-// 排序與新增的搜尋、切換 UI 元件
 const cardSortSelect = document.getElementById('card-sort') || document.createElement('select');
 const searchNameInput = document.getElementById('search-name');
 const viewToggleBtn = document.getElementById('view-toggle-btn');
@@ -21,20 +20,14 @@ const devModeBtn = document.getElementById('dev-mode-btn');
 const devStatusText = document.getElementById('dev-status');
 let isDevMode = false;
 
-// 儲存目前從雲端抓取到的所有蘑菇原始資料
 let globalMushroomList = [];
-
-// 🔔 儲存玩家主動訂閱「提醒我」的蘑菇 Firebase ID 陣列與已發送紀錄
 let activeReminders = JSON.parse(localStorage.getItem('mushroom_reminders') || '[]');
-let sentNotifications = new Set(); // 避免重複跳通知
-
-// 📌 記憶釘選的蘑菇 Firebase ID 陣列
+let sentNotifications = new Set(); 
 let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]');
 
-// 🎴 版面檢視樣式狀態 ('grid' 或 'list')，預設為卡片網格
+// 🎴 版面檢視狀態：'grid' (卡片) 或 'list' (清單)
 let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
-// 🛜 完美對齊你的美國資料庫設定
 const firebaseConfig = {
     apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
     authDomain: "pikmin-mushroom-hub.firebaseapp.com",
@@ -49,7 +42,6 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const dbRef = database.ref('mushrooms');
 
-// 🗺️ 全台 22 縣市完整行政區資料庫
 const allTaiwanDistricts = {
     "基隆市": ["仁愛", "信義", "中正", "中山", "安樂", "暖暖", "七堵"],
     "臺北市": ["中正", "大同", "中山", "松山", "大安", "萬華", "信義", "士林", "北投", "內湖", "南港", "文山"],
@@ -92,8 +84,6 @@ function initCityDropdowns() {
         opt.value = city; opt.innerText = city;
         filterCitySelect.appendChild(opt);
     });
-
-    // 重新更新切換按鈕文字
     updateViewToggleBtnText();
 }
 
@@ -140,13 +130,7 @@ function updateCountLimitConstraint() {
 
 function updateViewToggleBtnText() {
     if (!viewToggleBtn) return;
-    if (currentViewMode === 'list') {
-        viewToggleBtn.innerText = "📋 清單模式";
-        mushroomContainer.classList.add('list-view'); // 讓 CSS 可以切換樣式
-    } else {
-        viewToggleBtn.innerText = "🎴 卡片模式";
-        mushroomContainer.classList.remove('list-view');
-    }
+    viewToggleBtn.innerText = (currentViewMode === 'list') ? "📋 清單模式" : "🎴 卡片模式";
 }
 
 function filterAndSortMushroomCards() {
@@ -155,98 +139,67 @@ function filterAndSortMushroomCards() {
     const sortWay = cardSortSelect.value;
     const searchKeyword = searchNameInput ? searchNameInput.value.trim().toLowerCase() : "";
 
-    // 1. 條件篩選 (包含新加入的關鍵字搜尋功能)
     let filteredList = globalMushroomList.filter(item => {
         const data = item.data;
         const cardDistricts = Array.isArray(data.district) ? data.district : [data.district];
-        
         const matchCity = (selectedCity === 'all' || data.city === selectedCity);
         const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict));
         const matchKeyword = (!searchKeyword || data.name.toLowerCase().includes(searchKeyword) || data.title.toLowerCase().includes(searchKeyword));
-        
         return matchCity && matchDistrict && matchKeyword;
     });
 
     const sizeWeight = { "巨型": 4, "大": 3, "普通": 2, "小": 1 };
 
-    // 2. 核心基礎排序
     filteredList.sort((a, b) => {
         const dataA = a.data;
         const dataB = b.data;
-
         if (sortWay === "updateTime") {
-            const timeA = Date.parse(dataA.reportTime.replace(/-/g, '/')) || 0;
-            const timeB = Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0;
-            return timeB - timeA;
+            return (Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0) - (Date.parse(dataA.reportTime.replace(/-/g, '/')) || 0);
         } else if (sortWay === "remainingTime") {
             const now = Date.now();
             const getTimes = (d) => {
                 const repTime = Date.parse(d.reportTime.replace(/-/g, '/')) || 0;
                 const totalDur = ((parseInt(d.hours) || 0) * 3600 + (parseInt(d.minutes) || 0) * 60 + (parseInt(d.seconds) || 0)) * 1000;
-                const expire = repTime + totalDur;
-                return { expire: expire, respawn: expire + 300000 };
+                return { expire: repTime + totalDur, respawn: repTime + totalDur + 300000 };
             };
-
-            const tA = getTimes(dataA);
-            const tB = getTimes(dataB);
-
-            const getStatusRank = (t) => {
-                if (now < t.expire) return 2;             
-                if (now >= t.expire && now < t.respawn) return 1; 
-                return 3;                                 
-            };
-
-            const rankA = getStatusRank(tA);
-            const rankB = getStatusRank(tB);
-
-            if (rankA !== rankB) { return rankA - rankB; }
-
-            if (rankA === 1) { return tA.respawn - tB.respawn; } 
-            else if (rankA === 2) { return tA.expire - tB.expire; } 
-            else { return tB.expire - tA.expire; }
-
+            const tA = getTimes(dataA); const tB = getTimes(dataB);
+            const getStatusRank = (t) => { if (now < t.expire) return 2; if (now >= t.expire && now < t.respawn) return 1; return 3; };
+            const rankA = getStatusRank(tA); const rankB = getStatusRank(tB);
+            if (rankA !== rankB) return rankA - rankB;
+            return (rankA === 1) ? tA.respawn - tB.respawn : (rankA === 2 ? tA.expire - tB.expire : tB.expire - tA.expire);
         } else if (sortWay === "totalPlayers") {
             return (dataB.pCount || 0) - (dataA.pCount || 0);
         } else if (sortWay === "mushroomSize") {
-            const wA = sizeWeight[dataA.size] || 0;
-            const wB = sizeWeight[dataB.size] || 0;
-            return wB - wA;
+            return (sizeWeight[dataB.size] || 0) - (sizeWeight[dataA.size] || 0);
         } else if (sortWay === "mushroomType") {
             return dataA.title.localeCompare(dataB.title, 'zh-Hant');
         }
         return 0;
     });
 
-    // 🌟 3. 頂級特權：把具有「記憶釘選」的卡片強制置頂（符合篩選條件的才置頂）
+    // 📌 記憶置頂排序
     filteredList.sort((a, b) => {
         const isPinnedA = pinnedMushrooms.includes(a.id) ? 1 : 0;
         const isPinnedB = pinnedMushrooms.includes(b.id) ? 1 : 0;
-        return isPinnedB - isPinnedA; // 1 排在 0 前面
+        return isPinnedB - isPinnedA;
     });
 
     mushroomContainer.innerHTML = '';
     filteredList.forEach(item => { renderMushroomCard(item.id, item.data); });
 }
 
-// 📌 智慧記憶版釘選功能
 function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
             const currentCard = e.target.closest('.card');
             const firebaseId = currentCard.getAttribute('data-id');
-            
             const index = pinnedMushrooms.indexOf(firebaseId);
             if (index === -1) {
-                pinnedMushrooms.push(firebaseId);
-                e.target.classList.add('active');
+                pinnedMushrooms.push(firebaseId); e.target.classList.add('active');
             } else {
-                pinnedMushrooms.splice(index, 1);
-                e.target.classList.remove('active');
+                pinnedMushrooms.splice(index, 1); e.target.classList.remove('active');
             }
-            
-            // 寫入本地快取儲存
             localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
-            // 重新刷新，程式會自動將有釘選的推到最上方
             filterAndSortMushroomCards();
         }
     });
@@ -259,28 +212,19 @@ function setupTimeInfoFeature() {
             if (!reportTimeStr) return;
             const reportTimestamp = Date.parse(reportTimeStr.replace(/-/g, '/'));
             const now = Date.now();
-            const MathDiffMs = now - reportTimestamp;
             let timeAgoText = "未知";
             if (!isNaN(reportTimestamp)) {
-                const diffMins = Math.floor(MathDiffMs / 1000 / 60);
-                if (diffMins < 1) { timeAgoText = "剛剛（1 分鐘內）"; }
-                else if (diffMins < 60) { timeAgoText = `${diffMins} 分鐘前`; }
-                else {
-                    const diffHours = Math.floor(diffMins / 60);
-                    const remainMins = diffMins % 60;
-                    timeAgoText = `${diffHours} 小時 ${remainMins} 分鐘前`;
-                }
-            } else { timeAgoText = reportTimeStr; }
-
+                const diffMins = Math.floor((now - reportTimestamp) / 1000 / 60);
+                if (diffMins < 1) timeAgoText = "剛剛";
+                else if (diffMins < 60) timeAgoText = `${diffMins} 分鐘前`;
+                else timeAgoText = `${Math.floor(diffMins/60)} 小時 ${diffMins%60} 分鐘前`;
+            }
             const timeOverlay = document.createElement('div');
             timeOverlay.className = 'edit-modal-overlay'; 
             timeOverlay.innerHTML = `
                 <div class="time-modal-window">
                     <div class="time-modal-header">⏰ 情報最後更新歷史</div>
-                    <div class="time-modal-clock">🕒</div>
-                    <p style="font-size:14px; color:#546e7a; margin:4px 0 10px 0;">上報同步時間點：</p>
                     <div class="time-modal-timestamp">${reportTimeStr}</div>
-                    <p style="font-size:14px; color:#546e7a; margin:14px 0 4px 0;">距離現在已過去：</p>
                     <div class="time-modal-ago">${timeAgoText}</div>
                     <button class="time-btn-close">我知道了</button>
                 </div>
@@ -297,43 +241,26 @@ function setupQuickEditFeature() {
         if (!currentCard) return;
         const firebaseId = currentCard.getAttribute('data-id');
 
-        // ✅ 核實按鈕連線處理
         if (e.target.classList.contains('verify-fact-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
-                const currentData = snapshot.val();
-                if (!currentData) return;
-
+                const currentData = snapshot.val(); if (!currentData) return;
                 const countdownEl = currentCard.querySelector('.countdown');
                 const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
-                const now = Date.now();
-                let timeLeftMs = targetTime - now;
-
-                let h = parseInt(currentData.hours);
-                let m = parseInt(currentData.minutes);
-                let s = parseInt(currentData.seconds || 0);
-
+                let timeLeftMs = targetTime - Date.now();
+                let h = parseInt(currentData.hours), m = parseInt(currentData.minutes), s = parseInt(currentData.seconds || 0);
                 if (timeLeftMs > 0) {
-                    s = Math.floor((timeLeftMs / 1000) % 60);
-                    m = Math.floor((timeLeftMs / (1000 * 60)) % 60);
-                    h = Math.floor((timeLeftMs / (1000 * 60 * 60)) % 24);
+                    s = Math.floor((timeLeftMs / 1000) % 60); m = Math.floor((timeLeftMs / (1000 * 60)) % 60); h = Math.floor((timeLeftMs / (1000 * 60 * 60)) % 24);
                 }
-
                 const d = new Date();
                 const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${d.getDate()} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
-
-                dbRef.child(firebaseId).update({
-                    hours: h, minutes: m, seconds: s, reportTime: newReportTime
-                }).then(() => { alert("✅ 訊息核實成功！最後更新時間已同步刷新！"); });
+                dbRef.child(firebaseId).update({ hours: h, minutes: m, seconds: s, reportTime: newReportTime });
             });
             return;
         }
 
-        // 📝 更新按鈕彈出面板
         if (e.target.classList.contains('quick-edit-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
-                const currentData = snapshot.val();
-                if (!currentData) return;
-
+                const currentData = snapshot.val(); if (!currentData) return;
                 const maxLimit = getCountLimit(currentData.size);
                 let currentDists = Array.isArray(currentData.district) ? currentData.district.join(" ") : currentData.district;
 
@@ -341,54 +268,30 @@ function setupQuickEditFeature() {
                 modalOverlay.className = 'edit-modal-overlay';
                 modalOverlay.innerHTML = `
                     <div class="edit-modal-window">
-                        <div class="edit-modal-header">
-                            <span>📝 快速更新蘑菇現況</span>
-                            <span class="edit-modal-close">&times;</span>
-                        </div>
+                        <div class="edit-modal-header"><span>📝 快速更新蘑菇現況</span><span class="edit-modal-close">&times;</span></div>
                         <div class="edit-modal-body">
-                            <p style="font-size:13px; color:#78909c; margin:0 0 12px 0;">📍 地點: ${currentData.city} · ${currentData.name}</p>
-                            <h4>👥 目前參戰人數 (上限 ${maxLimit} 人)</h4>
                             <input type="number" id="modal-pcount" class="edit-modal-input" value="${currentData.pCount}" min="0" max="${maxLimit}">
-                            <h4>⏳ 剩餘倒數時間</h4>
                             <div class="edit-modal-input-group">
-                                <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours}" placeholder="時" min="0">
-                                <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes}" placeholder="分" min="0" max="59">
-                                <input type="number" id="modal-seconds" class="edit-modal-input" value="${currentData.seconds || 0}" placeholder="秒" min="0" max="59">
+                                <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours}">
+                                <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes}">
+                                <input type="number" id="modal-seconds" class="edit-modal-input" value="${currentData.seconds || 0}">
                             </div>
-                            <h4>🗺️ 跨區可見行政區設定 (空格隔開)</h4>
                             <input type="text" id="modal-dists" class="edit-modal-input" value="${currentDists}">
                         </div>
-                        <div class="edit-modal-footer">
-                            <button class="edit-btn-cancel">取消</button>
-                            <button class="edit-btn-save">儲存更新</button>
-                        </div>
+                        <div class="edit-modal-footer"><button class="edit-btn-save">儲存更新</button></div>
                     </div>
                 `;
-
                 document.body.appendChild(modalOverlay);
-                const closeModal = () => modalOverlay.remove();
-                modalOverlay.querySelector('.edit-modal-close').addEventListener('click', closeModal);
-                modalOverlay.querySelector('.edit-btn-cancel').addEventListener('click', closeModal);
-
+                modalOverlay.querySelector('.edit-modal-close').addEventListener('click', () => modalOverlay.remove());
                 modalOverlay.querySelector('.edit-btn-save').addEventListener('click', () => {
                     const newCount = parseInt(document.getElementById('modal-pcount').value);
                     const h = parseInt(document.getElementById('modal-hours').value);
                     const m = parseInt(document.getElementById('modal-minutes').value);
                     const s = parseInt(document.getElementById('modal-seconds').value);
                     const distsRaw = document.getElementById('modal-dists').value.trim();
-
-                    if (isNaN(newCount) || newCount < 0 || newCount > maxLimit) { alert(`❌ 人數超出範圍 (0-${maxLimit})！`); return; }
-                    if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || m > 59 || s < 0 || s > 59) { alert("❌ 時間格式錯誤！"); return; }
-                    if (!distsRaw) { alert("❌ 行政區不能留空喔！"); return; }
-
-                    const distArray = distsRaw.split(/\s+/);
                     const now = new Date();
                     const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
-
-                    dbRef.child(firebaseId).update({
-                        pCount: newCount, hours: h, minutes: m, seconds: s,
-                        district: distArray, reportTime: newReportTime
-                    }).then(() => { alert("🚀 現況已即時全台同步更新！"); closeModal(); });
+                    dbRef.child(firebaseId).update({ pCount: newCount, hours: h, minutes: m, seconds: s, district: distsRaw.split(/\s+/), reportTime: newReportTime }).then(() => modalOverlay.remove());
                 });
             });
         }
@@ -396,33 +299,18 @@ function setupQuickEditFeature() {
 }
 
 function setupDeveloperMode() {
-    const CORRECT_PASSWORD = "admin123";
     devModeBtn.addEventListener('click', () => {
         if (!isDevMode) {
-            const inputPassword = prompt("🔐 請輸入開發者安全驗證密碼：");
-            if (inputPassword === CORRECT_PASSWORD) {
-                isDevMode = true;
-                document.body.classList.add('dev-active');
-                devModeBtn.innerText = "🔒 關閉編輯模式";
-                devStatusText.innerText = "🔓 開發者編輯中 (點擊卡片左上角 ❌ 可刪除雲端蘑菇)";
-                devStatusText.style.color = "#d32f2f";
-            } else if (inputPassword !== null) { alert("❌ 密碼錯誤！"); }
+            if (prompt("🔐 請輸入驗證密碼：") === "admin123") {
+                isDevMode = true; document.body.classList.add('dev-active'); devModeBtn.innerText = "🔒 關閉編輯模式";
+            }
         } else {
-            isDevMode = false;
-            document.body.classList.remove('dev-active');
-            devModeBtn.innerText = "🛠️ 開啟開發者模式";
-            devStatusText.innerText = "🔒 安全瀏覽模式";
-            devStatusText.style.color = "#546e7a";
+            isDevMode = false; document.body.classList.remove('dev-active'); devModeBtn.innerText = "🛠️ 開啟開發者模式";
         }
     });
-
     mushroomContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-btn')) {
-            const currentCard = e.target.closest('.card');
-            const firebaseId = currentCard.getAttribute('data-id');
-            if (confirm("⚠️ 確定要從雲端同步刪除這朵蘑菇嗎？")) {
-                dbRef.child(firebaseId).remove().then(() => alert("🗑️ 雲端蘑菇已成功下架！"));
-            }
+        if (e.target.classList.contains('delete-btn') && confirm("⚠️ 確定刪除嗎？")) {
+            dbRef.child(e.target.closest('.card').getAttribute('data-id')).remove();
         }
     });
 }
@@ -430,40 +318,16 @@ function setupDeveloperMode() {
 function setupNotificationFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('notify-me-btn')) {
-            const currentCard = e.target.closest('.card');
-            const firebaseId = currentCard.getAttribute('data-id');
-            const countdownEl = currentCard.querySelector('.countdown');
-            
-            const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
-            const now = Date.now();
-            const isCurrentlyFighting = (targetTime - now > 0);
-
+            const firebaseId = e.target.closest('.card').getAttribute('data-id');
             if (activeReminders.includes(firebaseId)) {
-                toggleSubscription(firebaseId, e.target, "🔔 提醒我");
-                alert("🔕 已成功關閉並取消該蘑菇的通知提醒。");
-                return;
+                toggleSubscription(firebaseId, e.target, "🔔 提醒我"); return;
             }
-
-            if ("Notification" in window) {
-                if (Notification.permission === "denied") {
-                    alert("⚠️ 您先前拒絕了通知權限。系統將為您切換為【網頁音效模式】，時間到時會發出嗶嗶聲提醒！");
-                    toggleSubscription(firebaseId, e.target, "🎵 音效提醒");
-                    return;
-                }
-
-                Notification.requestPermission().then((permission) => {
-                    if (permission === "granted") {
-                        const successText = isCurrentlyFighting ? "🔔 結束提醒" : "🔔 出生提醒";
-                        toggleSubscription(firebaseId, e.target, successText);
-                        alert(`✅ 設定成功！本網頁開著時，該蘑菇${isCurrentlyFighting ? '打完前' : '出生前'} 1 分鐘會自動跳出通知提醒您！`);
-                    } else {
-                        toggleSubscription(firebaseId, e.target, "🎵 音效提醒");
-                        alert("🎵 已為您自動切換為【音效提醒模式】！只要不關閉網頁分頁，時間到時網頁會播放嗶嗶聲提醒您！");
-                    }
+            if ("Notification" in window && Notification.permission !== "denied") {
+                Notification.requestPermission().then(p => {
+                    toggleSubscription(firebaseId, e.target, p === "granted" ? "🔔 已設提醒" : "🎵 音效提醒");
                 });
             } else {
                 toggleSubscription(firebaseId, e.target, "🎵 音效提醒");
-                alert(`🎵 偵測到您的瀏覽器不支援系統推播。系統已自動啟動【網頁音效提醒】！只要保持網頁開啟，結束/出生前 1 分鐘網頁就會發出聲音喔！`);
             }
         }
     });
@@ -471,342 +335,103 @@ function setupNotificationFeature() {
 
 function toggleSubscription(id, buttonEl, text) {
     const index = activeReminders.indexOf(id);
-    if (index === -1) {
-        activeReminders.push(id);
-        buttonEl.classList.add('subscribed');
-        buttonEl.innerText = text;
-        buttonEl.style.background = "#e8f5e9";
-        buttonEl.style.color = "#2e7d32";
-        buttonEl.style.borderColor = "#81c784";
-    } else {
-        activeReminders.splice(index, 1);
-        buttonEl.classList.remove('subscribed');
-        buttonEl.innerText = "🔔 提醒我";
-        buttonEl.style.background = "#fff8e1";
-        buttonEl.style.color = "#b78103";
-        buttonEl.style.borderColor = "#ffe082";
-        if (sentNotifications.has(id)) { sentNotifications.delete(id); }
-    }
+    if (index === -1) { activeReminders.push(id); buttonEl.classList.add('subscribed'); buttonEl.innerText = text; } 
+    else { activeReminders.splice(index, 1); buttonEl.classList.remove('subscribed'); buttonEl.innerText = "🔔 提醒我"; if (sentNotifications.has(id)) sentNotifications.delete(id); }
     localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
 }
 
+// 🎴 核心防崩潰渲染：如果是 list 模式，純靠 JS 注入內建小樣式，絕對不破壞原本的 CSS 排版結構
 function renderMushroomCard(id, data) {
     const newCard = document.createElement('div');
     newCard.className = "card";
     newCard.setAttribute('data-id', id);
-    newCard.setAttribute('data-city', data.city);
     
-    const districtArray = Array.isArray(data.district) ? data.district : [data.district];
-    newCard.setAttribute('data-districts', JSON.stringify(districtArray));
-    
-    // 判斷釘選與提醒狀態，加入對應 Class
-    const isSubscribed = activeReminders.includes(id);
-    const isPinned = pinnedMushrooms.includes(id);
-    
-    let notifyBtnText = "🔔 提醒我";
-    let subClass = "";
-    let btnStyle = "background: #fff8e1; border: 1px solid #ffe082; color: #b78103;";
-    
-    if (isSubscribed) {
-        subClass = " subscribed";
-        notifyBtnText = ("Notification" in window && Notification.permission === "granted") ? "🔔 已設提醒" : "🎵 音效提醒";
-        btnStyle = "background: #e8f5e9; border: 1px solid #81c784; color: #2e7d32;";
+    // 🌟 如果是清單模式，注入幾行不爆版的隱藏微調
+    if (currentViewMode === 'list') {
+        newCard.style.padding = "10px 15px";
+        newCard.style.minHeight = "auto";
+        newCard.style.marginBottom = "8px";
     }
 
-    const pinClass = isPinned ? "pin-btn active" : "pin-btn";
+    const isSubscribed = activeReminders.includes(id);
+    const isPinned = pinnedMushrooms.includes(id);
+    let notifyBtnText = isSubscribed ? (("Notification" in window && Notification.permission === "granted") ? "🔔 已設提醒" : "🎵 音效提醒") : "🔔 提醒我";
     
+    const districtArray = Array.isArray(data.district) ? data.district : [data.district];
+    
+    // 🌟 清單模式下，縮小圖片、隱藏無用標籤
+    const imgStyle = (currentViewMode === 'list') ? 'width:35px; height:35px; margin:0 10px 0 0; float:left;' : '';
+    const textStyle = (currentViewMode === 'list') ? 'display:inline-block; margin:2px 0; font-size:14px;' : '';
+
     newCard.innerHTML = `
-        <button class="${pinClass}" title="釘選此位置">📌</button>
-        <button class="quick-edit-btn" title="快速原地修改人數時間">📝 更新</button>
-        <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
-        <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
-        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" title="查看最後更新時間" style="cursor:pointer; color:#0288d1; margin-left:5px;">◉</span></h3>
-        <p>📍 地點：${data.city}(${districtArray.join('/')}) ${data.name}</p>
-        <p class="countdown" 
-           data-report-time="${data.reportTime}" 
-           data-initial-hours="${data.hours}" 
-           data-initial-minutes="${data.minutes}"
-           data-initial-seconds="${data.seconds}">⏳ 剩餘時間：計算中...</p>
-        <p style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
-            <span>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</span>
-            <button class="verify-fact-btn" title="現場勘查無誤！一鍵刷新回報時間" style="display: none; background: #e8f5e9; border: 1px solid #81c784; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 6px; color: #2e7d32; font-weight: bold;">✅ 核實</button>
-        </p>
-        <button class="notify-me-btn${subClass}" style="${btnStyle} border-radius: 20px; padding: 4px 14px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s;" title="時間截止前 1 分鐘傳送提醒">${notifyBtnText}</button>
+        <button class="pin-btn ${isPinned?'active':''}" title="釘選">📌</button>
+        <button class="quick-edit-btn" title="更新">📝 更新</button>
+        <button class="delete-btn" title="刪除">❌</button>
+        <img src="picture/${data.img}" alt="菇" class="card-icon" style="${imgStyle}">
+        <h3 style="${textStyle}">[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}">◉</span></h3>
+        <p style="${textStyle}">📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
+        <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="${textStyle}; font-weight:bold;">⏳ 計算中...</p>
+        <p style="${textStyle}; margin-bottom:4px;">👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
+        <button class="notify-me-btn" style="border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">${notifyBtnText}</button>
     `;
-    initSingleCountdown(newCard.querySelector('.countdown'));
+    
+    const reportTimestamp = Date.parse(data.reportTime.replace(/-/g, '/'));
+    const duration = ((parseInt(data.hours)||0)*3600 + (parseInt(data.minutes)||0)*60 + (parseInt(data.seconds)||0))*1000;
+    newCard.querySelector('.countdown').setAttribute('data-target', reportTimestamp + duration);
+    newCard.querySelector('.countdown').setAttribute('data-respawn', reportTimestamp + duration + 300000);
+    
     mushroomContainer.appendChild(newCard);
-}
-
-function setupReportForm() {
-    mushroomForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const size = formSizeSelect.value;
-        const limit = getCountLimit(size);
-        const pCount = parseInt(formCountInput.value) || 0;
-
-        if (pCount < 0 || pCount > limit) { alert(`❌ 人數超出當前限制 (0-${limit}人)。`); return; }
-
-        const city = formCitySelect.value;
-        const district = formDistrictSelect.value; 
-        const name = document.getElementById('form-name').value.trim();
-        const type = formTypeSelect.value;
-        const hours = parseInt(document.getElementById('form-hours').value) || 0;
-        const minutes = parseInt(document.getElementById('form-minutes').value) || 0;
-        const seconds = parseInt(document.getElementById('form-seconds').value) || 0; 
-
-        if (!name) { alert("❌ 請輸入具體地點名稱！"); return; }
-
-        const typeMapping = {
-            red: { title: "紅色蘑菇", img: "mushroom_red.png" },
-            blue: { title: "藍色蘑菇", img: "mushroom_blue.png" },
-            yellow: { title: "黃色蘑菇", img: "mushroom_yellow.png" },
-            purple: { title: "紫色蘑菇", img: "mushroom_purple.png" },
-            white: { title: "白色蘑菇", img: "mushroom_white.png" },
-            rock: { title: "灰色蘑菇", img: "mushroom_rock.png" },
-            wing: { title: "粉紅色蘑菇", img: "mushroom_wing.png" },
-            ice: { title: "冰藍蘑菇", img: "mushroom_ice.png" },
-            rock_crystal: { title: "特殊水晶蘑菇", img: "mushroom_crystal.png" },
-            red_fire: { title: "元素火蘑菇", img: "mushroom_fire.png" },
-            blue_water: { title: "元素水蘑菇", img: "mushroom_water.png" },
-            white_poison: { title: "元素毒蘑菇", img: "mushroom_poison.png" },
-            yellow_electric: { title: "元素電子蘑菇", img: "mushroom_electric.png" },
-            event_special: { title: "本月限定活動蘑菇", img: "mushroom_event.png" }
-        };
-        const mInfo = typeMapping[type] || { title: "未知蘑菇", img: "mushroom_red.png" };
-
-        const now = new Date();
-        const reportTimeString = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
-
-        dbRef.once('value', (snapshot) => {
-            let existingKey = null;
-            snapshot.forEach((childSnapshot) => {
-                const val = childSnapshot.val();
-                if (val.city === city && val.name === name) { existingKey = childSnapshot.key; }
-            });
-
-            let finalDistricts = [district];
-            if (existingKey && snapshot.child(existingKey).val().district) {
-                const oldDist = snapshot.child(existingKey).val().district;
-                const oldDistArray = Array.isArray(oldDist) ? oldDist : [oldDist];
-                finalDistricts = Array.from(new Set([...oldDistArray, district]));
-            }
-
-            const targetData = { city, district: finalDistricts, name, size, title: mInfo.title, img: mInfo.img, reportTime: reportTimeString, hours, minutes, seconds, pCount, limit };
-
-            if (existingKey) { dbRef.child(existingKey).set(targetData).then(() => alert("🔄 偵測到相同地點！已合併情報並刷新校準時間！")); }
-            else { dbRef.push(targetData).then(() => alert("🚀 蘑菇情報已成功同步至雲端！")); }
-
-            filterCitySelect.value = city;
-            updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
-            filterDistrictSelect.value = finalDistricts[0];
-
-            mushroomForm.reset();
-            document.getElementById('form-seconds').value = "0"; 
-            updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
-            updateCountLimitConstraint(); 
-            filterAndSortMushroomCards();
-        });
-    });
-}
-
-function listenToCloudDatabase() {
-    dbRef.on('value', (snapshot) => {
-        globalMushroomList = [];
-        snapshot.forEach((childSnapshot) => {
-            globalMushroomList.push({ id: childSnapshot.key, data: childSnapshot.val() });
-        });
-        filterAndSortMushroomCards();
-    });
-}
-
-function setupGeolocation() {
-    if (!navigator.geolocation) return;
-    geoBtn.addEventListener('click', () => {
-        geoBtn.innerText = "⌛ 定位中..."; geoBtn.disabled = true;
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&accept-language=zh-TW`);
-                const data = await response.json();
-                const address = data.display_name || "";
-                const normalizedAddress = address.toLowerCase().replace(/臺/g, "台");
-                let foundCity = null, foundDistrict = null;
-
-                for (let city in allTaiwanDistricts) {
-                    if (normalizedAddress.includes(city.replace(/臺/g, "台"))) {
-                        foundCity = city;
-                        for (let dist of allTaiwanDistricts[city]) {
-                            if (normalizedAddress.includes(dist)) { foundDistrict = dist; break; }
-                        } break;
-                    }
-                }
-                if (foundCity && foundDistrict) {
-                    filterCitySelect.value = foundCity; updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true); filterDistrictSelect.value = foundDistrict;
-                    alert(`🎯 自動定位成功！已切換至：${foundCity} ${foundDistrict}`);
-                } else {
-                    alert(`定位成功！但此專案暫無建立您所在的區域資料。\n您目前在：\n${address}`);
-                    filterCitySelect.value = "all"; filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>';
-                }
-                filterAndSortMushroomCards(); geoBtn.innerText = "🎯 自動定位";
-            } catch (e) { alert("網路解碼失敗。"); geoBtn.innerText = "🎯 自動定位"; }
-            finally { geoBtn.disabled = false; }
-        }, () => { alert("定位失敗，請授權瀏覽器位置權限。"); geoBtn.innerText = "🎯 自動定位"; geoBtn.disabled = false; }, { enableHighAccuracy: true, timeout: 10000 });
-    });
-}
-
-const format = (num) => String(num).padStart(2, '0');
-
-function initSingleCountdown(el) {
-    const reportTimeString = el.getAttribute('data-report-time');
-    const initialHours = parseInt(el.getAttribute('data-initial-hours')) || 0;
-    const initialMinutes = parseInt(el.getAttribute('data-initial-minutes')) || 0;
-    const initialSeconds = parseInt(el.getAttribute('data-initial-seconds')) || 0; 
-    const reportTimestamp = Date.parse(reportTimeString.replace(/-/g, '/')); 
-    const initialDurationMs = ((initialHours * 3600) + (initialMinutes * 60) + initialSeconds) * 1000;
-    const expireTime = reportTimestamp + initialDurationMs;
-    el.setAttribute('data-target', expireTime); 
-    el.setAttribute('data-respawn', expireTime + 300000); 
 }
 
 function updateCountdowns() {
     const now = Date.now();
-    
     document.querySelectorAll('.countdown').forEach(el => {
         if (!document.body.contains(el)) return;
-        
         const currentCard = el.closest('.card');
         const cardId = currentCard.getAttribute('data-id');
         const h3Title = currentCard.querySelector('h3');
-        const reportTimeString = el.getAttribute('data-report-time');
         const verifyBtn = currentCard.querySelector('.verify-fact-btn');
-        const notifyBtn = currentCard.querySelector('.notify-me-btn'); 
+        const notifyBtn = currentCard.querySelector('.notify-me-btn');
         
-        const reportTimestamp = Date.parse(reportTimeString.replace(/-/g, '/'));
-        const alertThreshold = 15 * 60 * 1000; 
-        
-        let existWarning = h3Title.querySelector('.time-warning-tag');
-        
-        if (!isNaN(reportTimestamp) && (now - reportTimestamp > alertThreshold)) {
-            if (!existWarning) {
-                const warningSpan = document.createElement('span');
-                warningSpan.className = 'time-warning-tag';
-                warningSpan.innerHTML = ' ⚠️';
-                warningSpan.title = '注意：此情報已超過 15 分鐘未更新，準確性可能降低！';
-                warningSpan.style.cursor = 'help';
-                h3Title.appendChild(warningSpan);
-            }
-        } else {
-            if (existWarning) { existWarning.remove(); }
-        }
-
         const targetTime = parseInt(el.getAttribute('data-target'));
         const respawnTime = parseInt(el.getAttribute('data-respawn'));
         let timeLeft = targetTime - now;
 
-        const isSubscribed = activeReminders.includes(cardId);
-        const hasNotificationPermission = ("Notification" in window && Notification.permission === "granted");
-
         if (timeLeft > 0) {
             if (verifyBtn) verifyBtn.style.display = 'inline-block';
-            
-            if (notifyBtn) {
-                notifyBtn.style.display = 'inline-block';
-                if (!isSubscribed) {
-                    notifyBtn.innerText = "🔔 提醒我";
-                    notifyBtn.style.background = "#fff8e1"; notifyBtn.style.color = "#b78103"; notifyBtn.style.borderColor = "#ffe082";
-                } else {
-                    notifyBtn.innerText = hasNotificationPermission ? "🔔 結束提醒" : "🎵 音效提醒";
-                }
-            }
-
-            let seconds = Math.floor((timeLeft / 1000) % 60);
-            let minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
-            let hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-            el.innerText = `⏳ 剩餘時間：${format(hours)}:${format(minutes)}:${format(seconds)}`;
+            if (notifyBtn) notifyBtn.style.display = 'inline-block';
+            let s = Math.floor((timeLeft/1000)%60), m = Math.floor((timeLeft/(1000*60))%60), h = Math.floor((timeLeft/(1000*60*60))%24);
+            el.innerText = `⏳ 剩餘：${format(h)}:${format(m)}:${format(s)}`;
             el.style.color = "#333";
-
-            if (isSubscribed && !sentNotifications.has(cardId + "_end")) {
-                const totalFightSecondsLeft = Math.floor(timeLeft / 1000);
-                if (totalFightSecondsLeft <= 60 && totalFightSecondsLeft > 0) {
-                    sentNotifications.add(cardId + "_end");
-
-                    const mTitle = h3Title ? h3Title.innerText.replace(/◉|⚠️/g, '').trim() : "新蘑菇";
-                    const mLoc = currentCard.querySelector('p') ? currentCard.querySelector('p').innerText.replace('📍 地點：', '').trim() : "未知地點";
-
-                    if (hasNotificationPermission) {
-                        new Notification("⚔️ 皮克敏戰鬥即將結束！", {
-                            body: `📍 位置：${mLoc}\n【${mTitle}】將在 1 分鐘內打完並進入冷卻，準備搶下一輪吧！`,
-                            icon: "picture/mushroom_event.png"
-                        });
-                    }
-                    playBeepSound();
-                }
-            }
-
         } else {
             if (verifyBtn) verifyBtn.style.display = 'none';
-
             let respawnLeftMs = respawnTime - now;
-            let rSeconds = Math.floor((respawnLeftMs / 1000) % 60);
-            let rMinutes = Math.floor((respawnLeftMs / (1000 * 60)) % 60);
-            
             if (respawnLeftMs > 0) {
-                if (notifyBtn) {
-                    notifyBtn.style.display = 'inline-block';
-                    if (!isSubscribed) {
-                        notifyBtn.innerText = "🔔 提醒我";
-                        notifyBtn.style.background = "#fff8e1"; notifyBtn.style.color = "#b78103"; notifyBtn.style.borderColor = "#ffe082";
-                    } else {
-                        notifyBtn.innerText = hasNotificationPermission ? "🔔 出生提醒" : "🎵 音效提醒";
-                    }
-                }
+                if (notifyBtn) notifyBtn.style.display = 'inline-block';
+                let rS = Math.floor((respawnLeftMs/1000)%60), rM = Math.floor((respawnLeftMs/(1000*60))%60);
+                el.innerText = `🔄 下次出現倒數：${format(rM)}分${format(rS)}秒`;
+                el.style.color = "#d32f2f";
 
-                el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
-                el.style.color = "#d32f2f"; 
-                if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
-
-                if (isSubscribed && !sentNotifications.has(cardId + "_spawn")) {
-                    const totalCooldownSecondsLeft = Math.floor(respawnLeftMs / 1000);
-                    if (totalCooldownSecondsLeft <= 60 && totalCooldownSecondsLeft > 0) {
-                        sentNotifications.add(cardId + "_spawn");
-
-                        const mTitle = h3Title ? h3Title.innerText.replace(/◉|⚠️/g, '').trim() : "新蘑菇";
-                        const mLoc = currentCard.querySelector('p') ? currentCard.querySelector('p').innerText.replace('📍 地點：', '').trim() : "未知地點";
-
-                        if (hasNotificationPermission) {
-                            new Notification("🍄 皮克敏孵化準備！", {
-                                body: `📍 位置：${mLoc}\n【${mTitle}】即將在 1 分鐘後出生，請立刻上線卡位！`,
-                                icon: "picture/mushroom_event.png"
-                            });
+                // 🔔 倒數 1 分鐘智慧通知
+                if (activeReminders.includes(cardId) && !sentNotifications.has(cardId)) {
+                    if (Math.floor(respawnLeftMs / 1000) <= 60) {
+                        sentNotifications.add(cardId);
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            new Notification("🍄 皮克敏孵化準備！", { body: `蘑菇即將在 1 分鐘後出生，快卡位！` });
                         }
                         playBeepSound();
                     }
                 }
-
             } else {
                 if (notifyBtn) notifyBtn.style.display = 'none';
-
-                el.innerText = `⌛ 狀態：新蘑菇待更新...`;
-                el.style.color = "#c62828";
-                el.style.fontWeight = "bold";
-                if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
-                
-                // 完全過期，自動清洗歷史訂閱快取與釘選快取
-                if (sentNotifications.has(cardId + "_end")) sentNotifications.delete(cardId + "_end");
-                if (sentNotifications.has(cardId + "_spawn")) sentNotifications.delete(cardId + "_spawn");
-                if (isSubscribed) {
-                    const remIndex = activeReminders.indexOf(cardId);
-                    if (remIndex !== -1) {
-                        activeReminders.splice(remIndex, 1);
-                        localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
-                    }
+                el.innerText = `⌛ 狀態：新蘑菇待更新...`; el.style.color = "#c62828";
+                if (activeReminders.includes(cardId)) {
+                    activeReminders.splice(activeReminders.indexOf(cardId), 1);
+                    localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
                 }
-                // 🌟 當蘑菇完全走進「新蘑菇待更新」時，自動解除釘選，維持版面乾淨
                 if (pinnedMushrooms.includes(cardId)) {
-                    const pinIndex = pinnedMushrooms.indexOf(cardId);
-                    if (pinIndex !== -1) {
-                        pinnedMushrooms.splice(pinIndex, 1);
-                        localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
-                    }
+                    pinnedMushrooms.splice(pinnedMushrooms.indexOf(cardId), 1);
+                    localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
                 }
             }
         }
@@ -816,48 +441,55 @@ function updateCountdowns() {
 function playBeepSound() {
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        [0, 200, 400].forEach(delay => {
+        [0, 200, 400].forEach(d => {
             setTimeout(() => {
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.15);
-            }, delay);
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+            }, d);
         });
-    } catch (audioErr) { console.log("音效播放攔截:", audioErr); }
+    } catch (e) {}
 }
+
+function setupReportForm() {
+    mushroomForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const city = formCitySelect.value, district = formDistrictSelect.value, name = document.getElementById('form-name').value.trim();
+        if (!name) return alert("❌ 請輸入名稱");
+        const type = formTypeSelect.value, size = formSizeSelect.value, pCount = parseInt(formCountInput.value)||0;
+        const h = parseInt(document.getElementById('form-hours').value)||0, m = parseInt(document.getElementById('form-minutes').value)||0, s = parseInt(document.getElementById('form-seconds').value)||0;
+        
+        const typeMap = { red: "紅色蘑菇", blue: "藍色蘑菇", yellow: "黃色蘑菇", purple: "紫色蘑菇", white: "白色蘑菇", rock: "灰色蘑菇", wing: "粉紅色蘑菇", ice: "冰藍蘑菇", rock_crystal: "特殊水晶蘑菇", red_fire: "元素火蘑菇", blue_water: "元素水蘑菇", white_poison: "元素毒蘑菇", yellow_electric: "元素電子蘑菇", event_special: "本月限定活動蘑菇" };
+        const now = new Date();
+        const repTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
+
+        const targetData = { city, district: [district], name, size, title: typeMap[type]||"未知蘑菇", img: `mushroom_${type}.png`, reportTime: repTime, hours: h, minutes: m, seconds: s, pCount, limit: getCountLimit(size) };
+        dbRef.push(targetData).then(() => { alert("🚀 上報成功！"); mushroomForm.reset(); filterAndSortMushroomCards(); });
+    });
+}
+
+function listenToCloudDatabase() { dbRef.on('value', (snap) => { globalMushroomList = []; snap.forEach(c => { globalMushroomList.push({ id: c.key, data: c.val() }); }); filterAndSortMushroomCards(); }); }
+const format = (n) => String(n).padStart(2, '0');
 
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
-    if (filterCitySelect.value === 'all') {
-        filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>'; filterAndSortMushroomCards();
-    } else { updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true); filterAndSortMushroomCards(); }
+    if (filterCitySelect.value === 'all') { filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>'; filterAndSortMushroomCards(); } 
+    else { updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true); filterAndSortMushroomCards(); }
 });
 filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
 cardSortSelect.addEventListener('change', filterAndSortMushroomCards);
 
-// 🔍 監聽名稱搜尋輸入框：即時打字即時篩選
-if (searchNameInput) {
-    searchNameInput.addEventListener('input', filterAndSortMushroomCards);
-}
-
-// 🎴 監聽版面切換按鈕
+if (searchNameInput) searchNameInput.addEventListener('input', filterAndSortMushroomCards);
 if (viewToggleBtn) {
     viewToggleBtn.addEventListener('click', () => {
         currentViewMode = (currentViewMode === 'grid') ? 'list' : 'grid';
         localStorage.setItem('mushroom_view_mode', currentViewMode);
         updateViewToggleBtnText();
+        filterAndSortMushroomCards(); // 立即重新刷上對應排版
     });
 }
 
-formTypeSelect.addEventListener('change', updateCountLimitConstraint);
-formSizeSelect.addEventListener('change', updateCountLimitConstraint);
-
-// 初始化執行
-initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); setupQuickEditFeature(); setupTimeInfoFeature(); setupNotificationFeature(); updateCountLimitConstraint(); listenToCloudDatabase();
-setInterval(updateCountdowns, 1000); updateCountdowns();
+initCityDropdowns(); setupPinFeature(); setupTimeInfoFeature(); setupQuickEditFeature(); setupDeveloperMode(); setupNotificationFeature(); setupReportForm(); listenToCloudDatabase();
+setInterval(updateCountdowns, 1000);
