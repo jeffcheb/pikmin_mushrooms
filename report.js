@@ -47,7 +47,7 @@ const allTaiwanDistricts = {
     "嘉義市": ["東區", "西區"],
     "嘉義縣": ["太保", "朴子", "布袋", "大林", "民雄", "溪口", "新港", "六腳", "東石", "義竹", "鹿草", "水上", "中埔", "竹崎", "梅山", "番路", "大埔", "阿里山"],
     "臺南市": ["中西", "東區", "南區", "北區", "安平", "安南", "永康", "歸仁", "新化", "左鎮", "玉井", "楠西", "南化", "左鎮", "仁德", "關廟", "龍崎", "官田", "麻豆", "佳里", "西港", "七股", "將軍", "學甲", "北門", "新營", "後壁", "白河", "東山", "六甲", "下營", "柳營", "鹽水", "善化", "大內", "山上", "新市", "安定"],
-    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "小港", "鳳山", "林園", "大寮", "大樹", "大社區", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "茂林", "桃源", "那瑪夏"],
+    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山", "林園", "大寮", "大樹", "大社區", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "茂林", "桃源", "那瑪夏"],
     "屏東縣": ["屏東", "三地門", "霧臺", "瑪家", "九如", "里港", "高樹", "鹽埔", "長治", "麟洛", "萬丹", "內埔", "竹田", "萬巒", "泰武", "來義", "潮州", "新埤", "枋寮", "枋山", "春日", "獅子", "牡丹", "恆春", "滿州", "車城", "琉球", "佳冬", "林邊", "南州", "崁頂", "東港", "新園"],
     "宜蘭縣": ["宜蘭", "羅東", "蘇澳", "頭城", "礁溪", "壯圍", "員山", "冬山", "五結", "三星", "大同", "南澳"],
     "花蓮縣": ["花蓮", "鳳林", "玉里", "新城", "吉安", "壽豐", "光復", "豐濱", "瑞穗", "富里", "秀林", "萬榮", "卓溪"],
@@ -117,9 +117,6 @@ function updateCountLimitConstraint() {
     if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
 }
 
-// 🎯 ===================================================
-// 🔍 核心修改：優化篩選邏輯，支援「多個行政區」陣列比對
-// ===================================================
 function filterLocation() {
     const selectedCity = filterCitySelect.value;
     const selectedDistrict = filterDistrictSelect.value;
@@ -127,17 +124,14 @@ function filterLocation() {
 
     cards.forEach(card => {
         const cardCity = card.getAttribute('data-city');
-        // 將卡片上的行政區 JSON 字串轉回陣列判定
         let cardDistricts = [];
         try {
             cardDistricts = JSON.parse(card.getAttribute('data-districts'));
         } catch(e) {
-            // 防呆：如果舊資料是單一字串，包成陣列處理
             cardDistricts = [card.getAttribute('data-districts')];
         }
 
         const matchCity = (selectedCity === 'all' || cardCity === selectedCity);
-        // 只要玩家選的行政區有在該菇的「可見行政區清單」中，就判定成功！
         const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict));
         
         card.style.display = (matchCity && matchDistrict) ? 'block' : 'none';
@@ -151,6 +145,43 @@ function setupPinFeature() {
             e.target.classList.toggle('active');
             if (e.target.classList.contains('active')) { mushroomContainer.prepend(currentCard); }
             else { mushroomContainer.appendChild(currentCard); }
+        }
+    });
+}
+
+// 🎯 ===================================================
+// ◉ 核心功能：點擊 ◉ 符號計算並彈出最後更新時間
+// ===================================================
+function setupTimeInfoFeature() {
+    mushroomContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('time-info-btn')) {
+            const reportTimeStr = e.target.getAttribute('data-time');
+            if (!reportTimeStr) return;
+            
+            // 解析上次上報的時間
+            const reportTimestamp = Date.parse(reportTimeStr.replace(/-/g, '/'));
+            const now = Date.now();
+            const diffMs = now - reportTimestamp;
+            
+            if (isNaN(reportTimestamp)) {
+                alert(`📝 最後更新時間：${reportTimeStr}`);
+                return;
+            }
+
+            const diffMins = Math.floor(diffMs / 1000 / 60);
+            
+            let timeAgoText = "";
+            if (diffMins < 1) {
+                timeAgoText = "剛剛（1 分鐘內）";
+            } else if (diffMins < 60) {
+                timeAgoText = `${diffMins} 分鐘前`;
+            } else {
+                const diffHours = Math.floor(diffMins / 60);
+                const remainMins = diffMins % 60;
+                timeAgoText = `${diffHours} 小時 ${remainMins} 分鐘前`;
+            }
+
+            alert(`⏰ 蘑菇情報最後更新時間：\n👉 ${reportTimeStr}\n歷史時差：大約在 ${timeAgoText} 進行了資料同步。`);
         }
     });
 }
@@ -199,7 +230,6 @@ function setupQuickEditFeature() {
                         }
                     }
                 } else if (editChoice === "3") {
-                    // 🎯 讓玩家可以直接用空格追加多個行政區
                     let currentDists = Array.isArray(currentData.district) ? currentData.district.join(" ") : currentData.district;
                     const newDistsInput = prompt("🗺️ 請輸入此蘑菇可被偵測到的所有行政區 (多個請用空格隔開)：", currentDists);
                     if (newDistsInput !== null) {
@@ -251,16 +281,16 @@ function renderMushroomCard(id, data) {
     newCard.setAttribute('data-id', id);
     newCard.setAttribute('data-city', data.city);
     
-    // 🎯 處理多區資料儲存至卡片屬性上
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
+    // 🎯 在標題下方注入可點擊的 ◉ 符號按鈕
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
         <button class="quick-edit-btn" title="快速原地更新資料">📝 更新</button>
         <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
         <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
-        <h3>[${data.size}] ${data.title}</h3>
+        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" title="查看最後更新時間" style="cursor:pointer; color:#0288d1; margin-left:5px;">◉</span></h3>
         <p>📍 地點：${data.city}(${districtArray.join('/')}) ${data.name}</p>
         <p class="countdown" 
            data-report-time="${data.reportTime}" 
@@ -285,10 +315,7 @@ function setupReportForm() {
         }
 
         const city = formCitySelect.value;
-        
-        // 🎯 預設抓取下拉選單的單一區，之後可用快速更新更新為多個區
         const district = [formDistrictSelect.value]; 
-        
         const name = document.getElementById('form-name').value.trim();
         const type = formTypeSelect.value;
         const hours = parseInt(document.getElementById('form-hours').value) || 0;
@@ -323,18 +350,17 @@ function setupReportForm() {
                 if (val.city === city && val.name === name) { existingKey = childSnapshot.key; }
             });
 
-            // 如果已有舊資料，融合新舊行政區
             let finalDistricts = district;
             if (existingKey && snapshot.child(existingKey).val().district) {
                 const oldDist = snapshot.child(existingKey).val().district;
                 const oldDistArray = Array.isArray(oldDist) ? oldDist : [oldDist];
-                finalDistricts = Array.from(new Set([...oldDistArray, ...district])); // 去除重複區
+                finalDistricts = Array.from(new Set([...oldDistArray, ...district]));
             }
 
             const targetData = { city, district: finalDistricts, name, size, title: mInfo.title, img: mInfo.img, reportTime: reportTimeString, hours, minutes, seconds, pCount, limit };
 
             if (existingKey) {
-                dbRef.child(existingKey).set(targetData).then(() => alert("🔄 雲端偵測到相同地點！已自動為您疊加/覆蓋可見行政區！"));
+                dbRef.child(existingKey).set(targetData).then(() => alert("🔄 雲端偵測到相同地點！已自動完成情報合併與時間校準！"));
             } else {
                 dbRef.push(targetData).then(() => alert("🚀 蘑菇成功同步至雲端資料庫！"));
             }
@@ -447,5 +473,5 @@ formTypeSelect.addEventListener('change', updateCountLimitConstraint);
 formSizeSelect.addEventListener('change', updateCountLimitConstraint);
 
 // 初始化執行
-initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); setupQuickEditFeature(); updateCountLimitConstraint(); listenToCloudDatabase();
+initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); setupQuickEditFeature(); setupTimeInfoFeature(); updateCountLimitConstraint(); listenToCloudDatabase();
 setInterval(updateCountdowns, 1000); updateCountdowns();
