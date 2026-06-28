@@ -25,7 +25,6 @@ let activeReminders = JSON.parse(localStorage.getItem('mushroom_reminders') || '
 let sentNotifications = new Set(); 
 let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]');
 
-// 🎴 版面狀態記憶
 let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
 const firebaseConfig = {
@@ -61,7 +60,7 @@ const allTaiwanDistricts = {
     "屏東縣": ["屏東", "三地門", "霧臺", "瑪家", "九如", "里港", "高樹", "鹽埔", "長治", "麟洛", "萬丹", "內埔", "竹田", "萬巒", "泰武", "來義", "潮州", "新埤", "枋寮", "枋山", "春日", "獅子", "牡丹", "恆春", "滿州", "車城", "琉球", "佳冬", "林邊", "南州", "崁頂", "東港", "新園"],
     "宜蘭縣": ["宜蘭", "羅東", "蘇澳", "頭城", "礁溪", "壯圍", "員山", "冬山", "五結", "三星", "大同", "南澳"],
     "花蓮縣": ["花蓮", "鳳林", "玉里", "新城", "吉安", "壽豐", "光復", "豐濱", "瑞穗", "富里", "秀林", "萬榮", "卓溪"],
-    "臺東縣": ["臺東", "成功", "關山", "長濱", "海端", "池上", "東河", "鹿野", "延平", "卑南", "金峰", "大武", "達仁", "綠島", "蘭嶼", "太麻里"],
+    "臺東縣": ["臺東", "成功", "關山", "長濱", "海端", "池上", "東河", "鹿野", "延平", "卑名", "金峰", "大武", "達仁", "綠島", "蘭嶼", "太麻里"],
     "澎湖縣": ["馬公", "湖西", "白沙", "西嶼", "望安", "七美"],
     "金門縣": ["金城", "金沙", "金湖", "金寧", "烈嶼", "烏坵"],
     "連江縣": ["南竿", "北竿", "莒光", "東引"]
@@ -130,7 +129,13 @@ function updateCountLimitConstraint() {
 
 function updateViewToggleBtnText() {
     if (!viewToggleBtn) return;
-    viewToggleBtn.innerText = (currentViewMode === 'list') ? "📋 清單模式" : "🎴 卡片模式";
+    if (currentViewMode === 'list') {
+        viewToggleBtn.innerText = "📋 清單模式";
+        mushroomContainer.classList.add('list-view');
+    } else {
+        viewToggleBtn.innerText = "🎴 卡片模式";
+        mushroomContainer.classList.remove('list-view');
+    }
 }
 
 function filterAndSortMushroomCards() {
@@ -189,13 +194,12 @@ function filterAndSortMushroomCards() {
 function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
-            const currentCard = e.target.closest('.card');
-            const firebaseId = currentCard.getAttribute('data-id');
+            const firebaseId = e.target.closest('.card').getAttribute('data-id');
             const index = pinnedMushrooms.indexOf(firebaseId);
             if (index === -1) {
-                pinnedMushrooms.push(firebaseId); e.target.classList.add('active');
+                pinnedMushrooms.push(firebaseId);
             } else {
-                pinnedMushrooms.splice(index, 1); e.target.classList.remove('active');
+                pinnedMushrooms.splice(index, 1);
             }
             localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
             filterAndSortMushroomCards();
@@ -338,7 +342,6 @@ function toggleSubscription(id, buttonEl, text) {
     localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
 }
 
-// 🎴 【終極防崩潰排版】如果不開清單模式，一切照舊；如果開清單模式，純用 JS 把大圖片縮到最小，絕對零跑版
 function renderMushroomCard(id, data) {
     const newCard = document.createElement('div');
     newCard.className = "card";
@@ -349,23 +352,15 @@ function renderMushroomCard(id, data) {
     let notifyBtnText = isSubscribed ? (("Notification" in window && Notification.permission === "granted") ? "🔔 已設提醒" : "🎵 音效提醒") : "🔔 提醒我";
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     
-    // 🌟 核心防爆修改：在清單模式下，直接控制圖片寬高與縮減上下間距
-    const isList = (currentViewMode === 'list');
-    const cardPadding = isList ? 'padding: 8px 15px;' : '';
-    const imgStyle = isList ? 'width: 32px; height: 32px; margin: 0 auto 4px auto;' : '';
-    const textMargin = isList ? 'margin: 3px 0; font-size: 13px;' : '';
-
-    if (cardPadding) newCard.setAttribute('style', cardPadding);
-
     newCard.innerHTML = `
         <button class="pin-btn ${isPinned?'active':''}" title="釘選">📌</button>
         <button class="quick-edit-btn" title="更新">📝 更新</button>
         <button class="delete-btn" title="刪除">❌</button>
-        <img src="picture/${data.img}" alt="菇" class="card-icon" style="${imgStyle}">
-        <h3 style="${textMargin}">[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}">◉</span></h3>
-        <p style="${textMargin}">📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
-        <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="${textMargin} font-weight:bold;">⏳ 計算中...</p>
-        <p style="${textMargin}">👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
+        <img src="picture/${data.img}" alt="菇" class="card-icon">
+        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}">◉</span></h3>
+        <p>📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
+        <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="font-weight:bold;">⏳ 計算中...</p>
+        <p>👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
         <button class="notify-me-btn" style="border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">${notifyBtnText}</button>
     `;
     
