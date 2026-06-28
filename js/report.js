@@ -364,12 +364,29 @@ if (btnAutoLocation) {
         });
     };
 
-    // 只要確保 Firebase 與全域字典掛載好，就立刻啟動
+    // ========================================================
+    // 🚀 終極修正：初始化與 Firebase 解耦
+    // ========================================================
+    
+    // 1. 網頁一載入，完全不用等 Firebase，立刻先把全台縣市選單填滿！
+    if (window.taiwanData) {
+        initFilterDistricts();
+    } else {
+        // 如果 taiwan-districts.js 稍微慢了一點點，用一個短計時器保底
+        const checkDataInterval = setInterval(() => {
+            if (window.taiwanData) {
+                clearInterval(checkDataInterval);
+                initFilterDistricts();
+            }
+        }, 50);
+    }
+
+    // 2. Firebase 的連線與資料同步，讓它自己在背景慢慢連，連上後再開始同步看板卡片
     const checkFbInterval = setInterval(() => {
-        if (window.fbDB && window.taiwanData) {
+        if (window.fbDB) {
             clearInterval(checkFbInterval);
-            initFilterDistricts(); 
-            startBoardSync();      
+            startBoardSync(); // 連上 Firebase 後，才開始抓取蘑菇卡片資料
         }
     }, 200);
+});
 });
