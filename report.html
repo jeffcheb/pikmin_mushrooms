@@ -3,135 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皮克敏即時蘑菇回報系統</title>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <title>皮克敏蘑菇即時回報站</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <header>
-        <div class="logo-area">
-            <img src="picture/logo.png" alt="網站 Logo" class="logo">
-            <h1>皮克敏高階戰力精算站</h1>
+    <div class="form-section" style="max-width: 600px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <h2 style="color: #2e7d32; text-align: center; margin-top: 0;">🍄 回報蘑菇現況</h2>
+        <form id="mushroom-form">
+            <div style="margin-bottom: 12px;">
+                <label>📍 選擇縣市：</label>
+                <select id="form-city" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>選擇行政區：</label>
+                <select id="form-district" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>🏢 地點具體名稱：</label>
+                <input type="text" id="form-name" placeholder="例如：公園變電箱、麥當勞旁" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>🍄 蘑菇種類：</label>
+                <select id="form-type" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="red">紅色蘑菇</option>
+                    <option value="blue">藍色蘑菇</option>
+                    <option value="yellow">黃色蘑菇</option>
+                    <option value="purple">紫色蘑菇</option>
+                    <option value="white">白色蘑菇</option>
+                    <option value="rock">灰色蘑菇</option>
+                    <option value="wing">粉紅色蘑菇</option>
+                    <option value="ice">冰藍蘑菇</option>
+                    <option value="rock_crystal">特殊水晶蘑菇</option>
+                    <option value="red_fire">元素火蘑菇</option>
+                    <option value="blue_water">元素水蘑菇</option>
+                    <option value="white_poison">元素毒蘑菇</option>
+                    <option value="yellow_electric">元素電子蘑菇</option>
+                    <option value="event_special">本月限定活動蘑菇</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>📏 蘑菇大小：</label>
+                <select id="form-size" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="小">小</option>
+                    <option value="普通" selected>普通</option>
+                    <option value="大">大</option>
+                    <option value="巨型">巨型</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>👥 目前參戰人數：</label>
+                <input type="number" id="form-count" value="0" min="0" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;">
+                <span id="count-hint" style="font-size: 12px; color: #78909c;"></span>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label>⏳ 剩餘倒數時間：</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" id="form-hours" value="0" min="0" placeholder="時" style="width: 33%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+                    <input type="number" id="form-minutes" value="0" min="0" max="59" placeholder="分" style="width: 33%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+                    <input type="number" id="form-seconds" value="0" min="0" max="59" placeholder="秒" style="width: 33%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+                </div>
+            </div>
+            <button type="submit" style="width: 100%; padding: 10px; background: #2e7d32; color: #fff; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">🚀 發佈至全台即時看板</button>
+        </form>
+    </div>
+
+    <div class="filter-section" style="background: #f1f8e9; padding: 15px; border-radius: 8px; margin: 20px auto; max-width: 1200px; text-align: center; box-sizing: border-box;">
+        
+        <div class="filter-group" style="display: inline-block; margin: 5px;">
+            <label for="filter-city">📍 選擇縣市：</label>
+            <select id="filter-city"></select>
         </div>
-        <nav>
-            <a href="index.html">戰力計算</a>
-            <a href="report.html" class="active">最新回報系統</a>
-        </nav>
-    </header>
 
-    <main>
-        <section id="report-form-section" class="section-box">
-            <h2>✍️ 新增蘑菇回報</h2>
-            <form id="mushroom-form" class="report-form">
-                <div class="form-row">
-                    <div class="form-cell">
-                        <label for="form-city">選擇縣市：</label>
-                        <select id="form-city" required>
-                            </select>
-                    </div>
-                    <div class="form-cell">
-                        <label for="form-district">選擇行政區：</label>
-                        <select id="form-district" required>
-                            </select>
-                    </div>
-                    <div class="form-cell" style="flex: 2;">
-                        <label for="form-name">具體地點名稱：</label>
-                        <input type="text" id="form-name" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-cell">
-                        <label for="form-type">蘑菇種類：</label>
-                        <select id="form-type" required>
-                            <optgroup label="—— 普通/冰藍蘑菇 ——">
-                                <option value="red">紅色蘑菇</option>
-                                <option value="blue">藍色蘑菇</option>
-                                <option value="yellow">黃色蘑菇</option>
-                                <option value="purple">紫色蘑菇</option>
-                                <option value="white">白色蘑菇</option>
-                                <option value="rock">灰色蘑菇</option>
-                                <option value="wing">粉紅色蘑菇</option>
-                                <option value="ice">冰藍蘑菇</option>
-                            </optgroup>
-                            <optgroup label="—— 特殊/元素蘑菇 ——">
-                                <option value="rock_crystal">水晶蘑菇</option>
-                                <option value="red_fire">火蘑菇</option>
-                                <option value="blue_water">水蘑菇</option>
-                                <option value="white_poison">毒蘑菇</option>
-                                <option value="yellow_electric">電子蘑菇</option>
-                            </optgroup>
-                            <optgroup label="—— 限定活動 ——">
-                                <option value="event_special">本月限定活動蘑菇</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="form-cell" style="flex: 0 0 130px; min-width: 110px;">
-                        <label for="form-size">蘑菇大小：</label>
-                        <select id="form-size" required>
-                            <option value="小">小</option>
-                            <option value="普通" selected>普通</option>
-                            <option value="大">大</option>
-                            <option value="巨型">巨型</option>
-                        </select>
-                    </div>
-                    <div class="form-cell">
-                        <label>當前畫面剩餘時間：</label>
-                        <div class="time-input-group">
-                            <input type="number" id="form-hours" min="0" max="23" placeholder="時" required><span>時</span>
-                            <input type="number" id="form-minutes" min="0" max="59" placeholder="分" required><span>分</span>
-                            <input type="number" id="form-seconds" min="0" max="59" placeholder="秒" value="0" required><span>秒</span>
-                        </div>
-                    </div>
-                    <div class="form-cell" style="flex: 0 0 160px; min-width: 140px;">
-                        <label for="form-count">目前人數 (自填)：</label>
-                        <input type="number" id="form-count" min="0" max="5" value="0" placeholder="0-5" required>
-                        <small id="count-hint" style="color: #666; font-size: 11px; display: block; margin-top: 2px;">上限: 5人</small>
-                    </div>
-                </div>
-                <button type="submit" class="submit-btn">🚀 送出回報資料</button>
-            </form>
-        </section>
+        <div class="filter-group" style="display: inline-block; margin: 5px;">
+            <label for="filter-district">選擇行政區：</label>
+            <select id="filter-district"></select>
+        </div>
 
-        <section id="report" class="section-box">
-            <h2>🍄 當前最新蘑菇回報</h2>
-            <div class="location-select-wrapper">
-    <label for="filter-city">📍 選擇縣市：</label>
-    <select id="filter-city">
-        </select>
+        <div class="filter-group" style="display: inline-block; margin: 5px;">
+            <label for="card-sort">📊 排序方式：</label>
+            <select id="card-sort">
+                <option value="remainingTime">剩餘時間 (最少)</option>
+                <option value="updateTime">更新時間 (最新)</option>
+                <option value="totalPlayers">參戰人數 (最多)</option>
+                <option value="mushroomSize">蘑菇大小 (最大)</option>
+                <option value="mushroomType">蘑菇種類 (名稱)</option>
+            </select>
+        </div>
 
-    <label for="filter-district">選擇行政區：</label>
-    <select id="filter-district">
-        </select>
+        <div class="filter-group" style="display: inline-block; margin: 5px;">
+            <input type="text" id="search-name" placeholder="🔍 搜尋關鍵字 (如：電桶)..." 
+                   style="padding: 7px 12px; border: 1px solid #ccc; border-radius: 20px; font-size: 14px; width: 190px; outline: none; transition: border 0.2s;">
+        </div>
 
-    <div class="sort-group">
-        <label for="card-sort">📊 排序方式：</label>
-        <select id="card-sort">
-            <option value="updateTime">更新時間 (最新)</option>
-            <option value="remainingTime">剩餘時間 (最少)</option>
-            <option value="totalPlayers">總人數 (最多)</option>
-            <option value="mushroomSize">蘑菇大小 (巨型優先)</option>
-            <option value="mushroomType">蘑菇種類 (名稱排序)</option>
-        </select>
+        <div class="filter-group" style="display: inline-block; margin: 5px;">
+            <button id="view-toggle-btn" style="padding: 7px 14px; background: #fff; border: 1px solid #ccc; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s;">
+                🎴 卡片模式
+            </button>
+        </div>
+
+        <button id="geo-btn" style="padding: 7px 14px; background: #2e7d32; color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; margin: 5px;">🎯 自動定位</button>
     </div>
 
-    <button id="geo-btn" class="geo-btn">🎯 自動定位</button>
-</div>
-
-            <div class="grid-container" id="mushroom-container">
-                </div>
-        </section>
-    </main>
-
-    <div class="dev-toolbar">
-        <button id="dev-mode-btn" class="dev-mode-btn">🛠️ 開啟開發者模式</button>
-        <span id="dev-status" class="dev-status">🔒 安全瀏覽模式</span>
+    <div style="text-align: center; margin: 20px 0;">
+        <button id="dev-mode-btn" style="padding: 6px 12px; font-size: 13px; background: #eceff1; border: 1px solid #b0bec5; border-radius: 4px; cursor: pointer;">🛠️ 開啟開發者模式</button>
+        <p id="dev-status" style="font-size: 12px; color: #546e7a; margin-top: 5px;">🔒 安全瀏覽模式</p>
     </div>
 
-    <footer>
-        <p>&copy; 2026 皮克敏蘑菇社群網站. 非官方粉絲製作.</p>
-    </footer>
+    <div id="mushroom-container"></div>
 
     <script src="report.js"></script>
 </body>
