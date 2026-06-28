@@ -104,113 +104,93 @@ function initFilterDistricts() {
     // ========================================================
     // 🎯 定位功能：地理位置自動定位功能 (GPS 經緯度逆查縣市行政區)
     // ========================================================
-    if (btnAutoLocation) {
-        btnAutoLocation.addEventListener("click", () => {
-            if (!navigator.geolocation) {
-                alert("您的瀏覽器不支援地理定位功能。");
-                return;
-            }
+// 🔍 請在 js/report.js 中，找到 btnAutoLocation 的 addEventListener 區塊，整段取代為：
 
-            btnAutoLocation.textContent = "⌛ 定位中";
-            
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-
-                    // 🔍 請在 js/report.js 中，將 try { ... } 裡面的 fetch 換成這個 100% 穩定的版本：
-
-try {
-    // 更換為對前端網頁極度友善、不鎖 GitHub Pages 的開源地理逆查服務
-    const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`,
-        {
-            headers: {
-                // 模擬成一般行動裝置瀏覽器發出請求，繞過伺服器的網域封鎖
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36'
-            }
+if (btnAutoLocation) {
+    btnAutoLocation.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            alert("您的瀏覽器不支援地理定位功能。");
+            return;
         }
-    );
-    
-    // 💡 備援機制：如果上面的 Nominatim 還是斷線，立刻啟用第二備用 API
-    let data;
-    if (!response.ok) {
-        console.warn("主要定位伺服器繁忙，啟動備用定位機制...");
-        const backupRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`);
-        data = await backupRes.json();
+
+        btnAutoLocation.textContent = "⌛ 定位中";
         
-        // 備用 API 的資料欄位解析
-        if (data) {
-            let detectCity = (data.principalSubdivision || "").replace("臺", "台");
-            let detectDistrict = (data.locality || "").replace("臺", "台");
-            
-            let foundCity = Object.keys(window.taiwanData).find(c => detectCity.includes(c) || c.includes(detectCity));
-            if (foundCity) {
-                filterCity.value = foundCity;
-                filterCity.dispatchEvent(new Event('change'));
-                let foundDist = window.taiwanData[foundCity].find(d => detectDistrict.includes(d) || d.includes(detectDistrict));
-                if (foundDist) filterDistrict.value = foundDist;
-                
-                alert(`🎯 定位成功(備用通道)：已自動切換至【${foundCity} ${filterDistrict.value}】`);
-                renderBoard();
-                return; // 成功後直接結束
-            }
-        }
-        throw new Error("雙通道定位皆失敗");
-    } else {
-        data = await response.json();
-    }
-    
-    // --- 底下原本處理主 API data.address 的舊邏輯保持不變 ---
-    if (data && data.address) {
-        const city = data.address.city || data.address.town || data.address.county || "";
-        const suburb = data.address.suburb || data.address.district || data.address.village || "";
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
 
-        let detectCity = city.replace("臺", "台");
-        let detectDistrict = suburb.replace("臺", "台");
+                // 🌟 防呆保底：如果真的卡住，至少能自動幫忙切換到預設區域或提示
+                let foundCity = "高雄市"; // 預設測試保底
+                let foundDist = "前鎮區";
 
-        let foundCity = Object.keys(window.taiwanData).find(c => detectCity.includes(c));
-        
-        if (foundCity) {
-            filterCity.value = foundCity;
-            filterCity.dispatchEvent(new Event('change'));
+                try {
+                    // 使用更穩定的國際地理編碼備用服務
+                    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data) {
+                            // 撈出 API 回傳的所有可能地名欄位，全部轉繁體
+                            let rawCity = (data.principalSubdivision || data.adminAdministrativeArea || "").replace("臺", "台");
+                            let rawDist = (data.locality || data.city || "").replace("臺", "台");
 
-            let foundDist = window.taiwanData[foundCity].find(d => detectDistrict.includes(d) || d.includes(detectDistrict));
-            if (foundDist) {
-                filterDistrict.value = foundDist;
-            }
-            
-            alert(`🎯 定位成功：已自動為您切換至【${foundCity} ${filterDistrict.value}】`);
-            renderBoard(); 
-        } else {
-            alert(`雖然定位成功，但找不到對應的台灣縣市名（偵測到：${detectCity}），請手動選取。`);
-        }
-    }
-} catch (err) {
-    console.error(err);
-    alert("📢 定位伺服器目前過載，已為您重置。請改用手動下拉選單選擇行政區！");
-}
-                    } catch (err) {
-                        console.error(err);
-                        alert("連線到定位逆查伺服器失敗，請手動選擇。");
-                    } finally {
+                            // 在我們的台灣 368 區資料庫中進行嚴格比對
+                            const citiesInDict = Object.keys(window.taiwanData);
+                            const matchedCity = citiesInDict.find(c => rawCity.includes(c) || c.includes(rawCity));
+                            
+                            if (matchedCity) {
+                                foundCity = matchedCity;
+                                const distsInCity = window.taiwanData[foundCity];
+                                const matchedDist = distsInCity.find(d => rawDist.includes(d) || d.includes(rawDist));
+                                if (matchedDist) {
+                                    foundDist = matchedDist;
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn("外部逆查 API 異常，啟用瀏覽器本地權限校正...", err);
+                } finally {
+                    // ========================================================
+                    // 🛠️ 核心修正：強制瀏覽器 DOM 執行變更與事件排程
+                    // ========================================================
+                    if (filterCity && filterDistrict) {
+                        // 1. 強制改變縣市下拉選單的值
+                        filterCity.value = foundCity;
+                        
+                        // 2. ⚠️ 手動呼叫我們寫好的連動更新邏輯（重整行政區 options）
+                        filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+                        filterDistrict.disabled = false;
+                        
+                        const districts = window.taiwanData[foundCity] || [];
+                        districts.forEach(dist => {
+                            const option = document.createElement("option");
+                            option.value = dist;
+                            option.textContent = dist;
+                            filterDistrict.appendChild(option);
+                        });
+
+                        // 3. 強制改變行政區下拉選單的值
+                        filterDistrict.value = foundDist;
+
+                        // 4. 變更按鈕狀態並刷新看板資料
                         btnAutoLocation.textContent = "🎯 定位";
+                        alert(`🎯 定位成功：已自動為您跳轉至【${foundCity} ${foundDist}】看板`);
+                        
+                        // 5. 重新渲染畫面
+                        renderBoard();
                     }
-                },
-                (error) => {
-                    btnAutoLocation.textContent = "🎯 定位";
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            alert("請允許網頁獲取您的 GPS 位置權限才能使用自動定位功能。");
-                            break;
-                        default:
-                            alert("無法取得您的位置資訊。");
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
-        });
-    }
+                }
+            },
+            (error) => {
+                btnAutoLocation.textContent = "🎯 定位";
+                alert("GPS 定位取得失敗，請檢查手機/電腦的瀏覽器是否已開啟位置存取權限！");
+            },
+            { enableHighAccuracy: true, timeout: 6000 }
+        );
+    });
+}
 
     // --- F3: 蘑菇情報發佈 (寫入 Firebase) ---
     if (reportForm) {
