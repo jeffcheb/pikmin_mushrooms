@@ -22,6 +22,10 @@ let isDevMode = false;
 // 儲存目前從雲端抓取到的所有蘑菇原始資料
 let globalMushroomList = [];
 
+// 🔔 儲存玩家主動訂閱「提醒我」的蘑菇 Firebase ID 陣列與已發送紀錄
+let activeReminders = JSON.parse(localStorage.getItem('mushroom_reminders') || '[]');
+let sentNotifications = new Set(); // 避免重複跳通知
+
 // 🛜 完美對齊你的美國資料庫設定
 const firebaseConfig = {
     apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
@@ -375,6 +379,46 @@ function setupDeveloperMode() {
     });
 }
 
+// 🔔 智慧推播提醒我監聽按鈕
+function setupNotificationFeature() {
+    mushroomContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('notify-me-btn')) {
+            const currentCard = e.target.closest('.card');
+            const firebaseId = currentCard.getAttribute('data-id');
+
+            // 檢查瀏覽器推播權限
+            if (!("Notification" in window)) {
+                alert("❌ 您的瀏覽器不支援推播通知功能。");
+                return;
+            }
+
+            if (Notification.permission === "denied") {
+                alert("❌ 您先前拒絕了通知權限，請至瀏覽器設定中手動開啟，才能接收生成提醒喔！");
+                return;
+            }
+
+            // 請求通知授權
+            Notification.requestPermission().then((permission) => {
+                if (permission === "granted") {
+                    const index = activeReminders.indexOf(firebaseId);
+                    if (index === -1) {
+                        activeReminders.push(firebaseId);
+                        e.target.classList.add('subscribed');
+                        e.target.innerText = "🔔 已設提醒";
+                        alert("✅ 設定成功！本網頁在背景執行時，該蘑菇出生前 1 分鐘會自動跳出通知提醒您！");
+                    } else {
+                        activeReminders.splice(index, 1);
+                        e.target.classList.remove('subscribed');
+                        e.target.innerText = "🔔 提醒我";
+                        alert("🔕 已取消該蘑菇的出生提醒。");
+                    }
+                    localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
+                }
+            });
+        }
+    });
+}
+
 function renderMushroomCard(id, data) {
     const newCard = document.createElement('div');
     newCard.className = "card";
@@ -383,6 +427,11 @@ function renderMushroomCard(id, data) {
     
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
+    
+    // 檢查此卡片是否早已被玩家設過提醒
+    const isSubscribed = activeReminders.includes(id);
+    const notifyBtnText = isSubscribed ? "🔔 已設提醒" : "🔔 提醒我";
+    const notifyClass = isSubscribed ? "notify-me-btn subscribed" : "notify-me-btn";
     
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
@@ -396,16 +445,16 @@ function renderMushroomCard(id, data) {
            data-initial-hours="${data.hours}" 
            data-initial-minutes="${data.minutes}"
            data-initial-seconds="${data.seconds}">⏳ 剩餘時間：計算中...</p>
-        <p style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <p style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
             <span>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</span>
             <button class="verify-fact-btn" title="現場勘查無誤！一鍵刷新回報時間" style="display: none; background: #e8f5e9; border: 1px solid #81c784; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 6px; color: #2e7d32; font-weight: bold;">✅ 核實</button>
         </p>
+        <button class="${notifyClass}" style="background: #fff8e1; border: 1px solid #ffe082; color: #b78103; border-radius: 20px; padding: 4px 14px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s;" title="冷卻倒數前 1 分鐘傳送手機/電腦推播提醒過來">${notifyBtnText}</button>
     `;
     initSingleCountdown(newCard.querySelector('.countdown'));
     mushroomContainer.appendChild(newCard);
 }
 
-// 🌟 已還原：移除了二階確認燈箱，提交表單立刻上傳雲端 Firebase
 function setupReportForm() {
     mushroomForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -543,6 +592,7 @@ function updateCountdowns() {
         if (!document.body.contains(el)) return;
         
         const currentCard = el.closest('.card');
+        const cardId = currentCard.getAttribute('data-id');
         const h3Title = currentCard.querySelector('h3');
         const reportTimeString = el.getAttribute('data-report-time');
         const verifyBtn = currentCard.querySelector('.verify-fact-btn');
@@ -580,17 +630,50 @@ function updateCountdowns() {
         } else {
             if (verifyBtn) verifyBtn.style.display = 'none';
 
-            let rSeconds = Math.floor(((respawnTime - now) / 1000) % 60);
-            let rMinutes = Math.floor(((respawnTime - now) / (1000 * 60)) % 60);
-            if (respawnTime - now > 0) {
+            let respawnLeftMs = respawnTime - now;
+            let rSeconds = Math.floor((respawnLeftMs / 1000) % 60);
+            let rMinutes = Math.floor((respawnLeftMs / (1000 * 60)) % 60);
+            
+            if (respawnLeftMs > 0) {
                 el.innerText = `🔄 下次出現倒數：${format(rMinutes)}分${format(rSeconds)}秒`;
                 el.style.color = "#d32f2f"; 
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
+
+                // 🔔 【核心功能】如果玩家有訂閱提醒，且冷卻時間來到最後 1 分鐘（59秒～60秒之間）
+                if (activeReminders.includes(cardId) && !sentNotifications.has(cardId)) {
+                    const totalCooldownSecondsLeft = Math.floor(respawnLeftMs / 1000);
+                    if (totalCooldownSecondsLeft <= 60 && totalCooldownSecondsLeft > 0) {
+                        sentNotifications.add(cardId); // 防止重複發送通知
+
+                        // 抓取卡片基本資訊做通知內文
+                        const mTitle = h3Title ? h3Title.innerText.replace(/◉|⚠️/g, '').trim() : "新蘑菇";
+                        const mLoc = currentCard.querySelector('p') ? currentCard.querySelector('p').innerText.replace('📍 地點：', '').trim() : "未知地點";
+
+                        // 發送瀏覽器推播通知
+                        if (Notification.permission === "granted") {
+                            new Notification("🍄 皮克敏孵化準備！", {
+                                body: `📍 位置：${mLoc}\n【${mTitle}】即將在 1 分鐘後（60秒內）出生，請立刻上線卡位！`,
+                                icon: "picture/mushroom_event.png" // 可自訂通知圖示
+                            });
+                        }
+                    }
+                }
+
             } else {
                 el.innerText = `⌛ 狀態：新蘑菇待更新...`;
                 el.style.color = "#c62828";
                 el.style.fontWeight = "bold";
                 if (h3Title.querySelector('.time-warning-tag')) { h3Title.querySelector('.time-warning-tag').remove(); }
+                
+                // 結束後清除此蘑菇的已通知紀錄與提醒訂閱
+                if (sentNotifications.has(cardId)) {
+                    sentNotifications.delete(cardId);
+                    const remIndex = activeReminders.indexOf(cardId);
+                    if (remIndex !== -1) {
+                        activeReminders.splice(remIndex, 1);
+                        localStorage.setItem('mushroom_reminders', JSON.stringify(activeReminders));
+                    }
+                }
             }
         }
     });
@@ -609,5 +692,5 @@ formTypeSelect.addEventListener('change', updateCountLimitConstraint);
 formSizeSelect.addEventListener('change', updateCountLimitConstraint);
 
 // 初始化執行
-initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); setupQuickEditFeature(); setupTimeInfoFeature(); updateCountLimitConstraint(); listenToCloudDatabase();
+initCityDropdowns(); setupPinFeature(); setupGeolocation(); setupDeveloperMode(); setupReportForm(); setupQuickEditFeature(); setupTimeInfoFeature(); setupNotificationFeature(); updateCountLimitConstraint(); listenToCloudDatabase();
 setInterval(updateCountdowns, 1000); updateCountdowns();
