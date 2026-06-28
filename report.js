@@ -53,7 +53,7 @@ const allTaiwanDistricts = {
     "嘉義市": ["東區", "西區"],
     "嘉義縣": ["太保", "朴子", "布袋", "大林", "民雄", "溪口", "新港", "六腳", "東石", "義竹", "鹿草", "水上", "中埔", "竹崎", "梅山", "番路", "大埔", "阿里山"],
     "臺南市": ["中西", "東區", "南區", "北區", "安平", "安南", "永康", "歸仁", "新化", "左鎮", "玉井", "楠西", "南化", "左鎮", "仁德", "關廟", "龍崎", "官田", "麻豆", "佳里", "西港", "七股", "將軍", "學甲", "北門", "新營", "後壁", "白河", "東山", "六甲", "下營", "柳營", "鹽水", "善化", "大內", "山上", "新市", "安定"],
-    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山", "林園", "大寮", "大樹", "大社區", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "茂林", "桃源", "那瑪夏"],
+    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山", "林園", "大寮", "大樹", "大社區", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "桃源", "那瑪夏"],
     "屏東縣": ["屏東", "三地門", "霧臺", "瑪家", "九如", "里港", "高樹", "鹽埔", "長治", "麟洛", "萬丹", "內埔", "竹田", "萬巒", "泰武", "來義", "潮州", "新埤", "枋寮", "枋山", "春日", "獅子", "牡丹", "恆春", "滿州", "車城", "琉球", "佳冬", "林邊", "南州", "崁頂", "東港", "新園"],
     "宜蘭縣": ["宜蘭", "羅東", "蘇澳", "頭城", "礁溪", "壯圍", "員山", "冬山", "五結", "三星", "大同", "南澳"],
     "花蓮縣": ["花蓮", "鳳林", "玉里", "新城", "吉安", "壽豐", "光復", "豐濱", "瑞穗", "富里", "秀林", "萬榮", "卓溪"],
@@ -224,22 +224,18 @@ function setupTimeInfoFeature() {
     });
 }
 
-// 🎯 ===================================================
-// 📝 核心優化：整合「快速更新面板」與「一鍵核實符合事實」功能
-// ===================================================
 function setupQuickEditFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         const currentCard = e.target.closest('.card');
         if (!currentCard) return;
         const firebaseId = currentCard.getAttribute('data-id');
 
-        // 🔥 功能 A：點擊「✅ 核實」按鈕，直接刷新最後更新時間
+        // 🔥 ✅ 核實按鈕連線處理
         if (e.target.classList.contains('verify-fact-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val();
                 if (!currentData) return;
 
-                // 讀取目前卡片上的倒數計時元素，動態捕捉當下的真實精確剩餘時間
                 const countdownEl = currentCard.querySelector('.countdown');
                 const targetTime = parseInt(countdownEl.getAttribute('data-target')) || 0;
                 const now = Date.now();
@@ -249,7 +245,6 @@ function setupQuickEditFeature() {
                 let m = parseInt(currentData.minutes);
                 let s = parseInt(currentData.seconds || 0);
 
-                // 如果還在倒數中，就直接重新計算精確的時間寫回，校正時差！
                 if (timeLeftMs > 0) {
                     s = Math.floor((timeLeftMs / 1000) % 60);
                     m = Math.floor((timeLeftMs / (1000 * 60)) % 60);
@@ -257,20 +252,16 @@ function setupQuickEditFeature() {
                 }
 
                 const d = new Date();
-                const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${format(d.getDate())} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
+                const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${d.getDate()} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
 
-                // 原封不動地把數據包裝，只刷新上報時間與精準剩餘倒數
                 dbRef.child(firebaseId).update({
-                    hours: h, minutes: m, seconds: s,
-                    reportTime: newReportTime
-                }).then(() => {
-                    alert("✅ 訊息核實完畢！最後更新時間已刷新為剛剛，警示已被解除！");
-                });
+                    hours: h, minutes: m, seconds: s, reportTime: newReportTime
+                }).then(() => { alert("✅ 訊息核實成功！最後更新時間已同步刷新！"); });
             });
             return;
         }
 
-        // 🛠️ 功能 B：點擊「📝 更新」按鈕，彈出燈箱面板修改資料
+        // 🛠️ 📝 更新按鈕彈出面板
         if (e.target.classList.contains('quick-edit-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val();
@@ -378,11 +369,10 @@ function renderMushroomCard(id, data) {
     const districtArray = Array.isArray(data.district) ? data.district : [data.district];
     newCard.setAttribute('data-districts', JSON.stringify(districtArray));
     
-    // 🌟 在卡片右上角釘選旁，多挖一粒「✅ 核實」按鈕
+    // 🌟 原汁原味還原右上角（只有 📌 和 📝 更新），核實按鈕改放至下方人數群組中，並預設 display:none 隱藏
     newCard.innerHTML = `
         <button class="pin-btn" title="釘選此位置">📌</button>
         <button class="quick-edit-btn" title="快速原地修改人數時間">📝 更新</button>
-        <button class="verify-fact-btn" title="現場勘查無誤！一鍵刷新回報時間" style="position:absolute; top:8px; right:95px; background:#e8f5e9; border:1px solid #81c784; border-radius:4px; cursor:pointer; font-size:12px; padding:2px 6px; color:#2e7d32;">✅ 核實</button>
         <button class="delete-btn" title="刪除此蘑菇">❌ 刪除</button>
         <img src="picture/${data.img}" alt="蘑菇" class="card-icon">
         <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" title="查看最後更新時間" style="cursor:pointer; color:#0288d1; margin-left:5px;">◉</span></h3>
@@ -392,7 +382,10 @@ function renderMushroomCard(id, data) {
            data-initial-hours="${data.hours}" 
            data-initial-minutes="${data.minutes}"
            data-initial-seconds="${data.seconds}">⏳ 剩餘時間：計算中...</p>
-        <p>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</p>
+        <p style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span>👥 目前人數：<span class="p-count">${data.pCount}</span> / ${data.limit} 人</span>
+            <button class="verify-fact-btn" title="現場勘查無誤！一鍵刷新回報時間" style="display: none; background: #e8f5e9; border: 1px solid #81c784; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 6px; color: #2e7d32; font-weight: bold;">✅ 核實</button>
+        </p>
     `;
     initSingleCountdown(newCard.querySelector('.countdown'));
     mushroomContainer.appendChild(newCard);
@@ -554,6 +547,7 @@ function initSingleCountdown(el) {
     el.setAttribute('data-respawn', expireTime + 300000); 
 }
 
+// ⏳ 核心判定：每秒倒數時，動態決定核實按鈕要不要出現！
 function updateCountdowns() {
     const now = Date.now();
     
@@ -563,9 +557,10 @@ function updateCountdowns() {
         const currentCard = el.closest('.card');
         const h3Title = currentCard.querySelector('h3');
         const reportTimeString = el.getAttribute('data-report-time');
+        const verifyBtn = currentCard.querySelector('.verify-fact-btn');
         
         const reportTimestamp = Date.parse(reportTimeString.replace(/-/g, '/'));
-        const alertThreshold = 15 * 60 * 1000; // 15 分鐘未更新警示
+        const alertThreshold = 15 * 60 * 1000; 
         
         let existWarning = h3Title.querySelector('.time-warning-tag');
         
@@ -587,12 +582,18 @@ function updateCountdowns() {
         let timeLeft = targetTime - now;
 
         if (timeLeft > 0) {
+            // 🎯 重點 A：只有正在進行摧毀倒數的蘑菇，才讓核實按鈕顯示 (inline-block)
+            if (verifyBtn) verifyBtn.style.display = 'inline-block';
+
             let seconds = Math.floor((timeLeft / 1000) % 60);
             let minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
             let hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
             el.innerText = `⏳ 剩餘時間：${format(hours)}:${format(minutes)}:${format(seconds)}`;
             el.style.color = "#333";
         } else {
+            // 🎯 重點 B：如果蘑菇已經打完了（進入下次出現倒數、或待更新狀態），一律隱藏核實按鈕！
+            if (verifyBtn) verifyBtn.style.display = 'none';
+
             let rSeconds = Math.floor(((respawnTime - now) / 1000) % 60);
             let rMinutes = Math.floor(((respawnTime - now) / (1000 * 60)) % 60);
             if (respawnTime - now > 0) {
