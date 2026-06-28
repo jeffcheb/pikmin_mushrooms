@@ -15,10 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let localMushroomsData = {};
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
-    
-    // 🔔 新增：本地儲存玩家開啟「重生提醒」的卡片 ID 清單
     let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
-    // 🔔 新增：記錄已經發過通知的卡片 ID，避免在一分鐘內重複彈出通知
     let firedAlerts = {};
 
     // 請求瀏覽器通知權限
@@ -26,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
         Notification.requestPermission();
     }
 
-    // 人數動態限制：完美同步最新蘑菇上限規則
+    // 人數動態限制
     if (mushroomSize && currentPlayers) {
         const updateMaxPlayers = () => {
             const size = mushroomSize.value;
@@ -68,9 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("board_view_pref", mode);
     }
 
-    // ========================================================
-    // 🌍 看板功能：使用全域 window.taiwanData 初始化縣市選單
-    // ========================================================
+    // 初始化縣市選單
     function initFilterDistricts() {
         if (!filterCity || !filterDistrict || !window.taiwanData) return;
 
@@ -109,23 +104,18 @@ document.addEventListener("DOMContentLoaded", () => {
         searchKeyword?.addEventListener("input", renderBoard);
     }
 
-    // ========================================================
-    // 🎯 定位功能：免 API 的純前端超速定位
-    // ========================================================
+    // 免 API 純前端定位
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
             if (!navigator.geolocation) {
                 alert("您的瀏覽器不支援地理定位功能。");
                 return;
             }
-
             btnAutoLocation.textContent = "⌛ 定位中";
-            
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-
                     const TaiwanCityCoordinates = {
                         "台北市": { lat: 25.0339, lon: 121.5644, defaultDist: "大安區" },
                         "新北市": { lat: 25.0169, lon: 121.4627, defaultDist: "板橋區" },
@@ -134,24 +124,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         "台南市": { lat: 22.9908, lon: 120.2133, defaultDist: "中西區" },
                         "高雄市": { lat: 22.6273, lon: 120.3014, defaultDist: "前鎮區" },
                         "基隆市": { lat: 25.1283, lon: 121.7391, defaultDist: "仁愛區" },
-                        "新竹市": { lat: 24.8138, lon: 120.9674, defaultDist: "東區" },
-                        "嘉義市": { lat: 23.4800, lon: 120.4491, defaultDist: "西區" },
-                        "新竹縣": { lat: 24.8383, lon: 121.0117, defaultDist: "竹北市" },
-                        "苗栗縣": { lat: 24.5601, lon: 120.8207, defaultDist: "苗栗市" },
-                        "彰化縣": { lat: 24.0516, lon: 120.5161, defaultDist: "彰化市" },
-                        "南投縣": { lat: 23.9155, lon: 120.6868, defaultDist: "南投市" },
-                        "雲林縣": { lat: 23.7092, lon: 120.4313, defaultDist: "斗六市" },
-                        "嘉義縣": { lat: 23.4592, lon: 120.2931, defaultDist: "太保市" },
-                        "屏東縣": { lat: 22.6660, lon: 120.4860, defaultDist: "屏東市" },
-                        "宜蘭縣": { lat: 24.7570, lon: 121.7530, defaultDist: "宜蘭市" },
-                        "花蓮縣": { lat: 23.9870, lon: 121.6010, defaultDist: "花蓮市" },
-                        "台東縣": { lat: 22.7560, lon: 121.1520, defaultDist: "台東市" },
-                        "澎湖縣": { lat: 23.5710, lon: 119.5790, defaultDist: "馬公市" }
+                        "宜蘭縣": { lat: 24.7570, lon: 121.7530, defaultDist: "宜蘭市" }
                     };
 
                     let closestCity = "高雄市"; 
                     let minDistance = Infinity;
-
                     for (const [cityName, coord] of Object.entries(TaiwanCityCoordinates)) {
                         const dLat = lat - coord.lat;
                         const dLon = lon - coord.lon;
@@ -161,18 +138,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             closestCity = cityName;
                         }
                     }
-
-                    const matchedData = TaiwanCityCoordinates[closestCity];
-                    const foundDist = matchedData.defaultDist;
-
+                    const foundDist = TaiwanCityCoordinates[closestCity].defaultDist;
                     if (filterCity && filterDistrict) {
                         const districtsData = window.taiwanData || {}; 
-                        
                         filterCity.value = closestCity;
-                        
                         filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
                         filterDistrict.disabled = false;
-                        
                         const districts = districtsData[closestCity] || [];
                         districts.forEach(dist => {
                             const option = document.createElement("option");
@@ -180,23 +151,22 @@ document.addEventListener("DOMContentLoaded", () => {
                             option.textContent = dist;
                             filterDistrict.appendChild(option);
                         });
-
                         filterDistrict.value = foundDist;
                         btnAutoLocation.textContent = "🎯 定位";
                         alert(`🎯 定位成功：已自動切換至【${closestCity} ${foundDist}】`);
                         renderBoard();
                     }
                 },
-                (error) => {
+                () => {
                     btnAutoLocation.textContent = "🎯 定位";
-                    alert("GPS 定位取得失敗，請確認是否給予網頁位置權限！");
+                    alert("GPS 定位失敗，請確認是否開啟權限。");
                 },
                 { enableHighAccuracy: false, timeout: 5000 }
             );
         });
     }
 
-    // --- F3: 情報發佈 (寫入 Firebase) ---
+    // 情報發佈 (寫入 Firebase)
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -218,21 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (size === "大型") maxPlayersVal = 35;
             else if (size === "巨大") maxPlayersVal = 40;
 
-            let iconPath = "picture/mushroom_normal.png"; 
-            if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
-            else if (type.includes("水")) iconPath = "picture/mushroom_water.png";
-            else if (type.includes("水晶")) iconPath = "picture/mushroom_crystal.png";
-            else if (type.includes("毒")) iconPath = "picture/mushroom_poison.png";
-            else if (type.includes("電")) iconPath = "picture/mushroom_electric.png";
-            else if (type.includes("紅")) iconPath = "picture/shroom_red.png";
-            else if (type.includes("藍")) iconPath = "picture/shroom_blue.png";
-            else if (type.includes("黃")) iconPath = "picture/shroom_yellow.png";
-            else if (type.includes("紫")) iconPath = "picture/shroom_purple.png";
-            else if (type.includes("白")) iconPath = "picture/shroom_white.png";
-            else if (type.includes("灰")) iconPath = "picture/shroom_gray.png";
-            else if (type.includes("粉紅")) iconPath = "picture/shroom_pink.png";
-            else if (type.includes("每月特殊蘑菇")) iconPath = "picture/mushroom_monthly_special.png";
-
+            const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
 
             const newMushroom = {
@@ -248,14 +204,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(() => {
                     reportForm.reset();
                     document.getElementById("district").disabled = true;
-                    if (updateMaxPlayers) updateMaxPlayers();
                     alert("🎉 情報發佈成功！");
                 })
                 .catch((error) => alert("發佈失敗：" + error.message));
         });
     }
 
-    // --- F5: 看板監聽與過濾渲染 ---
+    function getIconPath(type) {
+        if (type.includes("火")) return "picture/mushroom_fire.png";
+        if (type.includes("水")) return "picture/mushroom_water.png";
+        if (type.includes("水晶")) return "picture/mushroom_crystal.png";
+        if (type.includes("毒")) return "picture/mushroom_poison.png";
+        if (type.includes("電")) return "picture/mushroom_electric.png";
+        if (type.includes("紅")) return "picture/shroom_red.png";
+        if (type.includes("藍")) return "picture/shroom_blue.png";
+        if (type.includes("黃")) return "picture/shroom_yellow.png";
+        if (type.includes("紫")) return "picture/shroom_purple.png";
+        if (type.includes("白")) return "picture/shroom_white.png";
+        if (type.includes("灰")) return "picture/shroom_gray.png";
+        if (type.includes("粉紅")) return "picture/shroom_pink.png";
+        return "picture/mushroom_monthly_special.png";
+    }
+
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
         const shroomRef = window.fbRef(window.fbDB, "mushrooms");
@@ -267,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 🛠️ 看板渲染引擎 + 🔔 重生前 1 分鐘提醒核心邏輯
+    // 🌍 看板渲染引擎（整合歷史時間、更多快速更新選擇面板）
     // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
@@ -284,7 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 釘選排序
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
@@ -296,7 +265,6 @@ document.addEventListener("DOMContentLoaded", () => {
         keys.forEach(id => {
             const item = localMushroomsData[id];
             
-            // 🔍 篩選邏輯
             if (cityFilter !== "all" && item.city !== cityFilter) return;
             if (distFilter !== "all") {
                 const matchPrimaryDistrict = item.district === distFilter;
@@ -316,6 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let timeString = "";
             let statusClass = "countdown-text";
             let expiredCardClass = ""; 
+            let showQuickPanel = false; // 是否顯示快速更新選單
 
             let displayMaxPlayers = item.maxPlayers || 30;
             if (item.size === "小型") displayMaxPlayers = 25;
@@ -324,44 +293,42 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.size === "巨大") displayMaxPlayers = 40;
 
             if (msLeft > 0) {
-                // 🟢 進行中
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
                 const s = totalSec % 60;
                 timeString = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
             } else {
-                const bufferLeft = 300000 + msLeft; // 5分鐘
+                const bufferLeft = 300000 + msLeft; 
                 if (bufferLeft > 0) {
-                    // 🔴 5分鐘重生倒數
                     const totalSec = Math.floor(bufferLeft / 1000);
                     const m = Math.floor(totalSec / 60);
                     const s = totalSec % 60;
                     timeString = `🔄 下次出現倒數：${m}分${s}秒`;
                     statusClass = "countdown-text buffer-period"; 
 
-                    // 🔔 【核心：重生前 1 分鐘通知觸發點】 🔔
-                    // 如果剩餘秒數在 50~60 秒之間 (重生前1分鐘左右)，且玩家有開啟該卡片的提醒，且該輪未觸發過
                     if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
-                        firedAlerts[id] = true; // 鎖定防重複
+                        firedAlerts[id] = true; 
                         triggerWebNotification(item);
                     }
                 } else {
-                    // 🔘 超過5分鐘，轉灰色待更新
+                    // 🔘 超過五分鐘，進入灰色待更新狀態，開啟快速更新面板
                     timeString = `🔄 待現場玩家更新 (新菇已出生)`;
                     statusClass = "countdown-text need-update-period";
                     expiredCardClass = "card-expired-mode"; 
+                    showQuickPanel = true; 
                 }
             }
 
             renderedCount++;
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
-            
-            // 🔔 檢查本地狀態，決定提醒按鈕的樣式與文字
             const isAlertEnabled = alertEnabledList.includes(id);
             const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 關閉提醒";
-            const alertBtnClass = isAlertEnabled ? "btn-alert-on" : "btn-alert-off";
+
+            // 格式化上次更新時間 (◎ 面板用)
+            const lastUpdatedDate = new Date(item.updatedAt || item.createdAt);
+            const formattedTime = `${lastUpdatedDate.getMonth()+1}/${lastUpdatedDate.getDate()} ${lastUpdatedDate.getHours().toString().padStart(2,'0')}:${lastUpdatedDate.getMinutes().toString().padStart(2,'0')}:${lastUpdatedDate.getSeconds().toString().padStart(2,'0')}`;
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
@@ -371,14 +338,34 @@ document.addEventListener("DOMContentLoaded", () => {
                             <h4>[${item.size}] ${item.type}</h4>
                             <p>📍 ${item.city}${item.district} - ${item.locationName}</p>
                         </div>
+                        <button class="btn-history-trigger" onclick="toggleHistoryPanel('${id}')" title="顯示上次更新時間">◎</button>
                     </div>
+
+                    <div id="history-panel-${id}" class="history-info-panel" style="display:none;">
+                        <p>🕒 上次更新：<strong>${formattedTime}</strong></p>
+                    </div>
+
                     <div class="card-body">
                         <p>👥 參戰人數：<strong>${item.currentPlayers} / ${displayMaxPlayers}</strong> 人</p>
                         <p class="${statusClass}">${timeString}</p>
                     </div>
+
+                    ${showQuickPanel ? `
+                    <div class="quick-update-panel">
+                        <h5>⚡ 快速回報現場新菇：</h5>
+                        <div class="quick-buttons">
+                            <button onclick="quickUpdateStatus('${id}', '每月特殊蘑菇', '巨大', 4)">✨ 巨大特殊菇 (4小時)</button>
+                            <button onclick="quickUpdateStatus('${id}', '每月特殊蘑菇', '大型', 3)">✨ 大型特殊菇 (3小時)</button>
+                            <button onclick="quickUpdateStatus('${id}', '火蘑菇', '大型', 4)">🔥 大型火菇 (4小時)</button>
+                            <button onclick="quickUpdateStatus('${id}', '一般紅蘑菇', '普通', 1)">🔴 普通紅菇 (1小時)</button>
+                            <button class="btn-no-shroom" onclick="quickUpdateStatus('${id}', '暫無蘑菇', '無', 0)">❌ 目前沒長菇 (清除卡片)</button>
+                        </div>
+                    </div>
+                    ` : ''}
+
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
-                        <button class="btn-sm btn-alert ${alertBtnClass}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
+                        <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" onclick="toggleAlert('${id}')" ${expiredCardClass ? 'style="display:none;"' : ''}>${alertBtnText}</button>
                         <button class="btn-sm" onclick="quickJoin('${id}')" ${expiredCardClass ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>➕ 人數+1</button>
                     </div>
                 </div>
@@ -392,41 +379,73 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔔 點擊切換個別卡片的提醒狀態 (本地存取)
-    window.toggleAlert = (id) => {
-        if ("Notification" in window && Notification.permission === "denied") {
-            alert("❌ 您已封鎖瀏覽器通知權限，請至網址列左側鎖頭開啟，否則無法收到重生提醒喔！");
+    // ◎ 歷史紀錄面板切換
+    window.toggleHistoryPanel = (id) => {
+        const panel = document.getElementById(`history-panel-${id}`);
+        if (panel) {
+            panel.style.display = panel.style.display === "none" ? "block" : "none";
+        }
+    };
+
+    // 🔄 快速回報多重選擇處理器
+    window.quickUpdateStatus = (id, type, size, hours) => {
+        if (!window.fbDB) return;
+        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+
+        // 選擇「目前沒長菇」則直接將卡片從 Firebase 移除
+        if (type === "暫無蘑菇") {
+            window.fbRemove(shroomRef)
+                .then(() => alert("❌ 已同步回報：該點目前無蘑菇，卡片已下架。"))
+                .catch(err => alert("更新失敗：" + err.message));
             return;
         }
-        
-        if ("Notification" in window && Notification.permission === "default") {
-            Notification.requestPermission().then(permission => {
-                if (permission !== "granted") return;
-            });
-        }
 
+        // 計算對應的大小人數上限與新圖片路联
+        let maxVal = 30;
+        if (size === "小型") maxVal = 25;
+        else if (size === "普通") maxVal = 30;
+        else if (size === "大型") maxVal = 35;
+        else if (size === "巨大") maxVal = 40;
+
+        const iconPath = getIconPath(type);
+        const now = Date.now();
+
+        // 直接在線上覆蓋更新時間、種類與大小，卡片會立刻「重獲新生」變回正常綠色倒數！
+        window.fbUpdate(shroomRef, {
+            type: type,
+            size: size,
+            mushroomIcon: iconPath,
+            currentPlayers: 0,
+            maxPlayers: maxVal,
+            timeReported: { hours: hours, minutes: 0, seconds: 0 },
+            createdAt: now,
+            updatedAt: now
+        }).then(() => {
+            // 清除該卡片舊的通知鎖定，讓新一輪倒數能重新觸發通知
+            delete firedAlerts[id];
+            alert(`🎉 快速更新成功！已同步此處為【${size} ${type}】`);
+        }).catch(err => alert("更新失敗：" + err.message));
+    };
+
+    window.toggleAlert = (id) => {
         const index = alertEnabledList.indexOf(id);
         if (index > -1) {
             alertEnabledList.splice(index, 1);
-            delete firedAlerts[id]; // 重設警報發送標記
+            delete firedAlerts[id];
         } else {
             alertEnabledList.push(id);
         }
-        
         localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
-        renderBoard(); // 即時重新渲染按鈕狀態
+        renderBoard();
     };
 
-    // 🔔 觸發原生瀏覽器通知
     function triggerWebNotification(item) {
         if ("Notification" in window && Notification.permission === "granted") {
-            const title = "🍄 皮克敏蘑菇轉生預告！";
-            const options = {
-                body: `📍【${item.city}${item.district} - ${item.locationName}】的蘑菇將在 1 分鐘後原地出生，準備卡位！`,
+            new Notification("🍄 皮克敏蘑菇轉生預告！", {
+                body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生，準備卡位！`,
                 icon: item.mushroomIcon || "picture/mushroom_normal.png",
-                requireInteraction: true // 通知會一直停留在畫面上，直到玩家手動關閉或點擊
-            };
-            new Notification(title, options);
+                requireInteraction: true
+            });
         }
     }
 
@@ -441,7 +460,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.quickJoin = (id) => {
         const item = localMushroomsData[id];
         if (!item || !window.fbDB) return;
-        
         let currentMax = 30;
         if (item.size === "小型") currentMax = 25;
         else if (item.size === "普通" || item.size === "一般") currentMax = 30;
@@ -459,15 +477,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // ========================================================
-    // 🚀 多軌輪詢機制，保證抓到台灣行政區資料
-    // ========================================================
+    // 多軌輪詢
     function bootstrapFilter() {
         const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
         if (availableData) {
             window.taiwanData = availableData;
             initFilterDistricts();
-            console.log("✅ [成功] 台灣行政區資料已成功導入即時看板選單。");
             return true;
         }
         return false;
@@ -475,26 +490,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!bootstrapFilter()) {
         const forceLoadInterval = setInterval(() => {
-            if (bootstrapFilter()) {
-                clearInterval(forceLoadInterval);
-            }
+            if (bootstrapFilter()) clearInterval(forceLoadInterval);
         }, 30);
-        
-        setTimeout(() => {
-            clearInterval(forceLoadInterval);
-            if (!window.taiwanData || Object.keys(window.taiwanData).length === 0) {
-                console.warn("⚠️ 觸發保底機制：未能讀取到外部檔案，已自動為您掛載保底基礎縣市選單。");
-                window.taiwanData = { "台北市": ["大安區"], "新北市": ["板橋區"], "高雄市": ["前鎮區", "苓雅區"] };
-                initFilterDistricts();
-            }
-        }, 3000);
     }
 
     const checkFbInterval = setInterval(() => {
         if (window.fbDB) {
             clearInterval(checkFbInterval);
             startBoardSync(); 
-            console.log("🔥 [成功] Firebase 看板同步模組已上線。");
         }
     }, 150);
 });
