@@ -261,7 +261,7 @@ h2 {
 }
 
 /* ==========================================
-   🍄 頁面二：當前蘑菇列表與區域篩選
+   🍄 頁面二：當前蘑菇列表與區域/排序篩選
    ========================================== */
 .location-select-wrapper {
     margin-bottom: 20px;
@@ -272,7 +272,7 @@ h2 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 15px; /* 稍微放大一點間距容納排序欄位 */
 }
 
 .location-select-wrapper label {
@@ -286,6 +286,13 @@ h2 {
     border-radius: 6px;
     border: 1px solid #ccc;
     background: #fff;
+}
+
+/* 🌟 新增：排序控制群組樣式 */
+.sort-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* 🎯 GPS定位按鈕 */
