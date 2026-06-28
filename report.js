@@ -31,7 +31,7 @@ let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]'
 let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
 // ==========================================
-// 📡 2. Firebase 初始化與資料庫
+// 📡 2. Firebase 初始化與資料庫參考
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyBg9WBxj7Kb0937719661bV-bZ_r8k0M3Q",
@@ -49,7 +49,7 @@ if (!firebase.apps.length) {
 const database = firebase.database();
 const dbRef = database.ref('mushrooms');
 
-// 全台灣 22 縣市完整行政區資料庫 (精準修正上版遺漏引號語法錯誤)
+// 全台灣 22 縣市完整行政區資料庫
 const allTaiwanDistricts = {
     "基隆市": ["仁愛", "信義", "中正", "中山", "安樂", "暖暖", "七堵"],
     "臺北市": ["中正", "大同", "中山", "松山", "大安", "萬華", "信義", "士林", "北投", "內湖", "南港", "文山"],
@@ -76,7 +76,7 @@ const allTaiwanDistricts = {
 };
 
 // ==========================================
-// ⚙️ 3. 下拉選單連動控制與大小限制
+// ⚙️ 3. 下拉選單初始化與聯動
 // ==========================================
 function initCityDropdowns() {
     const cities = Object.keys(allTaiwanDistricts);
@@ -140,7 +140,7 @@ function updateCountLimitConstraint() {
 }
 
 // ==========================================
-// 🎴 4. 清單/網格模式控制切換 (與 CSS 類別連動)
+// 🎴 4. 清單/網格檢視模式切換控制
 // ==========================================
 function updateViewToggleBtnText() {
     if (!viewToggleBtn) return;
@@ -153,17 +153,8 @@ function updateViewToggleBtnText() {
     }
 }
 
-if (viewToggleBtn) {
-    viewToggleBtn.addEventListener('click', () => {
-        currentViewMode = (currentViewMode === 'grid') ? 'list' : 'grid';
-        localStorage.setItem('mushroom_view_mode', currentViewMode);
-        updateViewToggleBtnText();
-        filterAndSortMushroomCards();
-    });
-}
-
 // ==========================================
-// 🎯 5. 真・自動定位反查模組
+// 🎯 5. GPS 自動定位反查功能模組
 // ==========================================
 if (geoBtn) {
     geoBtn.addEventListener('click', () => {
@@ -235,7 +226,7 @@ if (geoBtn) {
 }
 
 // ==========================================
-// 📊 6. 看板數據篩選、排序與卡片渲染 (修復所有隱形按鈕)
+// 📊 6. 資料過濾、排序與卡片結構渲染
 // ==========================================
 function filterAndSortMushroomCards() {
     const selectedCity = filterCitySelect.value;
@@ -309,7 +300,7 @@ function renderMushroomCard(id, data) {
         <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" style="cursor:pointer;color:#0288d1;font-weight:bold;">◉</span></h3>
         <p>📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
         <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="font-weight:bold;">⏳ 計算中...</p>
-        <p>👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;background:#2196f3;color:#fff;border:none;padding:2px 6px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:bold;margin-left:4px;">✅ 核實</button></p>
+        <p>👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
         <button class="notify-me-btn" style="border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">${notifyBtnText}</button>
     `;
     
@@ -357,7 +348,7 @@ function updateCountdowns() {
 }
 
 // ==========================================
-// 📌 7. 彈出互動視窗按鈕綁定控制核心
+// 📌 7. 核心按鈕與彈出視窗（事件代理監聽）
 // ==========================================
 function setupCardClicks() {
     mushroomContainer.addEventListener('click', (e) => {
@@ -365,7 +356,7 @@ function setupCardClicks() {
         if (!currentCard) return;
         const firebaseId = currentCard.getAttribute('data-id');
 
-        // 📝 快速更新彈出視窗功能綁定
+        // 📝 快速更新控制
         if (e.target.classList.contains('quick-edit-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val(); if (!currentData) return;
@@ -378,55 +369,43 @@ function setupCardClicks() {
                     <div class="edit-modal-window">
                         <div class="edit-modal-header"><span>📝 快速更新蘑菇現況</span><span class="edit-modal-close">&times;</span></div>
                         <div class="edit-modal-body">
-                            <h4>目前人數：</h4>
-                            <input type="number" id="modal-pcount" class="edit-modal-input" value="${currentData.pCount}" min="0" max="${maxLimit}">
-                            <h4>倒數剩餘時間：</h4>
+                            <input type="number" id="modal-pcount" class="edit-modal-input" value="${currentData.pCount || 0}" min="0" max="${maxLimit}">
                             <div class="edit-modal-input-group">
-                                <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours}">
-                                <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes}">
+                                <input type="number" id="modal-hours" class="edit-modal-input" value="${currentData.hours || 0}">
+                                <input type="number" id="modal-minutes" class="edit-modal-input" value="${currentData.minutes || 0}">
                                 <input type="number" id="modal-seconds" class="edit-modal-input" value="${currentData.seconds || 0}">
                             </div>
-                            <h4>具體地點名稱：</h4>
-                            <input type="text" id="modal-dists" class="edit-modal-input" value="${currentData.name || ''}">
+                            <input type="text" id="modal-name" class="edit-modal-input" value="${currentData.name || ''}">
                         </div>
                         <div class="edit-modal-footer">
-                            <button class="edit-btn-cancel">取消</button>
-                            <button class="edit-btn-save">儲存更新</button>
+                            <button class="edit-btn-cancel" style="background:#eceff1;color:#37474f;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;">取消</button>
+                            <button class="edit-btn-save" style="background:#2e7d32;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;">儲存更新</button>
                         </div>
                     </div>
                 `;
                 document.body.appendChild(modalOverlay);
                 
-                const closeBtn = modalOverlay.querySelector('.edit-modal-close');
-                const cancelBtn = modalOverlay.querySelector('.edit-btn-cancel');
-                const saveBtn = modalOverlay.querySelector('.edit-btn-save');
-                
                 const closeModal = () => modalOverlay.remove();
-                closeBtn.addEventListener('click', closeModal);
-                cancelBtn.addEventListener('click', closeModal);
+                modalOverlay.querySelector('.edit-modal-close').addEventListener('click', closeModal);
+                modalOverlay.querySelector('.edit-btn-cancel').addEventListener('click', closeModal);
                 
-                saveBtn.addEventListener('click', () => {
+                modalOverlay.querySelector('.edit-btn-save').addEventListener('click', () => {
                     const newCount = parseInt(document.getElementById('modal-pcount').value) || 0;
                     const h = parseInt(document.getElementById('modal-hours').value) || 0;
                     const m = parseInt(document.getElementById('modal-minutes').value) || 0;
                     const s = parseInt(document.getElementById('modal-seconds').value) || 0;
-                    const nameRaw = document.getElementById('modal-dists').value.trim();
+                    const nameRaw = document.getElementById('modal-name').value.trim();
                     const now = new Date();
                     const newReportTime = `${now.getFullYear()}-${format(now.getMonth()+1)}-${format(now.getDate())} ${format(now.getHours())}:${format(now.getMinutes())}:${format(now.getSeconds())}`;
                     
                     dbRef.child(firebaseId).update({ 
-                        pCount: newCount, 
-                        hours: h, 
-                        minutes: m, 
-                        seconds: s, 
-                        name: nameRaw, 
-                        reportTime: newReportTime 
+                        pCount: newCount, hours: h, minutes: m, seconds: s, name: nameRaw, reportTime: newReportTime 
                     }).then(() => closeModal());
                 });
             });
         }
 
-        // ⏰ 最後更新歷史時間按鈕功能綁定
+        // ⏰ 最後更新時間歷史彈出視窗
         if (e.target.classList.contains('time-info-btn')) {
             const reportTimeStr = e.target.getAttribute('data-time');
             if (!reportTimeStr) return;
@@ -453,7 +432,7 @@ function setupCardClicks() {
             timeOverlay.querySelector('.time-btn-close').addEventListener('click', () => timeOverlay.remove());
         }
 
-        // ✅ 核實功能功能綁定
+        // ✅ 點擊核實按鈕
         if (e.target.classList.contains('verify-fact-btn')) {
             dbRef.child(firebaseId).once('value', (snapshot) => {
                 const currentData = snapshot.val(); if (!currentData) return;
@@ -465,36 +444,14 @@ function setupCardClicks() {
                     s = Math.floor((timeLeftMs / 1000) % 60); m = Math.floor((timeLeftMs / (1000 * 60)) % 60); h = Math.floor((timeLeftMs / (1000 * 60 * 60)) % 24);
                 }
                 const d = new Date();
-                const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${format(d.getDate())} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
-                dbRef.child(firebaseId).update({ hours: h, minutes: m, seconds: s, reportTime: newReportTime }).then(() => {
-                    alert("✅ 核實成功！已將情報時效更新為當前最新狀態。");
-                });
+                const newReportTime = `${d.getFullYear()}-${format(d.getMonth()+1)}-${d.getDate()} ${format(d.getHours())}:${format(d.getMinutes())}:${format(d.getSeconds())}`;
+                dbRef.child(firebaseId).update({ hours: h, minutes: m, seconds: s, reportTime: newReportTime });
             });
         }
     });
 }
 
-// 開發者模式功能控制
-function setupDeveloperMode() {
-    devModeBtn.addEventListener('click', () => {
-        if (!isDevMode) {
-            if (prompt("🔐 請輸入驗證密碼：") === "admin123") {
-                isDevMode = true; document.body.classList.add('dev-active'); devModeBtn.innerText = "🔒 關閉編輯模式";
-                devStatusText.innerText = "🔓 開發者模式：點擊卡片 ❌ 可下架蘑菇";
-            }
-        } else {
-            isDevMode = false; document.body.classList.remove('dev-active'); devModeBtn.innerText = "🛠️ 開啟開發者模式";
-            devStatusText.innerText = "🔒 安全瀏覽模式";
-        }
-    });
-    mushroomContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-btn') && confirm("⚠️ 確定要從全雲端看板下架此蘑菇嗎？")) {
-            dbRef.child(e.target.closest('.card').getAttribute('data-id')).remove();
-        }
-    });
-}
-
-// 📌 釘選按鈕點擊追蹤
+// 📌 釘選功能機制
 function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
@@ -504,6 +461,26 @@ function setupPinFeature() {
             else pinnedMushrooms.splice(index, 1);
             localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
             filterAndSortMushroomCards();
+        }
+    });
+}
+
+// 🛠️ 開發者模式驗證模組
+function setupDeveloperMode() {
+    devModeBtn.addEventListener('click', () => {
+        if (!isDevMode) {
+            if (prompt("🔐 請輸入驗證密碼：") === "admin123") {
+                isDevMode = true; document.body.classList.add('dev-active'); devModeBtn.innerText = "🔒 關閉編輯模式";
+                devStatusText.innerText = "🔓 開發者編輯模式 (點擊卡片左上角 ❌ 可刪除蘑菇)";
+            }
+        } else {
+            isDevMode = false; document.body.classList.remove('dev-active'); devModeBtn.innerText = "🛠️ 開啟開發者模式";
+            devStatusText.innerText = "🔒 安全瀏覽模式";
+        }
+    });
+    mushroomContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn') && confirm("⚠️ 確定要下架此蘑菇嗎？")) {
+            dbRef.child(e.target.closest('.card').getAttribute('data-id')).remove();
         }
     });
 }
@@ -528,6 +505,9 @@ if (mushroomForm) {
 function listenToCloudDatabase() { dbRef.on('value', (snap) => { globalMushroomList = []; snap.forEach(c => { globalMushroomList.push({ id: c.key, data: c.val() }); }); filterAndSortMushroomCards(); }); }
 const format = (n) => String(n).padStart(2, '0');
 
+// ==========================================
+// 📡 8. 事件監聽初始化綁定
+// ==========================================
 formCitySelect.addEventListener('change', () => updateDistrictDropdown(formCitySelect, formDistrictSelect, false));
 filterCitySelect.addEventListener('change', () => {
     if (filterCitySelect.value === 'all') { filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>'; filterAndSortMushroomCards(); } 
@@ -537,7 +517,16 @@ filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
 if (cardSortSelect) cardSortSelect.addEventListener('change', filterAndSortMushroomCards);
 if (searchNameInput) searchNameInput.addEventListener('input', filterAndSortMushroomCards);
 
-// 全站初始化啟動
+if (viewToggleBtn) {
+    viewToggleBtn.addEventListener('click', () => {
+        currentViewMode = (currentViewMode === 'grid') ? 'list' : 'grid';
+        localStorage.setItem('mushroom_view_mode', currentViewMode);
+        updateViewToggleBtnText();
+        filterAndSortMushroomCards();
+    });
+}
+
+// 啟動全站初始化
 initCityDropdowns();
 setupPinFeature();
 setupCardClicks();
