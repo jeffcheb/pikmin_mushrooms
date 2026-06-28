@@ -16,14 +16,27 @@ document.addEventListener("DOMContentLoaded", () => {
     let localMushroomsData = {};
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
 
-    // 人數動態限制
+    // ========================================================
+    // 👥 人數動態限制：完美同步最新蘑菇上限規則
+    // ========================================================
     if (mushroomSize && currentPlayers) {
-        mushroomSize.addEventListener("change", () => {
-            currentPlayers.max = 5; 
-            if (parseInt(currentPlayers.value) > parseInt(currentPlayers.max)) {
-                currentPlayers.value = currentPlayers.max;
+        const updateMaxPlayers = () => {
+            const size = mushroomSize.value;
+            let maxVal = 30; // 預設一般
+            if (size === "小型") maxVal = 25;
+            else if (size === "普通" || size === "一般") maxVal = 30;
+            else if (size === "大型") maxVal = 35;
+            else if (size === "巨大") maxVal = 40;
+            
+            currentPlayers.max = maxVal;
+            // 提示防呆：如果目前輸入的人數大於剛切換的上限，自動修正
+            if (parseInt(currentPlayers.value) > maxVal) {
+                currentPlayers.value = maxVal;
             }
-        });
+        };
+        mushroomSize.addEventListener("change", updateMaxPlayers);
+        // 初始化時先跑一次
+        updateMaxPlayers();
     }
 
     // 網格/清單模式切換
@@ -107,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
 
-                    // 台灣主要縣市中心點概略經緯度
                     const TaiwanCityCoordinates = {
                         "台北市": { lat: 25.0339, lon: 121.5644, defaultDist: "大安區" },
                         "新北市": { lat: 25.0169, lon: 121.4627, defaultDist: "板橋區" },
@@ -194,6 +206,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const minutes = parseInt(document.getElementById("time-minutes").value) || 0;
             const seconds = parseInt(document.getElementById("time-seconds").value) || 0;
 
+            // 根據大小動態計算最高上限存入資料庫
+            let maxPlayersVal = 30;
+            if (size === "小型") maxPlayersVal = 25;
+            else if (size === "普通" || size === "一般") maxPlayersVal = 30;
+            else if (size === "大型") maxPlayersVal = 35;
+            else if (size === "巨大") maxPlayersVal = 40;
+
             let iconPath = "picture/mushroom_normal.png"; 
             if (type.includes("火")) iconPath = "picture/mushroom_fire.png";
             else if (type.includes("水")) iconPath = "picture/mushroom_water.png";
@@ -214,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const newMushroom = {
                 city, district, locationName, type, size,
                 mushroomIcon: iconPath,
-                currentPlayers: players, maxPlayers: 5,
+                currentPlayers: players, maxPlayers: maxPlayersVal,
                 timeReported: { hours, minutes, seconds },
                 createdAt: nowTimestamp, updatedAt: nowTimestamp
             };
@@ -224,6 +243,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(() => {
                     reportForm.reset();
                     document.getElementById("district").disabled = true;
+                    // 發佈後重新調校人數最大值
+                    if (updateMaxPlayers) updateMaxPlayers();
                     alert("🎉 情報發佈成功！");
                 })
                 .catch((error) => alert("發佈失敗：" + error.message));
@@ -241,6 +262,9 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(renderBoard, 1000); 
     }
 
+    // ========================================================
+    // 🛠️ 核心修改：過期轉灰色「待現場更新」看板渲染引擎
+    // ========================================================
     function renderBoard() {
         if (!mushroomBoard) return;
         
@@ -256,6 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        // 釘選排序
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
@@ -267,7 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
         keys.forEach(id => {
             const item = localMushroomsData[id];
             
-            // 🔍 跨行政區模糊可見篩選邏輯
+            // 🔍 篩選邏輯
             if (cityFilter !== "all" && item.city !== cityFilter) return;
             if (distFilter !== "all") {
                 const matchPrimaryDistrict = item.district === distFilter;
@@ -286,23 +311,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let timeString = "";
             let statusClass = "countdown-text";
+            let expiredCardClass = ""; // 用來控制變灰色的 CSS 類別
+
+            // 重新校正動態最大參戰人數（相容舊資料）
+            let displayMaxPlayers = item.maxPlayers || 30;
+            if (item.size === "小型") displayMaxPlayers = 25;
+            else if (item.size === "普通" || item.size === "一般") displayMaxPlayers = 30;
+            else if (item.size === "大型") displayMaxPlayers = 35;
+            else if (item.size === "巨大") displayMaxPlayers = 40;
 
             if (msLeft > 0) {
+                // 🟢 進行中：顯示正常倒數
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
                 const s = totalSec % 60;
                 timeString = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
             } else {
-                const bufferLeft = 300000 + msLeft; 
+                const bufferLeft = 300000 + msLeft; // 5分鐘（300,000毫秒）
                 if (bufferLeft > 0) {
+                    // 🔴 5分鐘內：顯示轉生倒數
                     const totalSec = Math.floor(bufferLeft / 1000);
                     const m = Math.floor(totalSec / 60);
                     const s = totalSec % 60;
                     timeString = `🔄 下次出現倒數：${m}分${s}秒`;
                     statusClass = "countdown-text buffer-period"; 
                 } else {
-                    return; 
+                    // 🔘 超過5分鐘：【核心更動】卡片不消失，強制轉為灰色「待更新」狀態！
+                    timeString = `🔄 待現場玩家更新 (新菇已出生)`;
+                    statusClass = "countdown-text need-update-period";
+                    expiredCardClass = "card-expired-mode"; // 用於加入灰色濾鏡與樣式
                 }
             }
 
@@ -311,7 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
 
             htmlContent += `
-                <div class="mushroom-card ${isPinned}" data-id="${id}">
+                <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}">
                     <div class="card-header">
                         <img src="${item.mushroomIcon}" class="shroom-img" alt="${item.type}" onerror="this.src='https://via.placeholder.com/50x50?text=🍄'">
                         <div class="shroom-info">
@@ -320,12 +358,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </div>
                     <div class="card-body">
-                        <p>👥 參戰人數：<strong>${item.currentPlayers} / ${item.maxPlayers}</strong> 人</p>
+                        <p>👥 參戰人數：<strong>${item.currentPlayers} / ${displayMaxPlayers}</strong> 人</p>
                         <p class="${statusClass}">${timeString}</p>
                     </div>
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
-                        <button class="btn-sm" onclick="quickJoin('${id}')">➕ 人數+1</button>
+                        <button class="btn-sm" onclick="quickJoin('${id}')" ${expiredCardClass ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>➕ 人數+1</button>
                     </div>
                 </div>
             `;
@@ -349,7 +387,14 @@ document.addEventListener("DOMContentLoaded", () => {
     window.quickJoin = (id) => {
         const item = localMushroomsData[id];
         if (!item || !window.fbDB) return;
-        if (item.currentPlayers >= item.maxPlayers) {
+        
+        let currentMax = 30;
+        if (item.size === "小型") currentMax = 25;
+        else if (item.size === "普通" || item.size === "一般") currentMax = 30;
+        else if (item.size === "大型") currentMax = 35;
+        else if (item.size === "巨大") currentMax = 40;
+
+        if (item.currentPlayers >= currentMax) {
             alert("該蘑菇人數已滿！");
             return;
         }
@@ -361,17 +406,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ========================================================
-    // 🚀 終極非同步修正：初始化與 Firebase 解耦
-    // ========================================================
-    // ========================================================
-    // 🚀 終極非同步修正：多軌輪詢機制，保證抓到台灣行政區資料
+    // 🚀 多軌輪詢機制，保證抓到台灣行政區資料
     // ========================================================
     function bootstrapFilter() {
-        // 同時檢查 window.taiwanData 與內建的保底資料
         const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
-        
         if (availableData) {
-            // 如果成功抓到資料，確保將其綁定到全域以便定位按鈕共用
             window.taiwanData = availableData;
             initFilterDistricts();
             console.log("✅ [成功] 台灣行政區資料已成功導入即時看板選單。");
@@ -380,16 +419,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     }
 
-    // 軌道一：立刻執行嘗試
     if (!bootstrapFilter()) {
-        // 軌道二：若失敗，開啟每 30 毫秒一次的高速輪詢檢查，直到成功為止
         const forceLoadInterval = setInterval(() => {
             if (bootstrapFilter()) {
                 clearInterval(forceLoadInterval);
             }
         }, 30);
         
-        // 軌道三：設定一個 3 秒的超時防呆，若真的全丟包，強制生出最基礎的選單
         setTimeout(() => {
             clearInterval(forceLoadInterval);
             if (!window.taiwanData || Object.keys(window.taiwanData).length === 0) {
@@ -400,7 +436,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 3000);
     }
 
-    // 4. Firebase 監聽單獨走自己的軌道，互不干擾
     const checkFbInterval = setInterval(() => {
         if (window.fbDB) {
             clearInterval(checkFbInterval);
