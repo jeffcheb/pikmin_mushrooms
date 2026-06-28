@@ -97,13 +97,27 @@
         <section id="report" class="section-box">
             <h2>🍄 當前最新蘑菇回報</h2>
             <div class="location-select-wrapper">
-                <label>📍 篩選顯示區域：</label>
-                <select id="filter-city"></select>
-                <select id="filter-district">
-                    <option value="all">顯示所有行政區</option>
-                </select>
-                <button id="geo-btn" class="geo-btn">🎯 自動定位</button>
-            </div>
+    <label for="filter-city">📍 選擇縣市：</label>
+    <select id="filter-city">
+        </select>
+
+    <label for="filter-district">選擇行政區：</label>
+    <select id="filter-district">
+        </select>
+
+    <div class="sort-group">
+        <label for="card-sort">📊 排序方式：</label>
+        <select id="card-sort">
+            <option value="updateTime">更新時間 (最新)</option>
+            <option value="remainingTime">剩餘時間 (最少)</option>
+            <option value="totalPlayers">總人數 (最多)</option>
+            <option value="mushroomSize">蘑菇大小 (巨型優先)</option>
+            <option value="mushroomType">蘑菇種類 (名稱排序)</option>
+        </select>
+    </div>
+
+    <button id="geo-btn" class="geo-btn">🎯 自動定位</button>
+</div>
 
             <div class="grid-container" id="mushroom-container">
                 </div>
