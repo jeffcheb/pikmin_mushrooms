@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皮克敏蘑菇戰力模擬器</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <title>皮克敏蘑菇即時回報站</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" href="style.css?v=2026_final_v2">
 </head>
 <body>
 
@@ -14,94 +16,117 @@
             <h1>皮克敏高階工具站</h1>
         </div>
         <nav>
-            <a href="index.html" class="active">🧮 戰力模擬器</a>
-            <a href="report.html">🍄 雲端回報系統</a>
+            <a href="index.html">🧮 戰力模擬器</a>
+            <a href="report.html" class="active">🍄 雲端回報系統</a>
         </nav>
     </header>
 
     <main>
-        <section class="section-box">
-            <h2>🧮 單隻皮克敏戰力精算器</h2>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">依照社群最新攻略圖精算：全部欄位數據相加即為官方最終真實戰力值！</p>
-            
-            <div class="calc-flex">
-                <div class="form-group">
-                    <label>1. 選擇皮克敏種類 (基礎戰力)：</label>
-                    <div class="pikmin-select">
-                        <label><input type="radio" name="color" value="red" checked><img src="picture/pikmin_red.png" alt="紅" onerror="this.style.opacity='0.5'">紅 (4)</label>
-                        <label><input type="radio" name="color" value="blue"><img src="picture/pikmin_blue.png" alt="藍" onerror="this.style.opacity='0.5'">藍 (3)</label>
-                        <label><input type="radio" name="color" value="yellow"><img src="picture/pikmin_yellow.png" alt="黃" onerror="this.style.opacity='0.5'">黃 (3)</label>
-                        <label><input type="radio" name="color" value="purple"><img src="picture/pikmin_purple.png" alt="紫" onerror="this.style.opacity='0.5'">紫 (6)</label>
-                        <label><input type="radio" name="color" value="white"><img src="picture/pikmin_white.png" alt="白" onerror="this.style.opacity='0.5'">白 (2)</label>
-                        <label><input type="radio" name="color" value="rock"><img src="picture/pikmin_rock.png" alt="岩" onerror="this.style.opacity='0.5'">岩 (5)</label>
-                        <label><input type="radio" name="color" value="wing"><img src="picture/pikmin_wing.png" alt="羽" onerror="this.style.opacity='0.5'">羽 (2)</label>
-                        <label><input type="radio" name="color" value="ice"><img src="picture/pikmin_ice.png" alt="冰" onerror="this.style.opacity='0.5'">冰 (2)</label>
+        <div class="form-section">
+            <h2>🍄 回報蘑菇現況</h2>
+            <form id="mushroom-form">
+                <div style="margin-bottom: 12px;">
+                    <label>📍 選擇縣市：</label>
+                    <select id="form-city" style="width: 100%;"></select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>選擇行政區：</label>
+                    <select id="form-district" style="width: 100%;"></select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>🏢 地點具體名稱：</label>
+                    <input type="text" id="form-name" placeholder="例如：公園變電箱、麥當勞旁" style="width: 100%;" required>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>🍄 蘑菇種類：</label>
+                    <select id="form-type" style="width: 100%;">
+                        <option value="red">紅色蘑菇</option>
+                        <option value="blue">藍色蘑菇</option>
+                        <option value="yellow">黃色蘑菇</option>
+                        <option value="purple">紫色蘑菇</option>
+                        <option value="white">白色蘑菇</option>
+                        <option value="rock">灰色蘑菇</option>
+                        <option value="wing">粉紅色蘑菇</option>
+                        <option value="ice">冰藍蘑菇</option>
+                        <option value="rock_crystal">特殊水晶蘑菇</option>
+                        <option value="red_fire">元素火蘑菇</option>
+                        <option value="blue_water">元素水蘑菇</option>
+                        <option value="white_poison">元素毒蘑菇</option>
+                        <option value="yellow_electric">元素電子蘑菇</option>
+                        <option value="event_special">本月限定活動蘑菇</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>📏 蘑菇大小：</label>
+                    <select id="form-size" style="width: 100%;">
+                        <option value="小">小</option>
+                        <option value="普通" selected>普通</option>
+                        <option value="大">大</option>
+                        <option value="巨型">巨型</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>👥 目前參戰人數：</label>
+                    <input type="number" id="form-count" value="0" min="0" style="width: 100%;">
+                    <span id="count-hint" style="font-size: 12px; color: #78909c; display: block; margin-top: 4px;"></span>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label>⏳ 剩餘倒數時間：</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="number" id="form-hours" value="0" min="0" placeholder="時" style="width: 33%;">
+                        <input type="number" id="form-minutes" value="0" min="0" max="59" placeholder="分" style="width: 33%;">
+                        <input type="number" id="form-seconds" value="0" min="0" max="59" placeholder="秒" style="width: 33%;">
                     </div>
-
-                    <label for="hearts">2. 友好度 (愛心層級)：</label>
-                    <select id="hearts">
-                        <option value="0">🖤 0 心 (+0)</option>
-                        <option value="1">❤️ 1 顆紅心 (+1)</option>
-                        <option value="2">❤️ 2 顆紅心 (+2)</option>
-                        <option value="3">❤️ 3 顆紅心 (+3)</option>
-                        <option value="4">❤️ 4 顆紅心 (+4)</option>
-                        <option value="5">💛 1 顆金心 (+5)</option>
-                        <option value="6">💛 2 顆金心 (+6)</option>
-                        <option value="7">💛 3 顆金心 (+7)</option>
-                        <option value="8">💛 4 顆金心 (+8)</option>
-                    </select>
-
-                    <label for="flower">3. 頭部花朵狀態：</label>
-                    <select id="flower">
-                        <option value="0">🦲 禿頭頭 (+0)</option>
-                        <option value="1">🌱 葉子頭 (+1)</option>
-                        <option value="2">🟢 花苞頭 (+2)</option>
-                        <option value="3" selected>🌼 普花頭 (+3)</option>
-                        <option value="4">🌹 特殊花 / 當月副花 (+4)</option>
-                        <option value="5">🌻 當月主花 (+5)</option>
-                    </select>
-
-                    <label for="decor">4. 皮克敏飾品狀態：</label>
-                    <select id="decor">
-                        <option value="0">❌ 無飾品 (工作力 +0)</option>
-                        <option value="4" selected>🎀 已獲得一般飾品 (工作力 +4)</option>
-                        <option value="100">🌟 當季副活動/復刻飾品 (非活動菇常駐+4 / 活動菇大匹配+100)</option>
-                        <option value="300">🔥 當季主活動限定飾品 (非活動菇常駐+4 / 活動菇大匹配+300)</option>
-                    </select>
-
-                    <label for="mushroom-type">5. 擬攻打的蘑菇環境：</label>
-                    <select id="mushroom-type">
-                        <option value="none" selected>🏡 閒置狀態 (無蘑菇加成)</option>
-                        <option value="red">🔴 紅色蘑菇 (+12 同色匹配)</option>
-                        <option value="blue">🔵 藍色蘑菇 (+12 同色匹配)</option>
-                        <option value="yellow">🟡 黃色蘑菇 (+12 同色匹配)</option>
-                        <option value="purple">🟣 紫色蘑菇 (+12 同色匹配)</option>
-                        <option value="white">⚪ 白色蘑菇 (+12 同色匹配)</option>
-                        <option value="rock">⚫ 灰色蘑菇 (+12 同色匹配)</option>
-                        <option value="wing">💗 粉紅色蘑菇 (+12 同色匹配)</option>
-                        <option value="ice">🧊 冰藍蘑菇 (+12 同色匹配)</option>
-                        <option value="red_fire">🔥 元素火蘑菇 (限紅皮參戰 +100)</option>
-                        <option value="blue_water">💧 元素水蘑菇 (限藍皮參戰 +100)</option>
-                        <option value="white_poison">☠️ 元素毒蘑菇 (限白皮參戰 +100)</option>
-                        <option value="yellow_electric">⚡ 元素電子蘑菇 (限黃皮參戰 +100)</option>
-                        <option value="rock_crystal">💎 特特殊水晶蘑菇 (限岩皮參戰 +100)</option>
-                        <option value="event_special">🍄 本月神秘/限定活動蘑菇</option>
-                    </select>
                 </div>
+                <button type="submit" class="submit-btn" style="width: 100%;">🚀 發佈至全台即時看板</button>
+            </form>
+        </div>
 
-                <div class="result-box">
-                    <h3>💡 單隻預估破壞力</h3>
-                    <div class="score" id="total-score">0</div>
-                    <p style="font-size: 0.85rem; color: #555; margin: 0;">將所有同打法的皮克敏加總<br>即為你的小隊總攻擊力！</p>
-                </div>
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="filter-city">📍 選擇縣市：</label>
+                <select id="filter-city"></select>
             </div>
-        </section>
+
+            <div class="filter-group">
+                <label for="filter-district">選擇行政區：</label>
+                <select id="filter-district"></select>
+            </div>
+
+            <div class="filter-group">
+                <label for="card-sort">📊 排序方式：</label>
+                <select id="card-sort">
+                    <option value="remainingTime">剩餘時間 (最少)</option>
+                    <option value="updateTime">更新時間 (最新)</option>
+                    <option value="totalPlayers">參戰人數 (最多)</option>
+                    <option value="mushroomSize">蘑菇大小 (最大)</option>
+                    <option value="mushroomType">蘑菇種類 (名稱)</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <input type="text" id="search-name" placeholder="🔍 搜尋關鍵字 (如：電桶)...">
+            </div>
+
+            <div class="filter-group">
+                <button id="view-toggle-btn">🎴 卡片模式</button>
+            </div>
+
+            <button id="geo-btn">🎯 自動定位</button>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="dev-mode-btn">🛠️ 開啟開發者模式</button>
+            <p id="dev-status">🔒 安全瀏覽模式</p>
+        </div>
+
+        <div id="mushroom-container"></div>
     </main>
 
     <footer>
         <p>© 2026 Pikmin Bloom 台灣高階社群工具站</p>
     </footer>
 
-    <script src="calc.js"></script>
+    <script src="report.js"></script>
 </body>
 </html>
