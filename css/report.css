@@ -231,3 +231,159 @@
     transform: scale(1.03) !important; /* 按鈕自身輕微放大即可，絕不更動高寬 */
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
+/* ========================================================
+   📄 完美行動裝置響應式 - 列表模式 (List View)
+   ======================================================== */
+
+/* 1. 當切換到清單模式時，容器改為單欄垂直排列，且收緊間距 */
+.board-container.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* 緊湊的清單間距 */
+    width: 100%;
+}
+
+/* 2. 清單模式下的卡片基礎：高度極致壓縮、橫向一字排開 */
+.board-container.list-view .mushroom-card {
+    display: flex;
+    flex-direction: row; /* 電腦版橫向排開 */
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px; /* 大幅縮小上下內邊距 */
+    margin: 0;
+    min-height: 60px; /* 限制高度不讓它太高 */
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    background-color: #ffffff;
+    top: 0;
+}
+
+/* 3. 欄位環境隔離與微調 */
+.board-container.list-view .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 35%; /* 地點與名字佔用左側區塊 */
+    flex-shrink: 0;
+}
+
+.board-container.list-view .shroom-img {
+    width: 36px; /* 清單模式縮小圖片 */
+    height: 36px;
+}
+
+.board-container.list-view .shroom-info h4 {
+    font-size: 14px;
+    margin: 0 0 2px 0;
+}
+
+.board-container.list-view .shroom-info p {
+    font-size: 12px;
+    margin: 0;
+    color: #7f8c8d;
+    /* 避免字數太多撐開清單，自動隱藏變三個點 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+/* 4. 隱藏 ◎ 按鈕或調整，清單模式下將它挪到名字旁邊 */
+.board-container.list-view .btn-history-trigger {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+}
+
+/* 5. 清單模式內的人數與時間區塊（包在 card-body 內） */
+.board-container.list-view .card-body {
+    display: flex;
+    flex-direction: row; /* 橫向併排 */
+    align-items: center;
+    gap: 20px;
+    width: 35%; /* 人數與時間佔用中間區塊 */
+    margin: 0;
+    padding: 0;
+}
+
+.board-container.list-view .card-body p {
+    margin: 0;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* 6. 清單模式的按鈕控制列 */
+.board-container.list-view .card-footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 6px;
+    width: 30%; /* 按鈕佔用右側 */
+    margin-top: 0;
+    padding: 0;
+    border-top: none;
+}
+
+.board-container.list-view .card-footer .btn-sm {
+    padding: 4px 8px;
+    font-size: 11px; /* 按鈕變小符合精緻感 */
+    white-space: nowrap;
+}
+
+/* 7. 展開的內嵌面板在清單模式下強制橫跨整行 */
+.board-container.list-view .edit-status-panel,
+.board-container.list-view .history-info-panel,
+.board-container.list-view .quick-update-panel {
+    width: 100%;
+    margin: 4px 0;
+    order: 10; /* 強制推到最下方展開 */
+}
+
+/* 8. 讓卡片支援包容內嵌展開面板 */
+.board-container.list-view .mushroom-card {
+    flex-wrap: wrap; /* 允許展開的面板換行 */
+}
+
+/* ⚠️ 許久未更新標籤在清單模式下縮小放到最左側 */
+.board-container.list-view .stale-warning-badge {
+    margin: 0 8px 0 0;
+    padding: 2px 6px;
+    font-size: 10px;
+    order: -1; /* 排在最前面 */
+}
+
+/* ========================================================
+   📱 RWD 行動裝置（手機版，螢幕寬度小於 768px）極致壓縮優化
+   ======================================================== */
+@media (max-width: 768px) {
+    /* 讓手機上的清單卡片縱向緊湊 */
+    .board-container.list-view .mushroom-card {
+        flex-direction: column; /* 手機版改回上下排，但走精簡風 */
+        align-items: flex-start;
+        padding: 10px;
+        gap: 6px;
+    }
+    
+    .board-container.list-view .card-header {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .board-container.list-view .card-body {
+        width: 100%;
+        justify-content: space-between; /* 時間與人數左右排開 */
+        gap: 0;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 6px;
+        margin-bottom: 2px;
+    }
+    
+    .board-container.list-view .card-footer {
+        width: 100%;
+        justify-content: flex-end; /* 按鈕在手機清單右下角一字排開 */
+    }
+    
+    .board-container.list-view .shroom-info p {
+        max-width: 100%; /* 手機上放寬文字限制 */
+    }
+}
