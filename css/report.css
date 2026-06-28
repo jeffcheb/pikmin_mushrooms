@@ -75,21 +75,31 @@
 /* =========================================
    單張蘑菇卡片基本樣式
    ========================================= */
+/* 🟢 請優化或覆蓋你的卡片基礎與 Hover 樣式 */
+
 .mushroom-card {
-    background-color: var(--card-bg);
-    border-radius: var(--border-radius);
-    padding: 16px;
-    box-shadow: var(--box-shadow);
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
+    /* ... 你原本的其他基礎設定，如 background, border 等 ... */
+    
     position: relative;
-    transition: var(--transition);
+    top: 0; /* 🌟 建立位移基準點 */
+    
+    /* 🌟 核心關鍵：加入全屬性滑順過渡特效，時間設為 0.25 秒 */
+    transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.25s ease, 
+                top 0.25s ease !important;
+                
+    will-change: transform, top; /* 告訴瀏覽器做好硬體加速，防止重繪時閃爍 */
 }
 
 .mushroom-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    /* ❌ 盡量避免在這裡使用 margin-top: -5px; 這種會改變網格佈局(Layout)的寫法，那是狂跳的主因！ */
+    /* 🟢 改用以下只影響視覺、不影響排版擠壓的 transform 浮動效果： */
+    
+    top: -4px; /* 用 top 代替 margin-top，卡片會往上漂浮 4px，且絕不擠壓周邊元件 */
+    transform: scale(1.015); /* 微微放大 1.015 倍即可，視覺舒適且不易出錯 */
+    
+    /* 加上柔和陰影 */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.06) !important;
 }
 
 /* 釘選狀態樣式 */
