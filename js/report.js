@@ -163,6 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 情報發佈 (寫入 Firebase)
+    // --- F3: 情報發佈 (🔥 升級版：自動防重複、原地覆蓋更新機制) ---
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -170,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const city = document.getElementById("city").value;
             const district = document.getElementById("district").value;
-            const locationName = document.getElementById("location-name").value;
+            const locationName = document.getElementById("location-name").value.trim();
             const type = document.getElementById("mushroom-type").value;
             const size = mushroomSize.value;
             const players = parseInt(currentPlayers.value);
@@ -187,40 +188,73 @@ document.addEventListener("DOMContentLoaded", () => {
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
 
-            const newMushroom = {
+            // 📦 準備要寫入或更新的資料內容
+            const mushroomData = {
                 city, district, locationName, type, size,
                 mushroomIcon: iconPath,
                 currentPlayers: players, maxPlayers: maxPlayersVal,
                 timeReported: { hours, minutes, seconds },
-                createdAt: nowTimestamp, updatedAt: nowTimestamp
+                createdAt: nowTimestamp, 
+                updatedAt: nowTimestamp
             };
 
-            const shroomRef = window.fbRef(window.fbDB, "mushrooms");
-            window.fbPush(shroomRef, newMushroom)
-                .then(() => {
-                    reportForm.reset();
-                    document.getElementById("district").disabled = true;
-                    alert("🎉 情報發佈成功！");
-                })
-                .catch((error) => alert("發佈失敗：" + error.message));
+            // 🔍 核心檢查：遍歷目前本機已快取的 localMushroomsData，比對有沒有完全相同的菇
+            let existingId = null;
+            for (const [id, item] of Object.entries(localMushroomsData)) {
+                if (item.city === city && item.district === district && item.locationName === locationName) {
+                    existingId = id; // 找到了！抓到重複的地點了
+                    break;
+                }
+            }
+
+            if (existingId) {
+                // 🔄 狀況 A：地點重複，不新增卡片，直接原地「覆蓋更新」原卡片！
+                const targetRef = window.fbRef(window.fbDB, `mushrooms/${existingId}`);
+                window.fbUpdate(targetRef, mushroomData)
+                    .then(() => {
+                        reportForm.reset();
+                        document.getElementById("district").disabled = true;
+                        // 清除通知鎖，讓新覆蓋的蘑菇倒數能再次觸發推播
+                        delete firedAlerts[existingId];
+                        alert(`🔄 偵測到相同地點！已成功為您更新【${locationName}】的蘑菇狀態，防重複卡卡！`);
+                    })
+                    .catch((error) => alert("更新失敗：" + error.message));
+            } else {
+                // ➕ 狀況 B：全新地點，正常建立新卡片
+                const shroomRef = window.fbRef(window.fbDB, "mushrooms");
+                window.fbPush(shroomRef, mushroomData)
+                    .then(() => {
+                        reportForm.reset();
+                        document.getElementById("district").disabled = true;
+                        alert("🎉 全新地點！情報已順利發佈成功！");
+                    })
+                    .catch((error) => alert("發佈失敗：" + error.message));
+            }
         });
     }
 
     function getIconPath(type) {
-        if (type.includes("火")) return "picture/mushroom_fire.png";
-        if (type.includes("水")) return "picture/mushroom_water.png";
-        if (type.includes("水晶")) return "picture/mushroom_crystal.png";
-        if (type.includes("毒")) return "picture/mushroom_poison.png";
-        if (type.includes("電")) return "picture/mushroom_electric.png";
-        if (type.includes("紅")) return "picture/shroom_red.png";
-        if (type.includes("藍")) return "picture/shroom_blue.png";
-        if (type.includes("黃")) return "picture/shroom_yellow.png";
-        if (type.includes("紫")) return "picture/shroom_purple.png";
-        if (type.includes("白")) return "picture/shroom_white.png";
-        if (type.includes("灰")) return "picture/shroom_gray.png";
-        if (type.includes("粉紅")) return "picture/shroom_pink.png";
-        return "picture/mushroom_monthly_special.png";
-    }
+    if (type.includes("火")) return "picture/mushroom_fire.png";
+    if (type.includes("水")) return "picture/mushroom_water.png";
+    if (type.includes("水晶")) return "picture/mushroom_crystal.png";
+    if (type.includes("毒")) return "picture/mushroom_poison.png";
+    if (type.includes("電")) return "picture/mushroom_electric.png";
+    
+    // 🥶 完美支援「冰蘑菇」與社群愛用的「冰藍蘑菇」關鍵字！
+    if (type.includes("冰") || type.includes("冰藍")) return "picture/mushroom_ice.png"; 
+    
+    // 🎨 普通/巨大蘑菇系列
+    if (type.includes("紅")) return "picture/mushroom_red.png";
+    if (type.includes("藍")) return "picture/mushroom_blue.png";
+    if (type.includes("黃")) return "picture/mushroom_yellow.png";
+    if (type.includes("紫")) return "picture/mushroom_purple.png";
+    if (type.includes("白")) return "picture/mushroom_white.png";
+    if (type.includes("灰") || type.includes("岩石")) return "picture/mushroom_rock.png"; 
+    if (type.includes("粉紅") || type.includes("羽翅")) return "picture/mushroom_wing.png"; 
+    
+    // 🌟 預設保底或當月限定
+    return "picture/mushroom_monthly_special.png"; 
+}
 
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
