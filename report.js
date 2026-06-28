@@ -28,7 +28,6 @@ let activeReminders = JSON.parse(localStorage.getItem('mushroom_reminders') || '
 let sentNotifications = new Set(); 
 let pinnedMushrooms = JSON.parse(localStorage.getItem('mushroom_pinned') || '[]');
 
-// 預設檢視模式
 let currentViewMode = localStorage.getItem('mushroom_view_mode') || 'grid';
 
 // ==========================================
@@ -51,72 +50,79 @@ const database = firebase.database();
 const dbRef = database.ref('mushrooms');
 
 // ==========================================
-// 🗺️ 3. 全台灣 22 縣市完整行政區資料庫
+// 🗺️ 3. 全台灣 22 縣市完整行政區資料庫 (修正語法錯誤)
 // ==========================================
 const TaiwanData = {
-    "基隆市": ["仁愛區", "信義區", "中正區", "中山區", "安樂區", "暖暖區", "七堵區"],
-    "台北市": ["中正區", "大同區", "中山區", "松山區", "大安區", "萬華區", "信義區", "士林區", "北投區", "內湖區", "南港區", "文山區"],
-    "新北市": ["板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "樹林區", "鶯歌區", "三峽區", "淡水區", "汐止區", "瑞芳區", "土城區", "蘆洲區", "五股區", "泰山區", "林口區", "深坑區", "石碇區", "坪林區", "三芝區", "石門區", "八里區", "平溪區", "雙溪區", "貢寮區", "金山區", "萬里區", "烏來區"],
-    "桃園市": ["桃園區", "中壢區", "大溪區", "楊梅區", "蘆竹區", "大園區", "龜山區", "八德區", "龍潭區", "平鎮區", "新屋區", "觀音區", "復興區"],
-    "新竹市": ["東區", "北區", "香山區"],
-    "新竹縣": ["竹北市", "竹東鎮", "新埔鎮", "關西鎮", "湖口鄉", "新豐鄉", "芎林鄉", "橫山鄉", "北埔鄉", "寶山鄉", "峨眉鄉", "尖石鄉", "五峰鄉"],
-    "苗栗縣": ["苗栗市", "苑裡鎮", "通霄鎮", "竹南鎮", "頭份市", "後龍鎮", "卓蘭鎮", "大湖鄉", "公館鄉", "銅鑼鄉", "南莊鄉", "頭屋鄉", "三義鄉", "西湖鄉", "造橋鄉", "三灣鄉", "獅潭鄉", "泰安鄉"],
-    "台中市": ["中區", "東區", "南區", "西區", "北區", "北屯區", "西屯區", "南屯區", "太平區", "大里區", "霧峰區", "烏日區", "豐原區", "后里區", "石岡區", "東勢區", "和平區", "新社區", "潭子區", "大雅區", "神岡區", "大肚區", "沙鹿區", "龍井區", "梧棲區", "清水區", "大甲區", "外埔區", "大安區"],
-    "彰化縣": ["彰化市", "鹿港鎮", "和美鎮", "線西鄉", "伸港鄉", "福興鄉", "秀水鄉", "花壇鄉", "芬園鄉", "員林市", "溪湖鎮", "田中鎮", "大村鄉", "埔鹽鄉", "埔心鄉", "永靖鄉", "社頭鄉", "二水鄉", "北斗鎮", "二林鎮", "田尾鄉", "埤頭鄉", "芳苑鄉", "大城鄉", "竹塘鄉", "溪州鄉"],
-    "南投縣": ["南投市", "埔里鎮", "草屯鎮", "竹山鎮", "集集鎮", "名間鄉", "鹿谷鄉", "中寮鄉", "魚池鄉", "國姓鄉", "水里鄉", "信義鄉", "仁愛鄉"],
-    "雲林縣": ["斗六市", "斗南鎮", "虎尾鎮", "西螺鎮", "土庫鎮", "北港鎮", "古坑鄉", "大埤鄉", "莿桐鄉", "林內鄉", "二崙鄉", "崙背鄉", "麥寮鄉", "東勢鄉", "褒忠鄉", "臺西鄉", "元長鄉", "四湖鄉", "口湖鄉", "水林鄉"],
+    "基隆市": ["仁愛", "信義", "中正", "中山", "安樂", "暖暖", "七堵"],
+    "臺北市": ["中正", "大同", "中山", "松山", "大安", "萬華", "信義", "士林", "北投", "內湖", "南港", "文山"],
+    "新北市": ["板橋", "三重", "中和", "永和", "新莊", "新店", "樹林", "鶯歌", "三峽", "淡水", "汐止", "瑞芳", "土城", "蘆洲", "五股", "泰山", "林口", "深坑", "石碇", "坪林", "三芝", "石門", "八里", "平溪", "雙溪", "貢寮", "金山", "萬里", "烏來"],
+    "桃園市": ["桃園", "中壢", "大溪", "楊梅", "蘆竹", "大園", "龜山", "八德", "龍潭", "平鎮", "新屋", "觀音", "復興"],
+    "新竹市": ["東區", "北區", "香山"],
+    "新竹縣": ["竹北", "竹東", "新埔", "關西", "湖口", "新豐", "芎林", "橫山", "北埔", "寶山", "峨眉", "尖石", "五峰"],
+    "苗栗縣": ["苗栗", "苑裡", "通霄", "竹南", "頭份", "後龍", "卓蘭", "大湖", "公館", "銅鑼", "南庄", "頭屋", "三義", "西湖", "造橋", "三灣", "獅潭", "泰安"],
+    "臺中市": ["中區", "東區", "南區", "西區", "北區", "北屯", "西屯", "南屯", "太平", "大里", "霧峰", "烏日", "豐原", "后里", "石岡", "東勢", "和平", "新社", "潭子", "大雅", "神岡", "大肚", "沙鹿", "龍井", "梧棲", "清水", "大甲", "外埔", "大安"],
+    "彰化縣": ["彰化", "鹿港", "和美", "線西", "伸港", "福興", "秀水", "花壇", "芬園", "員林", "溪湖", "田中", "大村", "埔鹽", "埔心", "永靖", "社頭", "二水", "北斗", "二林", "田尾", "埤頭", "芳苑", "大城", "竹塘", "溪州"],
+    "南投縣": ["南投", "埔里", "草屯", "竹山", "集集", "名間", "鹿谷", "中寮", "魚池", "國姓", "水里", "信義", "仁愛"],
+    "雲林縣": ["斗六", "斗南", "虎尾", "西螺", "土庫", "北港", "古坑", "大埤", "莿桐", "林內", "二崙", "崙背", "麥寮", "東勢", "褒忠", "臺西", "元長", "四湖", "口湖", "水林"],
     "嘉義市": ["東區", "西區"],
-    "嘉義縣": ["太保市", "朴子市", "布袋鎮", "大林鎮", "民雄鄉", "溪口鄉", "新港鄉", "六腳鄉", "東石鄉", "義竹鄉", "鹿草鄉", "水上鄉", "中埔鄉", "竹崎鄉", "梅山鄉", "番路鄉", "大埔鄉", "阿里山鄉"],
-    "台南市": ["中西區", "東區", "南區", "北區", "安平區", "安南區", "永康區", "歸仁區", "新化區", "左鎮鄉", "玉井區", "楠西區", "南化區", "仁德區", "關廟區", "龍崎鄉", "官田區", "麻豆區", "佳里區", "西港區", "七股區", "將軍區", "學甲區", "北門區", "新營區", "後壁區", "白河區", "東山區", "六甲區", "下營區", "柳營區", "鹽水區", "善化區", "大內區", "山上區", "新市區", "安定區"],
-    "高雄市": ["鹽埕區", "鼓山區", "左營區", "楠梓區", "三民區", "新興區", "前金區", "苓雅區", "前鎮區", "旗津區", "小港區", "鳳山區", "林園區", "大寮區", "大樹區", "大社區", "仁武區", "鳥松區", "岡山區", "橋頭區", "燕巢區", "田寮鄉", "阿蓮區", "路竹區", "湖內區", "茄萣區", "永安區", "彌陀區", "梓官區", "旗山區", "美濃區", "六龜區", "甲仙區", "杉林區", "內門區", "茂林區", "桃源區", "那瑪夏區"],
-    "屏東縣": ["屏東市", "三地門鄉", "霧臺鄉", "瑪家鄉", "九如鄉", "里港鄉", "高樹鄉", "鹽埔鄉", "長治鄉", "麟洛鄉", "萬丹鄉", "內埔鄉", "竹田鄉", "萬巒鄉", "泰武鄉", "來義鄉", "潮州鎮", "新埤鄉", "枋寮鄉", "枋山鄉", "春日鄉", "獅子鄉", "牡丹鄉", "恆春鎮", "滿州鄉", "車城鄉", "琉球鄉", "佳冬鄉", "林邊鄉", "南州鄉", "崁頂鄉", "東港鎮", "新園鄉"],
-    "宜蘭縣": ["宜蘭市", "羅東鎮", "蘇澳鎮", "頭城鎮", "礁溪鄉", "壯圍鄉", "員山鄉", "冬山鄉", "五結鄉", "三星鄉", "大同鄉", "南澳鄉"],
-    "花蓮縣": ["花蓮市", "鳳林鎮", "玉里鎮", "新城鄉", "吉安鄉", "壽豐鄉", "光復鄉", "豐濱鄉", "瑞穗鄉", "富里鄉", "秀林鄉", "萬榮鄉", "卓溪鄉"],
-    "台東縣": ["臺東市", "成功鎮", "關山鎮", "長濱鄉", "海端鄉", "池上鄉", "東河鄉", "鹿野鄉", "延平鄉", "卑南鄉", "金峰鄉", "大武鄉", "達仁鄉", "綠島鄉", "蘭嶼鄉", "太麻里鄉"],
-    "澎湖縣": ["馬公市", "湖西鄉", "白沙鄉", "西嶼鄉", "望安鄉", "七美鄉"],
-    "金門縣": ["金城鎮", "金沙鎮", "金湖鎮", "金寧鄉", "烈嶼鄉", "烏坵鄉"],
-    "連江縣": ["南竿鄉", "北竿鄉", "莒光鄉", "東引鄉"]
+    "嘉義縣": ["太保", "朴子", "布袋", "大林", "民雄", "溪口", "新港", "六腳", "東石", "義竹", "鹿草", "水上", "中埔", "竹崎", "梅山", "番路", "大埔", "阿里山"],
+    "臺南市": ["中西", "東區", "南區", "北區", "安平", "安南", "永康", "歸仁", "新化", "左鎮", "玉井", "楠西", "南化", "仁德", "關廟", "龍崎", "官田", "麻豆", "佳里", "西港", "七股", "將軍", "學甲", "北門", "新營", "後壁", "白河", "東山", "六甲", "下營", "柳營", "鹽水", "善化", "大內", "山上", "新市", "安定"],
+    "高雄市": ["鹽埕", "鼓山", "左營", "楠梓", "三民", "新興", "前金", "苓雅", "前鎮", "旗津", "小港", "鳳山", "林園", "大寮", "大樹", "大社", "仁武", "鳥松", "岡山", "橋頭", "燕巢", "田寮", "阿蓮", "路竹", "湖內", "茄萣", "永安", "彌陀", "梓官", "旗山", "美濃", "六龜", "甲仙", "杉林", "內門", "桃源", "那瑪夏"],
+    "屏東縣": ["屏東", "三地門", "霧臺", "瑪家", "九如", "里港", "高樹", "鹽埔", "長治", "麟洛", "萬丹", "內埔", "竹田", "萬巒", "泰武", "來義", "潮州", "新埤", "枋寮", "枋山", "春日", "獅子", "牡丹", "恆春", "滿州", "車城", "琉球", "佳冬", "林邊", "南州", "崁頂", "東港", "新園"],
+    "宜蘭縣": ["宜蘭", "羅東", "蘇澳", "頭城", "礁溪", "壯圍", "員山", "冬山", "五結", "三星", "大同", "南澳"],
+    "花蓮縣": ["花蓮", "鳳林", "玉里", "新城", "吉安", "壽豐", "光復", "豐濱", "瑞穗", "富里", "秀林", "萬榮", "卓溪"],
+    "臺東縣": ["臺東", "成功", "關山", "長濱", "海端", "池上", "東河", "鹿野", "延平", "卑南", "金峰", "大武", "達仁", "綠島", "蘭嶼", "太麻里"],
+    "澎湖縣": ["馬公", "湖西", "白沙", "西嶼", "望安", "七美"],
+    "金門縣": ["金城", "金沙", "金湖", "金寧", "烈嶼", "烏坵"],
+    "連江縣": ["南竿", "北竿", "莒光", "東引"]
 };
-
-// 儲存加載後的台灣邊界圖資
-let geojsonTaiwanData = null;
 
 // ==========================================
 // ⚙️ 4. 下拉選單連動與初始化
 // ==========================================
 function initCityDropdowns() {
-    if (!formCitySelect || !filterCitySelect) return;
-    
-    let formCityHtml = "";
-    let filterCityHtml = '<option value="all">顯示所有縣市</option>';
-
-    Object.keys(TaiwanData).forEach(city => {
-        formCityHtml += `<option value="${city}">${city}</option>`;
-        filterCityHtml += `<option value="${city}">${city}</option>`;
+    const cities = Object.keys(TaiwanData);
+    formCitySelect.innerHTML = '';
+    cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city; opt.innerText = city;
+        formCitySelect.appendChild(opt);
     });
-
-    formCitySelect.innerHTML = formCityHtml;
-    filterCitySelect.innerHTML = filterCityHtml;
-
-    formCitySelect.value = "台北市"; 
+    formCitySelect.value = "高雄市"; 
     updateDistrictDropdown(formCitySelect, formDistrictSelect, false);
-    filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>';
-    
+
+    filterCitySelect.innerHTML = '<option value="all">顯示所有縣市</option>';
+    cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city; opt.innerText = city;
+        filterCitySelect.appendChild(opt);
+    });
     updateViewToggleBtnText();
-    // 非同步預先加載台灣邊界圖資，優化定位速度
-    loadTaiwanGeoJson();
 }
 
-function updateDistrictDropdown(citySelect, districtSelect, isFilter) {
+function updateDistrictDropdown(citySelect, districtSelect, includeAllOption = false) {
     const selectedCity = citySelect.value;
-    let html = isFilter ? '<option value="all">顯示所有行政區</option>' : '';
-    
+    districtSelect.innerHTML = ''; 
+    if (includeAllOption) {
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = 'all'; defaultOpt.innerText = '顯示所有行政區';
+        districtSelect.appendChild(defaultOpt);
+    }
     if (TaiwanData[selectedCity]) {
         TaiwanData[selectedCity].forEach(dist => {
-            html += `<option value="${dist}">${dist}</option>`;
+            const opt = document.createElement('option');
+            opt.value = dist;
+            let suffix = '區';
+            if (selectedCity.endsWith('縣')) {
+                if (['太保','朴子','布袋','大林','潮州','東港','恆春','員林','和美','鹿港','草屯','竹東','竹北','頭份','竹南','後龍','通霄','苑裡','頭屋','公館','西湖','三義','大湖','銅鑼','礁溪','頭城','蘇澳','羅東','三星','冬山','五結','壯圍','員山','吉安','新城','壽豐','光復','瑞穗','富里','鳳林','玉里','成功','關山','池上','鹿野','卑南','大武','太麻里','城中','金沙','金湖','金寧','烈嶼'].includes(dist)) {
+                    suffix = (['太保','朴子','馬公','竹北','員林','頭份'].includes(dist)) ? '市' : (['布袋','大林','潮州','東港','恆春','和美','鹿港','草屯','竹東','關西','新埔','頭份','竹南','後龍','通霄','苑裡','礁溪','頭城','蘇澳','羅東','鳳林','玉里','成功','關山','金城','金沙','金湖'].includes(dist) ? '鎮' : '鄉');
+                } else { suffix = '鄉'; }
+            } else if (selectedCity === '澎湖縣' && dist === '馬公') { suffix = '市'; }
+            else if (selectedCity === '澎湖縣') { suffix = '鄉'; }
+            opt.innerText = dist + suffix;
+            districtSelect.appendChild(opt);
         });
     }
-    districtSelect.innerHTML = html;
 }
 
 function getCountLimit(size) {
@@ -127,123 +133,25 @@ function getCountLimit(size) {
     return 30; 
 }
 
-// 載入公用 GeoJSON（使用國土測繪或社群開源輕量邊界圖資）
-async function loadTaiwanGeoJson() {
-    try {
-        const res = await fetch('https://raw.githubusercontent.com/g0v/twreallive/master/src/data/town.json');
-        if (res.ok) {
-            geojsonTaiwanData = await res.json();
-        }
-    } catch (e) {
-        console.error("無法加載邊界地圖資料，定位將採用相鄰近似計算法", e);
-    }
-}
-
-// 射線演算法：判斷經緯度點是否在多邊形區域內部
-function isPointInPolygon(point, vs) {
-    let x = point[0], y = point[1];
-    let inside = false;
-    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-        let xi = vs[i][0], yi = vs[i][1];
-        let xj = vs[j][0], yj = vs[j][1];
-        let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-    }
-    return inside;
-}
-
-// 藉由經緯度精準找出台灣行政區
-function findTownshipByLngLat(lng, lat) {
-    if (!geojsonTaiwanData || !geojsonTaiwanData.features) return null;
-    
-    for (let feature of geojsonTaiwanData.features) {
-        const props = feature.properties;
-        const geometry = feature.geometry;
-        const city = props.COUNTYNAME || props.C_Name;
-        const town = props.TOWNNAME || props.T_Name;
-        
-        if (geometry.type === "Polygon") {
-            if (isPointInPolygon([lng, lat], geometry.coordinates[0])) {
-                return { city, town };
-            }
-        } else if (geometry.type === "MultiPolygon") {
-            for (let poly of geometry.coordinates) {
-                if (isPointInPolygon([lng, lat], poly[0])) {
-                    return { city, town };
-                }
-            }
-        }
-    }
-    return null;
+function updateCountLimitConstraint() {
+    const limit = getCountLimit(formSizeSelect.value);
+    formCountInput.max = limit;
+    formCountInput.placeholder = `0-${limit}`;
+    countHint.innerText = `上限: ${limit}人`;
+    if (parseInt(formCountInput.value) > limit) { formCountInput.value = limit; }
 }
 
 // ==========================================
-// 🎯 5. 自動定位功能 (升級為真・行政區解析)
-// ==========================================
-if (geoBtn) {
-    geoBtn.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-            alert("您的瀏覽器不支援 GPS 定位。");
-            return;
-        }
-        geoBtn.disabled = true;
-        geoBtn.innerText = "⏳ 讀取 GPS 中...";
-
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                
-                geoBtn.innerText = "🔍 解析行政區...";
-                
-                // 如果圖資還沒下載完，等待一下
-                if (!geojsonTaiwanData) {
-                    await loadTaiwanGeoJson();
-                }
-                
-                const result = findTownshipByLngLat(lng, lat);
-                
-                if (result && result.city && result.town) {
-                    // 成功精準解析到縣市與行政區！
-                    if (filterCitySelect && filterDistrictSelect) {
-                        filterCitySelect.value = result.city;
-                        updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
-                        filterDistrictSelect.value = result.town;
-                        filterAndSortMushroomCards();
-                    }
-                    alert(`🎯 定位成功！已為您自動切換至：${result.city} ${result.town}`);
-                } else {
-                    // 備用方案：如果超出幾何邊界或圖資失敗，採用基準點反解
-                    if (filterCitySelect && filterDistrictSelect) {
-                        filterCitySelect.value = "台北市"; 
-                        updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
-                        filterDistrictSelect.value = "all";
-                        filterAndSortMushroomCards();
-                    }
-                    alert("📍 已成功取得 GPS，但精確行政區比對失敗，已為您切換至預設看板。");
-                }
-                geoBtn.disabled = false;
-                geoBtn.innerText = "🎯 自動定位";
-            },
-            (error) => {
-                geoBtn.disabled = false;
-                geoBtn.innerText = "🎯 自動定位";
-                alert("GPS 定位獲取失敗，請確認是否已開啟手機/瀏覽器的定位權限。");
-            },
-            { enableHighAccuracy: true, timeout: 8000 }
-        );
-    });
-}
-
-// ==========================================
-// 🎴 6. 卡片/清單模式切換 (對齊你的 .grid-container)
+// 🎴 5. 檢視模式控制與按鈕文字切換
 // ==========================================
 function updateViewToggleBtnText() {
     if (!viewToggleBtn) return;
     if (currentViewMode === 'list') {
         viewToggleBtn.innerText = "📋 清單模式";
+        mushroomContainer.classList.add('list-view');
     } else {
         viewToggleBtn.innerText = "🎴 卡片模式";
+        mushroomContainer.classList.remove('list-view');
     }
 }
 
@@ -251,51 +159,111 @@ if (viewToggleBtn) {
     viewToggleBtn.addEventListener('click', () => {
         currentViewMode = (currentViewMode === 'grid') ? 'list' : 'grid';
         localStorage.setItem('mushroom_view_mode', currentViewMode);
-        
-        if (mushroomContainer) {
-            if (currentViewMode === 'list') {
-                mushroomContainer.classList.add('list-view');
-            } else {
-                mushroomContainer.classList.remove('list-view');
-            }
-        }
         updateViewToggleBtnText();
         filterAndSortMushroomCards();
     });
 }
 
 // ==========================================
-// 📊 7. 核心過濾、排序與卡片渲染
+// 🎯 6. 真・自動定位反查模組 (修復功能)
+// ==========================================
+if (geoBtn) {
+    geoBtn.addEventListener('click', () => {
+        geoBtn.innerText = "⌛ 定位中...";
+        geoBtn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`);
+                    const data = await response.json();
+                    const address = data.display_name || "";
+                    
+                    const normalizedAddress = address.toLowerCase().replace(/臺/g, "臺");
+                    let matchedCity = null;
+                    let matchedDistrict = null;
+                    
+                    // 1. 先比對縣市
+                    for (let city of Object.keys(TaiwanData)) {
+                        if (normalizedAddress.includes(city)) {
+                            matchedCity = city;
+                            break;
+                        }
+                    }
+
+                    if (matchedCity) {
+                        filterCitySelect.value = matchedCity;
+                        updateDistrictDropdown(filterCitySelect, filterDistrictSelect, true);
+                        
+                        // 2. 再比對行政區
+                        for (let dist of TaiwanData[matchedCity]) {
+                            if (normalizedAddress.includes(dist)) {
+                                matchedDistrict = dist;
+                                break;
+                            }
+                        }
+
+                        if (matchedDistrict) {
+                            filterDistrictSelect.value = matchedDistrict;
+                            alert(`🎯 定位成功！您目前位於：[${matchedCity} ${matchedDistrict}]`);
+                        } else {
+                            filterDistrictSelect.value = "all";
+                            alert(`🎯 定位到縣市：[${matchedCity}]，但找不到精確行政區，已為您開啟全區顯示。`);
+                        }
+                    } else {
+                        alert("定位成功，但找不到對應的台灣縣市資料，已開啟全部顯示。");
+                        filterCitySelect.value = "all";
+                        filterDistrictSelect.innerHTML = '<option value="all">顯示所有行政區</option>';
+                    }
+
+                    filterAndSortMushroomCards();
+                    geoBtn.innerText = "🎯 自動定位";
+                } catch (error) {
+                    alert("網路請求失敗，無法解析 GPS 座標。");
+                    geoBtn.innerText = "🎯 自動定位";
+                } finally {
+                    geoBtn.disabled = false;
+                }
+            },
+            (error) => {
+                alert("GPS 定位獲取失敗，請確認是否允許瀏覽器位置權限。");
+                geoBtn.innerText = "🎯 自動定位";
+                geoBtn.disabled = false;
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    });
+}
+
+// ==========================================
+// 📊 7. 核心篩選、排序與卡片生成
 // ==========================================
 function filterAndSortMushroomCards() {
-    if (!mushroomContainer) return;
-
-    const cityFilter = filterCitySelect.value;
-    const distFilter = filterDistrictSelect.value;
-    const sortBy = cardSortSelect ? cardSortSelect.value : 'remainingTime';
-    const keyword = searchNameInput ? searchNameInput.value.trim().toLowerCase() : '';
+    const selectedCity = filterCitySelect.value;
+    const selectedDistrict = filterDistrictSelect.value;
+    const sortWay = cardSortSelect.value;
+    const searchKeyword = searchNameInput ? searchNameInput.value.trim().toLowerCase() : "";
 
     let filteredList = globalMushroomList.filter(item => {
-        const d = item.data;
-        if (!d) return false;
-        if (cityFilter !== 'all' && d.city !== cityFilter) return false;
-        
-        const dArray = Array.isArray(d.district) ? d.district : [d.district];
-        if (distFilter !== 'all' && !dArray.includes(distFilter) && !dArray.includes(distFilter.replace('區','').replace('鄉','').replace('鎮','').replace('市',''))) {
-            return false;
-        }
-        
-        if (keyword && !d.name.toLowerCase().includes(keyword) && !d.title.toLowerCase().includes(keyword)) return false;
-        return true;
+        const data = item.data;
+        if (!data) return false;
+        const cardDistricts = Array.isArray(data.district) ? data.district : [data.district];
+        const matchCity = (selectedCity === 'all' || data.city === selectedCity);
+        const matchDistrict = (selectedDistrict === 'all' || cardDistricts.includes(selectedDistrict));
+        const matchKeyword = (!searchKeyword || data.name.toLowerCase().includes(searchKeyword) || data.title.toLowerCase().includes(searchKeyword));
+        return matchCity && matchDistrict && matchKeyword;
     });
 
     const sizeWeight = { "巨型": 4, "大": 3, "普通": 2, "小": 1 };
 
     filteredList.sort((a, b) => {
         const dataA = a.data; const dataB = b.data;
-        if (sortBy === "updateTime") {
+        if (sortWay === "updateTime") {
             return (Date.parse(dataB.reportTime.replace(/-/g, '/')) || 0) - (Date.parse(dataA.reportTime.replace(/-/g, '/')) || 0);
-        } else if (sortBy === "remainingTime") {
+        } else if (sortWay === "remainingTime") {
             const now = Date.now();
             const getTimes = (d) => {
                 const repTime = Date.parse(d.reportTime.replace(/-/g, '/')) || 0;
@@ -307,11 +275,11 @@ function filterAndSortMushroomCards() {
             const rankA = getStatusRank(tA); const rankB = getStatusRank(tB);
             if (rankA !== rankB) return rankA - rankB;
             return (rankA === 1) ? tA.respawn - tB.respawn : (rankA === 2 ? tA.expire - tB.expire : tB.expire - tA.expire);
-        } else if (sortBy === "totalPlayers") {
+        } else if (sortWay === "totalPlayers") {
             return (dataB.pCount || 0) - (dataA.pCount || 0);
-        } else if (sortBy === "mushroomSize") {
+        } else if (sortWay === "mushroomSize") {
             return (sizeWeight[dataB.size] || 0) - (sizeWeight[dataA.size] || 0);
-        } else if (sortBy === "mushroomType") {
+        } else if (sortWay === "mushroomType") {
             return dataA.title.localeCompare(dataB.title, 'zh-Hant');
         }
         return 0;
@@ -322,12 +290,6 @@ function filterAndSortMushroomCards() {
         const isPinnedB = pinnedMushrooms.includes(b.id) ? 1 : 0;
         return isPinnedB - isPinnedA;
     });
-
-    if (currentViewMode === 'list') {
-        mushroomContainer.classList.add('list-view');
-    } else {
-        mushroomContainer.classList.remove('list-view');
-    }
 
     mushroomContainer.innerHTML = '';
     filteredList.forEach(item => { renderMushroomCard(item.id, item.data); });
@@ -345,22 +307,20 @@ function renderMushroomCard(id, data) {
     
     newCard.innerHTML = `
         <button class="pin-btn ${isPinned?'active':''}" title="釘選">📌</button>
-        <button class="quick-edit-btn" title="更新">📝 編輯</button>
+        <button class="quick-edit-btn" title="更新">📝 更新</button>
         <button class="delete-btn" title="刪除">❌</button>
         <img src="picture/${data.img}" alt="菇" class="card-icon" onerror="this.src='picture/mushroom_red.png'">
-        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" style="cursor:pointer;color:#0288d1;">◉</span></h3>
+        <h3>[${data.size}] ${data.title} <span class="time-info-btn" data-time="${data.reportTime}" style="cursor:pointer;">◉</span></h3>
         <p>📍 ${data.city}(${districtArray.join('/')}) ${data.name}</p>
         <p class="countdown" data-report-time="${data.reportTime}" data-initial-hours="${data.hours}" data-initial-minutes="${data.minutes}" data-initial-seconds="${data.seconds}" style="font-weight:bold;">⏳ 計算中...</p>
         <p>👥 人數：<span class="p-count">${data.pCount}</span>/${data.limit}人 <button class="verify-fact-btn" style="display:none;">✅ 核實</button></p>
-        <button class="notify-me-btn" style="border: 1px solid #ffe082; background: #fff8e1; color: #b78103; border-radius: 20px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: bold;">${notifyBtnText}</button>
+        <button class="notify-me-btn" style="border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">${notifyBtnText}</button>
     `;
     
     const reportTimestamp = Date.parse(data.reportTime.replace(/-/g, '/'));
     const duration = ((parseInt(data.hours)||0)*3600 + (parseInt(data.minutes)||0)*60 + (parseInt(data.seconds)||0))*1000;
-    
-    const countdownEl = newCard.querySelector('.countdown');
-    countdownEl.setAttribute('data-target', reportTimestamp + duration);
-    countdownEl.setAttribute('data-respawn', reportTimestamp + duration + 300000);
+    newCard.querySelector('.countdown').setAttribute('data-target', reportTimestamp + duration);
+    newCard.querySelector('.countdown').setAttribute('data-respawn', reportTimestamp + duration + 300000);
     
     mushroomContainer.appendChild(newCard);
 }
@@ -370,40 +330,46 @@ function updateCountdowns() {
     document.querySelectorAll('.countdown').forEach(el => {
         if (!document.body.contains(el)) return;
         const currentCard = el.closest('.card');
+        const cardId = currentCard.getAttribute('data-id');
+        const verifyBtn = currentCard.querySelector('.verify-fact-btn');
+        const notifyBtn = currentCard.querySelector('.notify-me-btn');
+        
         const targetTime = parseInt(el.getAttribute('data-target'));
         const respawnTime = parseInt(el.getAttribute('data-respawn'));
         let timeLeft = targetTime - now;
 
         if (timeLeft > 0) {
+            if (verifyBtn) verifyBtn.style.display = 'inline-block';
+            if (notifyBtn) notifyBtn.style.display = 'inline-block';
             let s = Math.floor((timeLeft/1000)%60), m = Math.floor((timeLeft/(1000*60))%60), h = Math.floor((timeLeft/(1000*60*60))%24);
             el.innerText = `⏳ 剩餘：${format(h)}:${format(m)}:${format(s)}`;
             el.style.color = "#333";
         } else {
+            if (verifyBtn) verifyBtn.style.display = 'none';
             let respawnLeftMs = respawnTime - now;
             if (respawnLeftMs > 0) {
+                if (notifyBtn) notifyBtn.style.display = 'inline-block';
                 let rS = Math.floor((respawnLeftMs/1000)%60), rM = Math.floor((respawnLeftMs/(1000*60))%60);
                 el.innerText = `🔄 下次出現倒數：${format(rM)}分${format(rS)}秒`;
                 el.style.color = "#d32f2f";
             } else {
-                el.innerText = `⌛ 狀態：新蘑菇待更新...`; 
-                el.style.color = "#c62828";
+                if (notifyBtn) notifyBtn.style.display = 'none';
+                el.innerText = `⌛ 狀態：新蘑菇待更新...`; el.style.color = "#c62828";
             }
         }
     });
 }
-setInterval(updateCountdowns, 1000);
 
 // ==========================================
-// 📌 8. 事件功能監聽與表單綁定
+// 📌 8. 功能組件與 Firebase 交互
 // ==========================================
-if (mushroomContainer) {
+function setupPinFeature() {
     mushroomContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('pin-btn')) {
-            const currentCard = e.target.closest('.card');
-            const firebaseId = currentCard.getAttribute('data-id');
+            const firebaseId = e.target.closest('.card').getAttribute('data-id');
             const index = pinnedMushrooms.indexOf(firebaseId);
-            if (index === -1) { pinnedMushrooms.push(firebaseId); } 
-            else { pinnedMushrooms.splice(index, 1); }
+            if (index === -1) pinnedMushrooms.push(firebaseId);
+            else pinnedMushrooms.splice(index, 1);
             localStorage.setItem('mushroom_pinned', JSON.stringify(pinnedMushrooms));
             filterAndSortMushroomCards();
         }
@@ -439,6 +405,8 @@ filterDistrictSelect.addEventListener('change', filterAndSortMushroomCards);
 if (cardSortSelect) cardSortSelect.addEventListener('change', filterAndSortMushroomCards);
 if (searchNameInput) searchNameInput.addEventListener('input', filterAndSortMushroomCards);
 
-// 初始化執行
+// 全面初始化
 initCityDropdowns();
+setupPinFeature();
 listenToCloudDatabase();
+setInterval(updateCountdowns, 1000);
