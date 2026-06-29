@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 🌟 【核心修改：多維度五大自訂排序算法】
+       // 🌟 核心修改：精準對齊自訂排序規則
         keys.sort((a, b) => {
             // 優先排序：有釘選的永遠排在最前面
             const aPinned = pinnedList.includes(a) ? 1 : 0;
@@ -299,34 +299,49 @@ document.addEventListener("DOMContentLoaded", () => {
             const itemB = localMushroomsData[b];
 
             if (currentSort === "type") {
-                // 按蘑菇種類（中文首字筆劃/拼音）排序
-                return itemA.type.localeCompare(itemB.type, "zh-Hant");
+                // 🍄 規則：每月特殊菇 ➡️ 元素菇 ➡️ 普通菇
+                // 定義三大種類的權重優先順序 (越小排越前面)
+                const getTypeWeight = (typeStr) => {
+                    if (typeStr.includes("每月") || typeStr.includes("特殊")) return 1; // 本月最優先
+                    if (typeStr.includes("火") || typeStr.includes("水") || typeStr.includes("水晶") || 
+                        typeStr.includes("毒") || typeStr.includes("電") || typeStr.includes("冰")) {
+                        return 2; // 元素菇次之
+                    }
+                    return 3; // 普通菇最後
+                };
+
+                const wA = getTypeWeight(itemA.type);
+                const wB = getTypeWeight(itemB.type);
+                
+                // 如果種類權重相同（例如都是元素菇），就照中文名字筆劃排序，避免畫面亂跳
+                if (wA === wB) return itemA.type.localeCompare(itemB.type, "zh-Hant");
+                return wA - wB; // 權重小的（1 > 2 > 3）排在前面
             } 
             else if (currentSort === "size") {
-                // 按蘑菇大小權重排序 (巨大 > 大型 > 普通/一般 > 小型)
+                // ⚖️ 規則：大小由大排到小
                 const sizeWeight = { "巨大": 4, "大型": 3, "普通": 2, "一般": 2, "小型": 1 };
                 const wA = sizeWeight[itemA.size] || 0;
                 const wB = sizeWeight[itemB.size] || 0;
-                return wB - wA; // 大的排前面
+                return wB - wA; // 大的（4 > 3 > 2 > 1）排在前面
             } 
             else if (currentSort === "time") {
-                // 按剩餘時間（長度）排序
+                // ⏳ 規則：剩餘時間由少排到多（快結束的排最前面，方便搶刀）
                 const msLeftA = ((itemA.timeReported.hours * 3600) + (itemA.timeReported.minutes * 60) + itemA.timeReported.seconds) * 1000 + itemA.createdAt - Date.now();
                 const msLeftB = ((itemB.timeReported.hours * 3600) + (itemB.timeReported.minutes * 60) + itemB.timeReported.seconds) * 1000 + itemB.createdAt - Date.now();
-                return msLeftB - msLeftA; // 剩餘時間長的排前面
+                return msLeftA - msLeftB; // 時間少的（小排到大）排在前面
             } 
             else if (currentSort === "update") {
-                // 按上次更新時間排序
+                // 🕒 規則：按上次更新時間排序（最新回報的排前面）
                 const timeA = itemA.updatedAt || itemA.createdAt;
                 const timeB = itemB.updatedAt || itemB.createdAt;
-                return timeB - timeA; // 最新回報的排前面
+                return timeB - timeA; 
             } 
             else if (currentSort === "players") {
-                // 按總參戰人數排序
-                return (itemB.currentPlayers || 0) - (itemA.currentPlayers || 0); // 人多的排前面
+                // 👥 規則：按目前總人數排序（人多的排前面）
+                return (itemB.currentPlayers || 0) - (itemA.currentPlayers || 0); 
             }
 
-            return 0; // 預設不變
+            return 0; 
         });
 
         let renderedCount = 0;
