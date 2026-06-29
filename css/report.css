@@ -543,3 +543,50 @@
     .board-container.list-view .card-footer { width: 100%; justify-content: flex-end; }
     .board-container.list-view .shroom-info p { max-width: 100%; white-space: normal; }
 }
+/* ========================================================
+   🎯 定位按鈕與排序選單完美寬度微調
+   ======================================================== */
+
+/* 1. 讓自動定位按鈕不要拉長，寬度緊湊，剛好比文字長度再長一點點 */
+#btn-auto-location {
+    flex: 0 1 auto !important; /* 🌟 徹底拔除被強行拉伸的 flex 佔比 */
+    width: auto !important;
+    min-width: fit-content !important; /* 🌟 寬度剛好適配文字長度 */
+    padding: 8px 14px !important; /* 前後微調留白，好看精緻 */
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+    white-space: nowrap; /* 防止英文字元或標籤在小螢幕換行 */
+}
+
+/* 2. 新增的排序下拉選單美化，使其大小與自動定位、篩選器完全平齊 */
+#sort-method {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    background-color: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    outline: none;
+    flex: 0 1 auto; /* 不要盲目變長 */
+    min-width: 150px;
+}
+
+#sort-method:focus {
+    border-color: #3498db;
+}
+
+/* 行動裝置上微調排序和定位併排 */
+@media (max-width: 768px) {
+    #sort-method {
+        width: 100%; /* 手機上滿版比較好按 */
+        flex: 1;
+    }
+    #btn-auto-location {
+        width: fit-content !important;
+    }
+}
