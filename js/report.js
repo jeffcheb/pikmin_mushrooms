@@ -471,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
                         firedAlerts[id] = true;
-                        triggerWebNotification(item);
+                        triggerWebNotification(item, id);
                     }
                 } else {
                     textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
@@ -590,15 +590,32 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    function triggerWebNotification(item) {
-        if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("🍄 皮克敏蘑菇轉生預告！", {
-                body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
-                icon: getIconPath(item.type),
-                requireInteraction: true
-            });
+    // 🟢 請將原本的 triggerWebNotification 替換為此版本：
+function triggerWebNotification(item, id) { // 🌟 新增傳入 id 參數
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("🍄 皮克敏蘑菇轉生預告！", {
+            body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
+            icon: getIconPath(item.type),
+            requireInteraction: true
+        });
+
+        // 🌟 核心修正：發出通知後，立刻將此 ID 從提醒清單中移除
+        if (id && typeof alertEnabledList !== "undefined") {
+            const alertIndex = alertEnabledList.indexOf(id);
+            if (alertIndex > -1) {
+                alertEnabledList.splice(alertIndex, 1);
+                localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
+                
+                // 🔄 同步將畫面上該卡片的按鈕改回「🔕 開啟提醒」的外觀
+                const alertBtn = document.getElementById(`alert-btn-${id}`);
+                if (alertBtn) {
+                    alertBtn.textContent = "🔕 開啟提醒";
+                    alertBtn.className = "btn-sm btn-alert btn-alert-off";
+                }
+            }
         }
     }
+}
 
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
