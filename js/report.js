@@ -301,13 +301,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (currentSort === "type") {
                 // 🍄 規則：每月特殊菇 ➡️ 元素菇 ➡️ 普通菇
                 // 定義三大種類的權重優先順序 (越小排越前面)
+               // 🍄 修正版規則：每月特殊菇(1) ➡️ 元素菇(2) ➡️ 普通菇(3，包含冰藍)
                 const getTypeWeight = (typeStr) => {
                     if (typeStr.includes("每月") || typeStr.includes("特殊")) return 1; // 本月最優先
+                    
+                    // 💥 這裡只留純元素菇，把冰藍拿掉
                     if (typeStr.includes("火") || typeStr.includes("水") || typeStr.includes("水晶") || 
                         typeStr.includes("毒") || typeStr.includes("電") || typeStr.includes("冰")) {
-                        return 2; // 元素菇次之
+                        // 注意：如果玩家選的是選單上的「一般冰藍蘑菇」，因為帶有「冰」，為了防止它誤入元素菇，我們加個排除條件：
+                        if (typeStr.includes("冰藍")) return 3; 
+                        return 2; 
                     }
-                    return 3; // 普通菇最後
+                    
+                    return 3; // 普通菇最後（一般紅、藍、黃、以及冰藍菇都會落在這裡）
+                };
                 };
 
                 const wA = getTypeWeight(itemA.type);
