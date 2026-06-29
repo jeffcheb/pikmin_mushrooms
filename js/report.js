@@ -253,9 +253,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 updatedAt: nowTimestamp
             };
 
+            // 🟢 修改 js/report.js 這段比對迴圈：對齊 Discord 的強制去空格機制
             let existingId = null;
             for (const [id, item] of Object.entries(localMushroomsData)) {
-                if (item.city === city && item.district === district && item.locationName === locationName) {
+                // 將資料庫的地點和網頁剛填入的地點，通通加上 .trim() 確保沒有隱形空白干擾
+                if (
+                    item.city.trim() === city.trim() && 
+                    item.district.trim() === district.trim() && 
+                    item.locationName.trim() === locationName.trim()
+                ) {
                     existingId = id;
                     break;
                 }
