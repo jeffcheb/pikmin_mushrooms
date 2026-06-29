@@ -7,10 +7,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnLogin = document.getElementById("btn-login");
     const btnLogout = document.getElementById("btn-logout");
     const tableBody = document.getElementById("admin-table-body");
+    
+    // 🌟 新增：取得後台搜尋框元件
+    const adminSearch = document.getElementById("admin-search");
+
+    // 全域變數，用來暫存從 Firebase 撈出來的原始資料，方便搜尋時過濾
+    let rawMushroomsData = {};
 
     const HASHED_PASSWORD_HEX = "96df8f747065961d199f1fa0e791b0f023db8cc7c69992fdd1d86bebf41c1a2e"; 
 
-    // 🛠️ 輔助函式：將字串轉為 SHA-256 雜湊碼
     async function sha256(message) {
         const msgBuffer = new TextEncoder().encode(message);                    
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -18,19 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // 檢查瀏覽器是否保持登入狀態
     if (sessionStorage.getItem("admin_authenticated") === "true") {
         showDashboard();
     }
 
-    // 登入驗證（非同步處理加密比對）
     if (btnLogin) {
         btnLogin.addEventListener("click", async () => {
             const inputPassword = adminPassword.value;
-            // 將使用者輸入的密碼即時加密
             const inputHashed = await sha256(inputPassword);
 
-            // 比對兩邊的加密代號是否一致
             if (inputHashed === HASHED_PASSWORD_HEX) {
                 sessionStorage.setItem("admin_authenticated", "true");
                 showDashboard();
@@ -41,7 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 登出系統
     if (btnLogout) {
         btnLogout.addEventListener("click", () => {
             sessionStorage.removeItem("admin_authenticated");
@@ -52,11 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function showDashboard() {
         if (!adminLogin || !adminDashboard) return;
         adminLogin.style.display = "none";
-        adminDashboard.style.style.display = "block";
+        adminDashboard.style.display = "block";
         startAdminSync(); 
     }
 
-    // 🔄 實時監聽 Firebase 並渲染後台表格
     function startAdminSync() {
         const checkFb = setInterval(() => {
             if (window.fbDB && window.fbRef && window.fbOnValue) {
@@ -64,27 +63,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const shroomRef = window.fbRef(window.fbDB, "mushrooms");
                 window.fbOnValue(shroomRef, (snapshot) => {
-                    const data = snapshot.val() || {};
-                    renderAdminTable(data);
+                    // 🌟 核心變更：把資料存到全域變數中
+                    rawMushroomsData = snapshot.val() || {};
+                    renderAdminTable(); // 執行渲染
                 });
             }
         }, 100);
+
+        // 🌟 新增：監聽搜尋框打字事件（即時觸發過濾）
+        adminSearch?.addEventListener("input", () => {
+            renderAdminTable();
+        });
     }
 
-    function renderAdminTable(data) {
+    // 🌟 升級：支援關鍵字搜尋的渲染函式
+    function renderAdminTable() {
         if (!tableBody) return;
-        const keys = Object.keys(data);
+        const keys = Object.keys(rawMushroomsData);
+        const keyword = adminSearch?.value.trim().toLowerCase() || ""; // 取得搜尋關鍵字
 
         if (keys.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#95a5a6;">📭 目前雲端資料庫沒有任何蘑菇數據。</td></tr>`;
             return;
         }
 
-        keys.sort((a, b) => (data[b].createdAt || 0) - (data[a].createdAt || 0));
+        keys.sort((a, b) => (rawMushroomsData[b].createdAt || 0) - (rawMushroomsData[a].createdAt || 0));
 
         let html = "";
+        let matchCount = 0;
+
         keys.forEach(id => {
-            const item = data[id];
+            const item = rawMushroomsData[id];
+            
+            // 🌟 搜尋過濾邏輯：檢查 種類、大小、城市、行政區、具體地點 是否包含關鍵字
+            if (keyword !== "") {
+                const matchType = item.type.toLowerCase().includes(keyword);
+                const matchSize = item.size.toLowerCase().includes(keyword);
+                const matchCity = item.city.toLowerCase().includes(keyword);
+                const matchDist = item.district.toLowerCase().includes(keyword);
+                const matchLoc = item.locationName.toLowerCase().includes(keyword);
+                
+                // 如果通通都不符合，就跳過這筆資料不渲染
+                if (!matchType && !matchSize && !matchCity && !matchDist && !matchLoc) return;
+            }
+
+            matchCount++;
             const date = new Date(item.createdAt || Date.now());
             const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
 
@@ -105,7 +128,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 </tr>
             `;
         });
-        tableBody.innerHTML = html;
+
+        // 如果有總資料，但搜尋完後一筆都沒對上
+        if (matchCount === 0 && keyword !== "") {
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#e74c3c;">🔍 找不到任何符合關鍵字「${keyword}」的蘑菇資料。</td></tr>`;
+        } else {
+            tableBody.innerHTML = html;
+        }
     }
 
     window.deleteMushroomData = (id) => {
