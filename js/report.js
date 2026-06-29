@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterDistrict = document.getElementById("filter-district");
     const btnAutoLocation = document.getElementById("btn-auto-location");
     
-    // 🌟 新增：取得 HTML 中的排序下拉選單
+    // 排序選單
     const sortMethod = document.getElementById("sort-method");
 
     let localMushroomsData = {};
@@ -101,8 +101,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         filterDistrict.addEventListener("change", renderBoard);
         searchKeyword?.addEventListener("input", renderBoard);
-        
-        // 🌟 新增：當切換排序方式時，立即重新渲染看板
         sortMethod?.addEventListener("change", renderBoard);
     }
 
@@ -233,24 +231,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🌟 修正順序版：將水晶挪到水前面，防止關鍵字打架！
+    // 圖片路徑抓取引擎 (水晶防打架優先判定)
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
         const typeStr = String(type);
 
-        // 🟢 先判斷字數較多、較特殊的「水晶」
         if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
-        
-        // 🔵 再判斷一般的「水」
         if (typeStr.includes("水")) return "picture/mushroom_water.png";
-        
-        // 💥 其他元素菇系列
         if (typeStr.includes("火")) return "picture/mushroom_fire.png";
         if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
         if (typeStr.includes("電")) return "picture/mushroom_electric.png";
         if (typeStr.includes("冰")) return "picture/mushroom_ice.png"; 
         
-        // 🎨 普通/巨大蘑菇系列 (mushroom_顏色.png)
         if (typeStr.includes("紅")) return "picture/mushroom_red.png";
         if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
         if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
@@ -288,9 +280,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-       // 🌟 核心修改：精準對齊自訂排序規則
+        // 多維度排序邏輯
         keys.sort((a, b) => {
-            // 優先排序：有釘選的永遠排在最前面
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
             if (bPinned !== aPinned) return bPinned - aPinned;
@@ -299,55 +290,40 @@ document.addEventListener("DOMContentLoaded", () => {
             const itemB = localMushroomsData[b];
 
             if (currentSort === "type") {
-                // 🍄 規則：每月特殊菇 ➡️ 元素菇 ➡️ 普通菇
-                // 定義三大種類的權重優先順序 (越小排越前面)
-               // 🍄 修正版規則：每月特殊菇(1) ➡️ 元素菇(2) ➡️ 普通菇(3，包含冰藍)
+                // 本月(1) -> 元素(2) -> 普通及冰藍(3)
                 const getTypeWeight = (typeStr) => {
-                    if (typeStr.includes("每月") || typeStr.includes("特殊")) return 1; // 本月最優先
-                    
-                    // 💥 這裡只留純元素菇，把冰藍拿掉
+                    if (typeStr.includes("每月") || typeStr.includes("特殊")) return 1; 
                     if (typeStr.includes("火") || typeStr.includes("水") || typeStr.includes("水晶") || 
                         typeStr.includes("毒") || typeStr.includes("電") || typeStr.includes("冰")) {
-                        // 注意：如果玩家選的是選單上的「一般冰藍蘑菇」，因為帶有「冰」，為了防止它誤入元素菇，我們加個排除條件：
-                        if (typeStr.includes("冰藍")) return 3; 
+                        if (typeStr.includes("冰藍")) return 3; // 冰藍歸類於普通菇
                         return 2; 
                     }
-                    
-                    return 3; // 普通菇最後（一般紅、藍、黃、以及冰藍菇都會落在這裡）
+                    return 3; 
                 };
-                };
-
                 const wA = getTypeWeight(itemA.type);
                 const wB = getTypeWeight(itemB.type);
-                
-                // 如果種類權重相同（例如都是元素菇），就照中文名字筆劃排序，避免畫面亂跳
                 if (wA === wB) return itemA.type.localeCompare(itemB.type, "zh-Hant");
-                return wA - wB; // 權重小的（1 > 2 > 3）排在前面
+                return wA - wB;
             } 
             else if (currentSort === "size") {
-                // ⚖️ 規則：大小由大排到小
                 const sizeWeight = { "巨大": 4, "大型": 3, "普通": 2, "一般": 2, "小型": 1 };
                 const wA = sizeWeight[itemA.size] || 0;
                 const wB = sizeWeight[itemB.size] || 0;
-                return wB - wA; // 大的（4 > 3 > 2 > 1）排在前面
+                return wB - wA; 
             } 
             else if (currentSort === "time") {
-                // ⏳ 規則：剩餘時間由少排到多（快結束的排最前面，方便搶刀）
                 const msLeftA = ((itemA.timeReported.hours * 3600) + (itemA.timeReported.minutes * 60) + itemA.timeReported.seconds) * 1000 + itemA.createdAt - Date.now();
                 const msLeftB = ((itemB.timeReported.hours * 3600) + (itemB.timeReported.minutes * 60) + itemB.timeReported.seconds) * 1000 + itemB.createdAt - Date.now();
-                return msLeftA - msLeftB; // 時間少的（小排到大）排在前面
+                return msLeftA - msLeftB; 
             } 
             else if (currentSort === "update") {
-                // 🕒 規則：按上次更新時間排序（最新回報的排前面）
                 const timeA = itemA.updatedAt || itemA.createdAt;
                 const timeB = itemB.updatedAt || itemB.createdAt;
                 return timeB - timeA; 
             } 
             else if (currentSort === "players") {
-                // 👥 規則：按目前總人數排序（人多的排前面）
                 return (itemB.currentPlayers || 0) - (itemA.currentPlayers || 0); 
             }
-
             return 0; 
         });
 
