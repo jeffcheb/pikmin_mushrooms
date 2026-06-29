@@ -231,25 +231,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 圖片路徑抓取引擎 (水晶防打架優先判定)
+    // 🌟 一勞永逸防護網版圖片抓取引擎：嚴格按照字串精細度「由長到短」向下過濾，徹底杜絕撞名 Bug！
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
         const typeStr = String(type);
 
+        // 1. 優先處理複合字、長度長的特殊專有名詞（防堵打架核心區）
+        if (typeStr.includes("每月") || typeStr.includes("特殊")) return "picture/mushroom_monthly_special.png";
+        if (typeStr.includes("冰藍")) return "picture/mushroom_ice.png"; 
         if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
-        if (typeStr.includes("水")) return "picture/mushroom_water.png";
+        if (typeStr.includes("粉紅") || typeStr.includes("羽翅")) return "picture/mushroom_wing.png"; 
+        if (typeStr.includes("岩石")) return "picture/mushroom_rock.png";
+
+        // 2. 處理獨立的元素屬性菇
         if (typeStr.includes("火")) return "picture/mushroom_fire.png";
+        if (typeStr.includes("水")) return "picture/mushroom_water.png";
         if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
         if (typeStr.includes("電")) return "picture/mushroom_electric.png";
         if (typeStr.includes("冰")) return "picture/mushroom_ice.png"; 
         
+        // 3. 最後才比對單一字元的最基礎普通顏色（被安全隔離在底層）
         if (typeStr.includes("紅")) return "picture/mushroom_red.png";
         if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
         if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
         if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
         if (typeStr.includes("白")) return "picture/mushroom_white.png";
-        if (typeStr.includes("灰") || typeStr.includes("岩石")) return "picture/mushroom_rock.png"; 
-        if (typeStr.includes("粉紅") || typeStr.includes("羽翅")) return "picture/mushroom_wing.png"; 
+        if (typeStr.includes("灰")) return "picture/mushroom_rock.png"; 
         
         return "picture/mushroom_monthly_special.png"; 
     }
@@ -280,7 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 多維度排序邏輯
+        // 多維度排序：無指定 -> 普通 -> 元素 -> 每月活動菇
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
@@ -291,13 +298,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (currentSort === "type") {
                 const getTypeWeight = (typeStr) => {
-                    if (typeStr.includes("每月") || typeStr.includes("特殊")) return 1; 
+                    if (typeStr.includes("無") || typeStr.includes("未指定") || typeStr === "") return 1;
+                    if (typeStr.includes("紅") || typeStr.includes("藍") || typeStr.includes("黃") || 
+                        typeStr.includes("紫") || typeStr.includes("白") || typeStr.includes("灰") || 
+                        typeStr.includes("岩石") || typeStr.includes("羽翅") || typeStr.includes("粉紅")) {
+                        return 2;
+                    }
                     if (typeStr.includes("火") || typeStr.includes("水") || typeStr.includes("水晶") || 
                         typeStr.includes("毒") || typeStr.includes("電") || typeStr.includes("冰")) {
-                        if (typeStr.includes("冰藍")) return 3; 
-                        return 2; 
+                        if (typeStr.includes("冰藍")) return 2; 
+                        return 3; 
                     }
-                    return 3; 
+                    if (typeStr.includes("每月") || typeStr.includes("特殊")) return 4;
+                    return 2; 
                 };
                 const wA = getTypeWeight(itemA.type);
                 const wB = getTypeWeight(itemB.type);
@@ -433,7 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 獨立微量計時器更新
+    // 獨立計時器與一次性提醒偵測
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -471,7 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
                         firedAlerts[id] = true;
-                        triggerWebNotification(item, id);
+                        triggerWebNotification(item, id); // 注入一次性關閉參數
                     }
                 } else {
                     textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
@@ -499,7 +512,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 核實按鈕
+    // 核實功能
     window.verifyMushroomStatus = (id) => {
         if (!window.fbDB) return;
         const item = localMushroomsData[id];
@@ -590,32 +603,30 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    // 🟢 請將原本的 triggerWebNotification 替換為此版本：
-function triggerWebNotification(item, id) { // 🌟 新增傳入 id 參數
-    if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("🍄 皮克敏蘑菇轉生預告！", {
-            body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
-            icon: getIconPath(item.type),
-            requireInteraction: true
-        });
+    // 🌟 一次性推播核心：發送完自動註銷
+    function triggerWebNotification(item, id) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("🍄 皮克敏蘑菇轉生預告！", {
+                body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
+                icon: getIconPath(item.type),
+                requireInteraction: true
+            });
 
-        // 🌟 核心修正：發出通知後，立刻將此 ID 從提醒清單中移除
-        if (id && typeof alertEnabledList !== "undefined") {
-            const alertIndex = alertEnabledList.indexOf(id);
-            if (alertIndex > -1) {
-                alertEnabledList.splice(alertIndex, 1);
-                localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
-                
-                // 🔄 同步將畫面上該卡片的按鈕改回「🔕 開啟提醒」的外觀
-                const alertBtn = document.getElementById(`alert-btn-${id}`);
-                if (alertBtn) {
-                    alertBtn.textContent = "🔕 開啟提醒";
-                    alertBtn.className = "btn-sm btn-alert btn-alert-off";
+            if (id && typeof alertEnabledList !== "undefined") {
+                const alertIndex = alertEnabledList.indexOf(id);
+                if (alertIndex > -1) {
+                    alertEnabledList.splice(alertIndex, 1);
+                    localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
+                    
+                    const alertBtn = document.getElementById(`alert-btn-${id}`);
+                    if (alertBtn) {
+                        alertBtn.textContent = "🔕 開啟提醒";
+                        alertBtn.className = "btn-sm btn-alert btn-alert-off";
+                    }
                 }
             }
         }
     }
-}
 
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
