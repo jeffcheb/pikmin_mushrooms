@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterCity = document.getElementById("filter-city");
     const filterDistrict = document.getElementById("filter-district");
     const btnAutoLocation = document.getElementById("btn-auto-location");
+    
+    // 🌟 新增：取得 HTML 中的排序下拉選單
+    const sortMethod = document.getElementById("sort-method");
 
     let localMushroomsData = {};
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
@@ -98,6 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         filterDistrict.addEventListener("change", renderBoard);
         searchKeyword?.addEventListener("input", renderBoard);
+        
+        // 🌟 新增：當切換排序方式時，立即重新渲染看板
+        sortMethod?.addEventListener("change", renderBoard);
     }
 
     // 免 API 純前端定位
@@ -227,7 +233,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 圖片路徑抓取引擎
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
         const typeStr = String(type);
@@ -269,16 +274,52 @@ document.addEventListener("DOMContentLoaded", () => {
         const cityFilter = filterCity?.value || "all";
         const distFilter = filterDistrict?.value || "all";
         const keyword = searchKeyword?.value.trim().toLowerCase() || "";
+        const currentSort = sortMethod?.value || "default";
 
         if (keys.length === 0) {
             mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報，快去發佈第一個吧！</p>';
             return;
         }
 
+        // 🌟 【核心修改：多維度五大自訂排序算法】
         keys.sort((a, b) => {
+            // 優先排序：有釘選的永遠排在最前面
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
-            return bPinned - aPinned; 
+            if (bPinned !== aPinned) return bPinned - aPinned;
+
+            const itemA = localMushroomsData[a];
+            const itemB = localMushroomsData[b];
+
+            if (currentSort === "type") {
+                // 按蘑菇種類（中文首字筆劃/拼音）排序
+                return itemA.type.localeCompare(itemB.type, "zh-Hant");
+            } 
+            else if (currentSort === "size") {
+                // 按蘑菇大小權重排序 (巨大 > 大型 > 普通/一般 > 小型)
+                const sizeWeight = { "巨大": 4, "大型": 3, "普通": 2, "一般": 2, "小型": 1 };
+                const wA = sizeWeight[itemA.size] || 0;
+                const wB = sizeWeight[itemB.size] || 0;
+                return wB - wA; // 大的排前面
+            } 
+            else if (currentSort === "time") {
+                // 按剩餘時間（長度）排序
+                const msLeftA = ((itemA.timeReported.hours * 3600) + (itemA.timeReported.minutes * 60) + itemA.timeReported.seconds) * 1000 + itemA.createdAt - Date.now();
+                const msLeftB = ((itemB.timeReported.hours * 3600) + (itemB.timeReported.minutes * 60) + itemB.timeReported.seconds) * 1000 + itemB.createdAt - Date.now();
+                return msLeftB - msLeftA; // 剩餘時間長的排前面
+            } 
+            else if (currentSort === "update") {
+                // 按上次更新時間排序
+                const timeA = itemA.updatedAt || itemA.createdAt;
+                const timeB = itemB.updatedAt || itemB.createdAt;
+                return timeB - timeA; // 最新回報的排前面
+            } 
+            else if (currentSort === "players") {
+                // 按總參戰人數排序
+                return (itemB.currentPlayers || 0) - (itemA.currentPlayers || 0); // 人多的排前面
+            }
+
+            return 0; // 預設不變
         });
 
         let renderedCount = 0;
@@ -430,13 +471,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // 🌟 核心控制：完全移除過期時隱藏編輯按鈕的邏輯，保留更新按鈕供新菇輸入
             if (isOver5Min) {
                 cardElement?.classList.add("card-expired-mode");
                 if (alertBtn) alertBtn.style.display = "none";
                 if (verifyBtn) verifyBtn.style.display = "none";
                 if (staleBadge) staleBadge.style.display = "none";
-                if (editBtn) editBtn.style.display = "inline-block"; // 確保更新按鈕存在
+                if (editBtn) editBtn.style.display = "inline-block"; 
             } else {
                 cardElement?.classList.remove("card-expired-mode");
                 if (editBtn) editBtn.style.display = "inline-block";
