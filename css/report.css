@@ -1,119 +1,197 @@
-/* css/report.css */
+/* ========================================================
+   🎨 皮克敏高階工具站 - 蘑菇情報看板專屬樣式 (report.css)
+   ======================================================== */
 
-/* 看板控制列排版 */
+/* --- 基礎佈局與主要容器 --- */
+.main-container {
+    max-width: 1200px;
+    margin: 80px auto 40px auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+}
+
+.divider {
+    border: 0;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 32px 0;
+}
+
+/* --- 📢 發佈情報表單樣式 --- */
+.report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: bold;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 15px;
+    background-color: #f8fafc;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #3498db;
+    background-color: #ffffff;
+}
+
+/* 剩餘時間輸入框排版 */
+.time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.time-inputs input {
+    width: 100%;
+    text-align: center;
+}
+
+.time-inputs span {
+    font-weight: bold;
+    color: #94a3b8;
+}
+
+/* --- 🌍 即時情報看板控制列 --- */
 .board-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 30px;
+    flex-direction: column;
+    gap: 16px;
     margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 15px;
 }
 
 .board-controls {
     display: flex;
-    gap: 15px;
+    justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
+    gap: 12px;
 }
 
 .filters {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.filters input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 200px;
+    flex: 1;
+}
+
+.filters select {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    background-color: #ffffff;
+    cursor: pointer;
+}
+
+.view-toggles {
+    display: flex;
+    gap: 4px;
 }
 
 .view-toggles button {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    padding: 6px 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 1.1rem;
-    transition: var(--transition);
+    font-size: 14px;
+    transition: all 0.2s;
 }
 
 .view-toggles button.active {
-    background-color: var(--primary-color);
+    background: #2ecc71;
     color: white;
-    border-color: var(--primary-color);
+    border-color: #2ecc71;
 }
 
-/* 剩餘時間輸入框的特殊排版 */
-.time-inputs {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.time-inputs input {
-    width: 60px;
-    text-align: center;
-}
-
-/* =========================================
-   卡片容器排版 (Grid v.s. List)
-   ========================================= */
-.board-container {
-    display: transition;
-}
-
-/* 網格模式 (Grid View) */
+/* ========================================================
+   🔲 網格模式樣式 (Grid View) - 預設預覽
+   ======================================================== */
 .board-container.grid-view {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
 }
 
-/* 條列模式 (List View) */
-.board-container.list-view {
+/* --- 📦 蘑菇卡片基礎樣式與 Hover 保護 --- */
+.mushroom-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-}
-
-/* =========================================
-   單張蘑菇卡片基本樣式
-   ========================================= */
-/* 🟢 請優化或覆蓋你的卡片基礎與 Hover 樣式 */
-
-.mushroom-card {
-    /* ... 你原本的其他基礎設定，如 background, border 等 ... */
-    
     position: relative;
-    top: 0; /* 🌟 建立位移基準點 */
-    
-    /* 🌟 核心關鍵：加入全屬性滑順過渡特效，時間設為 0.25 秒 */
+    top: 0;
     transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), 
                 box-shadow 0.25s ease, 
                 top 0.25s ease !important;
-                
-    will-change: transform, top; /* 告訴瀏覽器做好硬體加速，防止重繪時閃爍 */
+    will-change: transform, top;
+    box-sizing: border-box;
 }
 
-.mushroom-card:hover {
-    /* ❌ 盡量避免在這裡使用 margin-top: -5px; 這種會改變網格佈局(Layout)的寫法，那是狂跳的主因！ */
-    /* 🟢 改用以下只影響視覺、不影響排版擠壓的 transform 浮動效果： */
-    
-    top: -4px; /* 用 top 代替 margin-top，卡片會往上漂浮 4px，且絕不擠壓周邊元件 */
-    transform: scale(1.015); /* 微微放大 1.015 倍即可，視覺舒適且不易出錯 */
-    
-    /* 加上柔和陰影 */
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.06) !important;
+/* 網格模式下的 Hover 浮動效果 */
+.board-container.grid-view .mushroom-card:hover {
+    top: -5px;
+    transform: scale(1.015);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08), 0 4px 6px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* 釘選狀態樣式 */
+/* 釘選發亮效果 */
 .mushroom-card.pinned {
-    border: 2px solid #FFC107;
-    background-color: #FFFDF3;
+    border: 2px solid #f1c40f !important;
+    background-color: #fffdf3;
 }
 
-/* 卡片內部元素排版 */
+/* 卡片內容排版 */
 .card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 16px;
+    padding: 16px;
 }
 
 .shroom-img {
@@ -123,111 +201,345 @@
 }
 
 .shroom-info h4 {
-    font-size: 1.1rem;
-    color: var(--text-main);
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    color: #2c3e50;
 }
 
 .shroom-info p {
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    margin: 0;
+    font-size: 13px;
+    color: #7f8c8d;
 }
 
 .card-body {
-    font-size: 0.95rem;
-    margin-bottom: 12px;
-    flex-grow: 1;
+    padding: 0 16px 16px 16px;
+    flex: 1;
+}
+
+.card-body p {
+    margin: 6px 0;
+    font-size: 14px;
+    color: #34495e;
 }
 
 .countdown-text {
     font-weight: bold;
-    color: var(--primary-color);
+    color: #27ae60; /* 🟢 進行中綠色 */
 }
 
-/* 進入重生緩衝期的紅色倒數文字 (F5) */
 .countdown-text.buffer-period {
-    color: var(--danger-color);
+    color: #e74c3c !important; /* 🔴 5分鐘重生倒數紅色 */
 }
 
 .card-footer {
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 10px;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    border-radius: 0 0 12px 12px;
 }
 
+/* --- 🔘 獨立按鈕與防震動控制 --- */
 .btn-sm {
-    padding: 6px 12px;
-    font-size: 0.85rem;
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
+    background: #ffffff;
+    color: #475569;
     cursor: pointer;
-    border: 1px solid var(--border-color);
-    background-color: #fff;
-    transition: var(--transition);
-}
-
-.btn-sm:hover {
-    background-color: var(--bg-color);
-}
-
-.btn-pin.active {
-    background-color: #FFC107;
-    color: white;
-    border-color: #FFC107;
-}
-
-.loading-text {
     text-align: center;
-    grid-column: 1 / -1;
-    color: var(--text-muted);
-    padding: 40px 0;
+    white-space: nowrap;
 }
 
-/* 條列模式下的卡片外觀微調 */
-.board-container.list-view .mushroom-card {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-}
-
-.board-container.list-view .card-header {
-    margin-bottom: 0;
-}
-
-.board-container.list-view .card-body {
-    margin-bottom: 0;
-    flex-grow: 0;
-}
-/* 🔘 灰色過期卡片專屬樣式 */
-.mushroom-card.card-expired-mode {
-    background-color: #f4f4f4 !important;
-    border: 2px dashed #b5b5b5 !important;
-    box-shadow: none !important;
-    opacity: 0.75;
-    filter: grayscale(30%); /* 微微去色呈現沉睡狀態 */
-}
-
-/* 待更新文字樣式 */
-.countdown-text.need-update-period {
-    color: #7f8c8d !important;
-    font-weight: bold;
-    background: #e2e8f0;
-    padding: 4px 8px;
-    border-radius: 4px;
-    display: inline-block;
-}
-/* 🟢 終極防抖按鈕樣式保護 */
 .mushroom-card button,
 .card-footer button {
-    /* 強制設定在 JavaScript 重繪時，按鈕的滑鼠交互（Hitbox）維持絕對穩定 */
     pointer-events: auto !important;
     backface-visibility: hidden;
     transform: translateZ(0); 
     transition: background-color 0.2s ease, transform 0.1s ease !important;
 }
 
-/* 避免按鈕內部 Hover 特效干擾 Layout 排版造成卡片狂跳 */
 .mushroom-card button:hover {
-    transform: scale(1.03) !important; /* 按鈕自身輕微放大即可，絕不更動高寬 */
+    transform: scale(1.03) !important;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-pin.active {
+    background-color: #f1c40f !important;
+    color: white !important;
+    border-color: #f1c40f !important;
+}
+
+/* 🔔 提醒按鈕狀態 */
+.btn-alert.btn-alert-on {
+    background-color: #ff9f43 !important;
+    color: white !important;
+    border-color: #ff9f43 !important;
+}
+.btn-alert.btn-alert-on:hover {
+    background-color: #ee5253 !important;
+    border-color: #ee5253 !important;
+}
+.btn-alert.btn-alert-off {
+    background-color: #ecf0f1 !important;
+    color: #7f8c8d !important;
+    border-color: #bdc3c7 !important;
+}
+
+/* ✏️ 更新狀態按鈕 */
+.btn-edit-trigger {
+    background-color: #3498db !important;
+    color: white !important;
+    border-color: #3498db !important;
+}
+
+/* ========================================================
+   📄 完美行動裝置響應式 - 列表模式 (List View)
+   ======================================================== */
+.board-container.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.board-container.list-view .mushroom-card {
+    display: flex;
+    flex-direction: row; 
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    margin: 0;
+    min-height: 60px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    background-color: #ffffff;
+    top: 0;
+    flex-wrap: wrap; /* 允許面板換行 */
+}
+
+.board-container.list-view .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 35%;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.board-container.list-view .shroom-img {
+    width: 36px;
+    height: 36px;
+}
+
+.board-container.list-view .shroom-info h4 {
+    font-size: 14px;
+    margin: 0 0 2px 0;
+}
+
+.board-container.list-view .shroom-info p {
+    font-size: 12px;
+    margin: 0;
+    color: #7f8c8d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.board-container.list-view .card-body {
+    display: flex;
+    flex-direction: row; 
+    align-items: center;
+    gap: 20px;
+    width: 35%;
+    margin: 0;
+    padding: 0;
+}
+
+.board-container.list-view .card-body p {
+    margin: 0;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.board-container.list-view .card-footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 6px;
+    width: 30%;
+    margin-top: 0;
+    padding: 0;
+    border-top: none;
+    background: transparent;
+}
+
+.board-container.list-view .card-footer .btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* ========================================================
+   🛠️ 擴充功能面板、驗證與過期樣式 (網格與清單共用)
+   ======================================================== */
+
+/* ◎ 歷史紀錄 */
+.btn-history-trigger {
+    background: none;
+    border: 1px solid #bdc3c7;
+    color: #7f8c8d;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-history-trigger:hover {
+    background-color: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.history-info-panel {
+    background-color: #ebf5fb;
+    border-left: 4px solid #3498db;
+    padding: 6px 12px;
+    margin: 4px 12px;
+    font-size: 12px;
+    color: #2c3e50;
+    border-radius: 0 4px 4px 0;
+}
+
+/* ✏️ 狀態修改面板 */
+.edit-status-panel {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 8px 12px;
+    text-align: left;
+}
+.edit-status-panel h5 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #475569;
+}
+.edit-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+.edit-row label { width: 60px; color: #64748b; }
+.edit-row input[type="number"] {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 4px 6px;
+    width: 70px;
+}
+.edit-time-inputs { display: flex; align-items: center; gap: 2px; color: #94a3b8; }
+.edit-time-inputs input { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; width: 45px; text-align: center; }
+.edit-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.edit-actions button { padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; }
+.edit-actions .btn-save { background-color: #2ecc71; color: white; }
+.edit-actions .btn-cancel { background-color: #e2e8f0; color: #475569; }
+
+/* 🔄 灰色過期待更新卡片樣式 */
+.mushroom-card.card-expired-mode {
+    background-color: #f5f5f5 !important;
+    border: 2px dashed #b5b5b5 !important;
+    box-shadow: none !important;
+    opacity: 0.85;
+    filter: grayscale(20%);
+}
+.countdown-text.need-update-period {
+    color: #7f8c8d !important;
+    background: #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+/* ⚡ 快速回報面板 */
+.quick-update-panel {
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 10px 12px;
+}
+.quick-update-panel h5 { margin: 0 0 6px 0; font-size: 13px; color: #4a5568; }
+.quick-buttons { display: flex; flex-direction: column; gap: 4px; }
+.quick-buttons button {
+    background-color: #f8fafc; border: 1px solid #cbd5e1; color: #334155;
+    padding: 6px; font-size: 12px; border-radius: 4px; cursor: pointer; text-align: left;
+}
+.quick-buttons button:hover { background-color: #e2e8f0; }
+.quick-buttons .btn-no-shroom { background-color: #fff5f5; border-color: #feb2b2; color: #c53030; }
+.quick-buttons .btn-no-shroom:hover { background-color: #fed7d7; }
+
+/* ⚠️ 許久未更新標籤與核實 */
+.stale-warning-badge {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 4px;
+    margin: 8px 12px 0 12px;
+    animation: flashAnimation 2s infinite alternate;
+}
+.btn-verify { background-color: #2ecc71 !important; color: white !important; font-weight: bold !important; }
+
+/* 清單模式下的內嵌面板強制橫跨整行 */
+.board-container.list-view .edit-status-panel,
+.board-container.list-view .history-info-panel,
+.board-container.list-view .quick-update-panel {
+    width: 100%;
+    margin: 6px 0 0 0;
+    order: 10; 
+}
+.board-container.list-view .stale-warning-badge {
+    margin: 0 8px 0 0; padding: 2px 6px; font-size: 11px; order: -1;
+}
+
+@keyframes flashAnimation { from { background-color: #fff3cd; } to { background-color: #ffe8a1; } }
+.loading-text { text-align: center; color: #7f8c8d; font-size: 15px; padding: 20px 0; width: 100%; }
+
+/* ========================================================
+   📱 RWD 行動裝置（手機版，螢幕寬度小於 768px）
+   ======================================================== */
+@media (max-width: 768px) {
+    .form-row { flex-direction: column; gap: 16px; }
+    .filters { width: 100%; }
+    .filters input[type="text"] { width: 100%; min-width: 100%; }
+    .board-controls { flex-direction: column; align-items: flex-start; }
+    .view-toggles { width: 100%; justify-content: flex-end; }
+
+    /* 📱 手機清單模式高度深度縮減 */
+    .board-container.list-view .mushroom-card {
+        flex-direction: column; 
+        align-items: flex-start;
+        padding: 10px;
+        gap: 6px;
+    }
+    .board-container.list-view .card-header { width: 100%; justify-content: flex-start; }
+    .board-container.list-view .card-body {
+        width: 100%; justify-content: space-between; gap: 0;
+        border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 2px;
+    }
+    .board-container.list-view .card-footer { width: 100%; justify-content: flex-end; }
+    .board-container.list-view .shroom-info p { max-width: 100%; white-space: normal; }
 }
