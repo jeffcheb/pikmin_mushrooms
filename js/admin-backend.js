@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 全域變數，用來暫存從 Firebase 撈出來的原始資料，方便搜尋時過濾
     let rawMushroomsData = {};
 
-    const HASHED_PASSWORD_HEX = "96df8f747065961d199f1fa0e791b0f023db8cc7c69992fdd1d86bebf41c1a2e"; 
+    const HASHED_PASSWORD_HEX = "109827b3add23b5080c647208e766d61d61760f1a47135d5252405bb134553ac"; 
 
     async function sha256(message) {
         const msgBuffer = new TextEncoder().encode(message);                    
