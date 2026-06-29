@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>皮克敏工具站 | 蘑菇數據後台管理系統</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 後台專用極簡風格 */
+        .admin-container { max-width: 1200px; margin: 40px auto; padding: 20px; }
+        .login-box { max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: #fff; text-align: center; }
+        .login-box input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .admin-table th, .admin-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        .admin-table th { background-color: #2c3e50; color: white; }
+        .admin-table tr:hover { background-color: #f7fafc; }
+        .btn-delete { background-color: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .btn-delete:hover { background-color: #c0392b; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+        .shroom-thumb { width: 30px; height: 30px; object-fit: contain; vertical-align: middle; margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="admin-login" class="login-box">
+        <h2>🔒 管理員登入</h2>
+        <p>請輸入後台管理密碼以存取資料庫</p>
+        <input type="password" id="admin-password" placeholder="請輸入密碼...">
+        <button id="btn-login" class="btn-primary" style="width:100%;">驗證並登入</button>
+    </div>
+
+    <div id="admin-dashboard" class="admin-container" style="display: none;">
+        <div class="admin-header">
+            <h2>🛠️ 蘑菇情報資料庫管理後台</h2>
+            <button id="btn-logout" class="btn-sm" style="background:#7f8c8d; color:#fff;">安全登出</button>
+        </div>
+
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>種類</th>
+                    <th>大小</th>
+                    <th>位置地區</th>
+                    <th>具體地點</th>
+                    <th>目前人數 / 上限</th>
+                    <th>建立時間</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="admin-table-body">
+                <tr>
+                    <td colspan="7" style="text-align:center; color:#7f8c8d;">正在即時同步雲端資料庫...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script src="js/admin-backend.js"></script>
+</body>
+</html>
