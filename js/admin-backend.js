@@ -8,18 +8,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnLogout = document.getElementById("btn-logout");
     const tableBody = document.getElementById("admin-table-body");
 
-    // 🔒 簡單的安全防護：你可以自行修改下方的 'pikmin888' 為你想設定的後台密碼
-    const MASTER_PASSWORD = "pikmin888"; 
+    const HASHED_PASSWORD_HEX = "96df8f747065961d199f1fa0e791b0f023db8cc7c69992fdd1d86bebf41c1a2e"; 
+
+    // 🛠️ 輔助函式：將字串轉為 SHA-256 雜湊碼
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);                    
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     // 檢查瀏覽器是否保持登入狀態
     if (sessionStorage.getItem("admin_authenticated") === "true") {
         showDashboard();
     }
 
-    // 登入驗證
+    // 登入驗證（非同步處理加密比對）
     if (btnLogin) {
-        btnLogin.addEventListener("click", () => {
-            if (adminPassword.value === MASTER_PASSWORD) {
+        btnLogin.addEventListener("click", async () => {
+            const inputPassword = adminPassword.value;
+            // 將使用者輸入的密碼即時加密
+            const inputHashed = await sha256(inputPassword);
+
+            // 比對兩邊的加密代號是否一致
+            if (inputHashed === HASHED_PASSWORD_HEX) {
                 sessionStorage.setItem("admin_authenticated", "true");
                 showDashboard();
             } else {
@@ -41,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!adminLogin || !adminDashboard) return;
         adminLogin.style.display = "none";
         adminDashboard.style.style.display = "block";
-        startAdminSync(); // 開始監聽 Firebase
+        startAdminSync(); 
     }
 
     // 🔄 實時監聽 Firebase 並渲染後台表格
@@ -68,7 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 按建立時間由新到舊排序
         keys.sort((a, b) => (data[b].createdAt || 0) - (data[a].createdAt || 0));
 
         let html = "";
@@ -97,7 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
         tableBody.innerHTML = html;
     }
 
-    // 🗑️ 核心管理功能：一鍵將特定蘑菇從 Firebase 實時資料庫永久下架
     window.deleteMushroomData = (id) => {
         if (!window.fbDB || !window.fbRef || !window.fbRemove) {
             alert("Firebase 核心模組尚未就緒。");
