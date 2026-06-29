@@ -17,12 +17,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // 📊 依據 et.jupiter 提供的精準基礎戰力對照表
     const basePower = {
         purple: 6, // 紫皮
-        rock: 5,   // 岩皮
+        rock: 5,   // 岩皮/灰皮
         red: 4,    // 紅皮
         yellow: 3, // 黃皮
         blue: 3,   // 藍皮
         white: 2,  // 白皮
-        winged: 2  // 羽皮
+        winged: 2  // 羽皮/粉紅皮
     };
 
     // 🌸 花朵加成對照表
@@ -36,8 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function calculatePower() {
-        const mushroom = targetMushroom.value;
-        const color = pikminColor.value;
+        const mushroom = targetMushroom.value; // 取得網頁 HTML 設定的蘑菇 Value
+        const color = pikminColor.value;       // 取得皮克敏顏色
         const redHearts = parseInt(redHeartsInput.value) || 0;
         const goldHearts = parseInt(goldHeartsInput.value) || 0;
         const flower = flowerStatus.value;
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
             totalPower += 4;
         }
 
-        // 🎒 核心新需求：本月主/副飾品在當月特殊菇的額外超級加成！
+        // 🎒 核心需求：本月主/副飾品在當月特殊菇的額外超級加成！
         if (mushroom === "monthly_special") {
             if (decor === "monthly_main_decor") {
                 totalPower += 300; // 主飾品加成
@@ -82,9 +82,29 @@ document.addEventListener("DOMContentLoaded", () => {
         totalPower += (redHearts * 1);
         totalPower += (goldHearts * 4);
 
-        // --- 3. 元素相剋加成 (同屬打元素菇，例如紅皮打火菇，此處依遊戲實務保留額外克制分)
-        if (mushroom === "fire" && color === "red") totalPower += 4; // 範例克制倍增，可依實際體感調整
+        // --- 3. 🎯 元素相剋加成 (同屬打元素菇，保留克制分) ---
+        if (mushroom === "fire" && color === "red") totalPower += 4; 
         if (mushroom === "water" && color === "blue") totalPower += 4;
+
+        // --- 4. 🍄 新增：普通蘑菇同色匹配戰力爆發判定 (紅、藍、黃、紫、白、灰、羽、冰藍) ---
+        // 檢查皮克敏顏色是否與普通蘑菇的屬性完全對應
+        let isColorMatched = false;
+        
+        if (mushroom === "normal_red" && color === "red") isColorMatched = true;
+        if (mushroom === "normal_blue" && color === "blue") isColorMatched = true;
+        if (mushroom === "normal_yellow" && color === "yellow") isColorMatched = true;
+        if (mushroom === "normal_purple" && color === "purple") isColorMatched = true;
+        if (mushroom === "normal_white" && color === "white") isColorMatched = true;
+        if (mushroom === "normal_rock" && color === "rock") isColorMatched = true;
+        if (mushroom === "normal_winged" && color === "winged") isColorMatched = true;
+        
+        // 🥶 關鍵校正：藍皮克敏打「一般冰藍蘑菇（normal_ice）」也會獲得同色加成！
+        if (mushroom === "normal_ice" && color === "blue") isColorMatched = true;
+
+        // 如果觸發同色相剋，依遊戲實務，基礎戰力與愛心增幅會產生巨額額外加乘（此處給予社群標準的同色激勵加分）
+        if (isColorMatched) {
+            totalPower += 12; // 🧬 同色匹配戰力爆發！可依據你伺服器目前的倍率調整此數值
+        }
 
         // 將最終結果更新至網頁
         powerResult.textContent = totalPower;
@@ -96,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 強制限制愛心輸入框的上下限 (0-4 顆)
     [redHeartsInput, goldHeartsInput].forEach(input => {
+        if (!input) return;
         input.addEventListener("blur", () => {
             let val = parseInt(input.value);
             if (isNaN(val) || val < 0) input.value = 0;
