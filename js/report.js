@@ -1,56 +1,59 @@
 // js/report.js
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 控制使用條款彈窗的邏輯
-document.addEventListener("DOMContentLoaded", () => {
+    // ========================================================
+    // 📜 核心新增：使用條款與免責聲明彈窗控制邏輯
+    // ========================================================
     const termsOverlay = document.getElementById("terms-overlay");
     const chkAgreeTerms = document.getElementById("chk-agree-terms");
     const btnEnterSite = document.getElementById("btn-enter-site");
 
-    if (!termsOverlay || !chkAgreeTerms || !btnEnterSite) return;
+    if (termsOverlay && chkAgreeTerms && btnEnterSite) {
+        // 1. 檢查使用者以前是否曾經同意過條款
+        const hasAgreed = localStorage.getItem("user_agreed_mushrooms_terms");
 
-    // 1. 檢查使用者以前是否曾經同意過條款
-    const hasAgreed = localStorage.getItem("user_agreed_mushrooms_terms");
-
-    if (!hasAgreed) {
-        // 如果沒同意過，強制顯示彈窗遮罩，並禁止後面網頁捲動
-        termsOverlay.style.display = "flex";
-        document.body.style.overflow = "hidden";
-    } else {
-        // 如果同意過，保持隱藏，網頁正常運作
-        termsOverlay.style.display = "none";
-    }
-
-    // 2. 監聽勾選狀態切換（Checkbox change）
-    chkAgreeTerms.addEventListener("change", () => {
-        if (chkAgreeTerms.checked) {
-            // 啟用按鈕，換上綠色活力樣式
-            btnEnterSite.disabled = false;
-            btnEnterSite.className = "btn-enter-active";
+        if (!hasAgreed) {
+            // 如果沒同意過，強制顯示彈窗遮罩，並禁止後面網頁捲動
+            termsOverlay.style.display = "flex";
+            document.body.style.overflow = "hidden";
         } else {
-            // 停用按鈕，換回灰色死板樣式
-            btnEnterSite.disabled = true;
-            btnEnterSite.className = "btn-enter-disabled";
-        }
-    });
-
-    // 3. 點擊「進入網站」按鈕後的行為
-    btnEnterSite.addEventListener("click", () => {
-        if (chkAgreeTerms.checked) {
-            // 將同意紀錄永久存入瀏覽器 localStorage
-            localStorage.setItem("user_agreed_mushrooms_terms", "true");
-            
-            // 關閉遮罩並恢復網頁捲動
+            // 如果同意過，保持隱藏，網頁正常運作
             termsOverlay.style.display = "none";
             document.body.style.overflow = "auto";
-            
-            // 溫馨小提醒 (可選：引導玩家開啟推播)
-            if ("Notification" in window && Notification.permission === "default") {
-                Notification.requestPermission();
-            }
         }
-    });
-});
+
+        // 2. 監聽勾選狀態切換
+        chkAgreeTerms.addEventListener("change", () => {
+            if (chkAgreeTerms.checked) {
+                btnEnterSite.disabled = false;
+                btnEnterSite.className = "btn-enter-active";
+            } else {
+                btnEnterSite.disabled = true;
+                btnEnterSite.className = "btn-enter-disabled";
+            }
+        });
+
+        // 3. 點擊「進入網站」按鈕
+        btnEnterSite.addEventListener("click", () => {
+            if (chkAgreeTerms.checked) {
+                // 將同意紀錄永久存入瀏覽器 localStorage
+                localStorage.setItem("user_agreed_mushrooms_terms", "true");
+                
+                // 關閉遮罩並恢復網頁捲動
+                termsOverlay.style.display = "none";
+                document.body.style.overflow = "auto";
+                
+                // 引導玩家開啟推播
+                if ("Notification" in window && Notification.permission === "default") {
+                    Notification.requestPermission();
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 🌍 原有功能：看板變數與核心元件初始化
+    // ========================================================
     const reportForm = document.getElementById("report-form");
     const mushroomBoard = document.getElementById("mushroom-board");
     const mushroomSize = document.getElementById("mushroom-size");
@@ -281,26 +284,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🌟 一勞永逸防護網版圖片抓取引擎：嚴格按照字串精細度「由長到短」向下過濾，徹底杜絕撞名 Bug！
+    // 圖片路抓取引擎
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
         const typeStr = String(type);
 
-        // 1. 優先處理複合字、長度長的特殊專有名詞（防堵打架核心區）
         if (typeStr.includes("每月") || typeStr.includes("特殊")) return "picture/mushroom_monthly_special.png";
         if (typeStr.includes("冰藍")) return "picture/mushroom_ice.png"; 
         if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
         if (typeStr.includes("粉紅") || typeStr.includes("羽翅")) return "picture/mushroom_wing.png"; 
         if (typeStr.includes("岩石")) return "picture/mushroom_rock.png";
 
-        // 2. 處理獨立的元素屬性菇
         if (typeStr.includes("火")) return "picture/mushroom_fire.png";
         if (typeStr.includes("水")) return "picture/mushroom_water.png";
         if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
         if (typeStr.includes("電")) return "picture/mushroom_electric.png";
         if (typeStr.includes("冰")) return "picture/mushroom_ice.png"; 
         
-        // 3. 最後才比對單一字元的最基礎普通顏色（被安全隔離在底層）
         if (typeStr.includes("紅")) return "picture/mushroom_red.png";
         if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
         if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
@@ -337,7 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 多維度排序：無指定 -> 普通 -> 元素 -> 每月活動菇
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
@@ -432,7 +431,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
-                    
                     <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
 
                     <div class="card-header">
@@ -496,7 +494,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 獨立計時器與一次性提醒偵測
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -534,7 +531,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (totalSec >= 50 && totalSec <= 60 && alertEnabledList.includes(id) && !firedAlerts[id]) {
                         firedAlerts[id] = true;
-                        triggerWebNotification(item, id); // 注入一次性關閉參數
+                        triggerWebNotification(item, id);
                     }
                 } else {
                     textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
@@ -562,7 +559,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 核實功能
     window.verifyMushroomStatus = (id) => {
         if (!window.fbDB) return;
         const item = localMushroomsData[id];
@@ -653,7 +649,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    // 🌟 一次性推播核心：發送完自動註銷
     function triggerWebNotification(item, id) {
         if ("Notification" in window && Notification.permission === "granted") {
             new Notification("🍄 皮克敏蘑菇轉生預告！", {
