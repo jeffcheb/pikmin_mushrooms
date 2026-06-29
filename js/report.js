@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("您的瀏覽器不支援地理定位功能。");
                 return;
             }
-            btnAutoLocation.textContent = "⌛ 定位中";
+            btnAutoLocation.textContent = "⌛";
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
@@ -227,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🌟 圖片路徑抓取引擎
+    // 圖片路徑抓取引擎
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
         const typeStr = String(type);
@@ -250,16 +250,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return "picture/mushroom_monthly_special.png"; 
     }
 
-    // 🌟 連線 Firebase：只有當資料庫真的有變動時，才呼叫 renderBoard()。杜絕每秒 innerHTML 重繪！
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
         const shroomRef = window.fbRef(window.fbDB, "mushrooms");
         window.fbOnValue(shroomRef, (snapshot) => {
             localMushroomsData = snapshot.val() || {};
-            renderBoard(); // 🟢 資料庫有變，才畫一次結構
+            renderBoard(); 
         });
-        
-        // 🟢 每秒鐘只執行獨立微量計時器：更新「時間文字」，絕不重繪整張卡片結構！
         setInterval(updateTickCounters, 1000); 
     }
 
@@ -325,7 +322,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const dynamicImgSrc = getIconPath(item.type);
 
-            // 💡 建立結構，將時間文字標記上特定的 id 用於精準控制
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
                     
@@ -369,17 +365,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </div>
 
-                    <div class="quick-update-panel" id="quick-panel-${id}" style="display:none;">
-                        <h5>⚡ 快速回報現場新菇：</h5>
-                        <div class="quick-buttons">
-                            <button onclick="quickUpdateStatus('${id}', '每月特殊蘑菇', '巨大', 4)">✨ 巨大特殊菇 (4小時)</button>
-                            <button onclick="quickUpdateStatus('${id}', '每月特殊蘑菇', '大型', 3)">✨ 大型特殊菇 (3小時)</button>
-                            <button onclick="quickUpdateStatus('${id}', '火蘑菇', '大型', 4)">🔥 大型火菇 (4小時)</button>
-                            <button onclick="quickUpdateStatus('${id}', '一般紅蘑菇', '普通', 1)">🔴 普通紅菇 (1小時)</button>
-                            <button class="btn-no-shroom" onclick="quickUpdateStatus('${id}', '暫無蘑菇', '無', 0)">❌ 目前沒長菇 (清除卡片)</button>
-                        </div>
-                    </div>
-
                     <div class="card-footer">
                         <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
                         <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" id="alert-btn-${id}" onclick="toggleAlert('${id}')">${alertBtnText}</button>
@@ -394,21 +379,17 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
         } else {
             mushroomBoard.innerHTML = htmlContent;
-            // 立即執行一次時間注入，防止出現空白
             updateTickCounters();
         }
     }
 
-    // ========================================================
-    // 🌟 獨立輕量計時器：只修改文字（.textContent），杜絕狂跳與破圖
-    // ========================================================
+    // 獨立微量計時器更新
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
             const item = localMushroomsData[id];
             const textElement = document.getElementById(`time-text-${id}`);
             const cardElement = document.getElementById(`card-${id}`);
-            const quickPanel = document.getElementById(`quick-panel-${id}`);
             const editBtn = document.getElementById(`edit-btn-${id}`);
             const alertBtn = document.getElementById(`alert-btn-${id}`);
             const verifyBtn = document.getElementById(`verify-btn-${id}`);
@@ -423,7 +404,6 @@ document.addEventListener("DOMContentLoaded", () => {
             let isOver5Min = false;
 
             if (msLeft > 0) {
-                // 🟢 進行中倒數
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
@@ -431,9 +411,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 textElement.textContent = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
                 textElement.className = "countdown-text";
             } else {
-                const bufferLeft = 300000 + msLeft; // 5分鐘
+                const bufferLeft = 300000 + msLeft; 
                 if (bufferLeft > 0) {
-                    // 🔴 5分鐘重生倒數
                     const totalSec = Math.floor(bufferLeft / 1000);
                     const m = Math.floor(totalSec / 60);
                     const s = totalSec % 60;
@@ -445,28 +424,24 @@ document.addEventListener("DOMContentLoaded", () => {
                         triggerWebNotification(item);
                     }
                 } else {
-                    // 🔘 超過5分鐘，過期狀態
                     textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
                     textElement.className = "countdown-text need-update-period";
                     isOver5Min = true;
                 }
             }
 
-            // 💡 精準動態控制介面，不再依賴重繪 HTML 的 class
+            // 🌟 核心控制：完全移除過期時隱藏編輯按鈕的邏輯，保留更新按鈕供新菇輸入
             if (isOver5Min) {
                 cardElement?.classList.add("card-expired-mode");
-                if (quickPanel) quickPanel.style.display = "block";
-                if (editBtn) editBtn.style.display = "none";
                 if (alertBtn) alertBtn.style.display = "none";
                 if (verifyBtn) verifyBtn.style.display = "none";
                 if (staleBadge) staleBadge.style.display = "none";
+                if (editBtn) editBtn.style.display = "inline-block"; // 確保更新按鈕存在
             } else {
                 cardElement?.classList.remove("card-expired-mode");
-                if (quickPanel) quickPanel.style.display = "none";
                 if (editBtn) editBtn.style.display = "inline-block";
                 if (alertBtn) alertBtn.style.display = "inline-block";
                 
-                // 檢查久未更新狀態（15分鐘）
                 const lastUpdatedTime = item.updatedAt || item.createdAt;
                 const isStale = (Date.now() - lastUpdatedTime) > 900000;
                 if (staleBadge) staleBadge.style.display = isStale ? "block" : "none";
@@ -512,9 +487,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
         activePanels[id].edit = !activePanels[id].edit;
         
-        // 打開面板時，動態把當前倒數的時分秒塞進輸入框，方便微調
         if (activePanels[id].edit) {
-            renderBoard(); // 刷新一次帶入結構
+            renderBoard(); 
             const item = localMushroomsData[id];
             if (item) {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
@@ -555,41 +529,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }).catch(err => alert("更新失敗：" + err.message));
     };
 
-    window.quickUpdateStatus = (id, type, size, hours) => {
-        if (!window.fbDB) return;
-        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
-
-        if (type === "暫無蘑菇") {
-            window.fbRemove(shroomRef)
-                .then(() => alert("❌ 已同步回報：卡片已下架。"))
-                .catch(err => err);
-            return;
-        }
-
-        let maxVal = 30;
-        if (size === "小型") maxVal = 25;
-        else if (size === "普通") maxVal = 30;
-        else if (size === "大型") maxVal = 35;
-        else if (size === "巨大") maxVal = 40;
-
-        const iconPath = getIconPath(type);
-        const now = Date.now();
-
-        window.fbUpdate(shroomRef, {
-            type: type,
-            size: size,
-            mushroomIcon: iconPath,
-            currentPlayers: 0,
-            maxPlayers: maxVal,
-            timeReported: { hours: hours, minutes: 0, seconds: 0 },
-            createdAt: now,
-            updatedAt: now
-        }).then(() => {
-            delete firedAlerts[id];
-            alert(`🎉 快速更新成功！`);
-        }).catch(err => err);
-    };
-
     window.toggleAlert = (id) => {
         const index = alertEnabledList.indexOf(id);
         if (index > -1) {
@@ -620,7 +559,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    // 多軌輪詢
     function bootstrapFilter() {
         const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
         if (availableData) {
