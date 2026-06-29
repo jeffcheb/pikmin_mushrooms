@@ -433,7 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = htmlContent;
             updateTickCounters();
         }
-    }
+    });
 
     // 獨立微量計時器更新
     function updateTickCounters() {
