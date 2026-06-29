@@ -233,17 +233,24 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // 🌟 修正順序版：將水晶挪到水前面，防止關鍵字打架！
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
         const typeStr = String(type);
 
-        if (typeStr.includes("火")) return "picture/mushroom_fire.png";
-        if (typeStr.includes("水")) return "picture/mushroom_water.png";
+        // 🟢 先判斷字數較多、較特殊的「水晶」
         if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
+        
+        // 🔵 再判斷一般的「水」
+        if (typeStr.includes("水")) return "picture/mushroom_water.png";
+        
+        // 💥 其他元素菇系列
+        if (typeStr.includes("火")) return "picture/mushroom_fire.png";
         if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
         if (typeStr.includes("電")) return "picture/mushroom_electric.png";
         if (typeStr.includes("冰")) return "picture/mushroom_ice.png"; 
         
+        // 🎨 普通/巨大蘑菇系列 (mushroom_顏色.png)
         if (typeStr.includes("紅")) return "picture/mushroom_red.png";
         if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
         if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
