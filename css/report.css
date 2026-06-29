@@ -590,3 +590,29 @@
         width: fit-content !important;
     }
 }
+/* 🌟 右上角精簡型釘選按鈕 */
+.btn-pin-top {
+    background: none !important;
+    border: 1px solid #bdc3c7 !important;
+    border-radius: 50% !important;
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: none !important; /* 防止在清單模式下被強行拉伸 */
+    cursor: pointer;
+}
+
+/* 釘選發亮時，圓圈背景稍微帶點黃金色 */
+.btn-pin-top.active {
+    background-color: #f1c40f !important;
+    border-color: #f1c40f !important;
+    color: white !important;
+}
+
+.btn-pin-top:hover {
+    transform: scale(1.1) !important;
+}
