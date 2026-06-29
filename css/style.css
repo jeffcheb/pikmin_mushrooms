@@ -222,3 +222,112 @@ input:disabled, select:disabled {
         margin: 15px auto;
     }
 }
+/* 使用條款滿版遮罩 */
+.terms-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* 暗色半透明背景 */
+    backdrop-filter: blur(5px); /* 背景模糊效果，極具質感 */
+    z-index: 99999; /* 確保在最上層 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* 條款白色彈窗主體 */
+.terms-modal-box {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 550px;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh; /* 防止超出手機螢幕 */
+}
+
+.terms-modal-box h3 {
+    margin-top: 0;
+    color: #2c3e50;
+    text-align: center;
+    font-size: 1.4rem;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 12px;
+}
+
+/* 條款捲軸內文區 */
+.terms-content {
+    flex: 1;
+    overflow-y: auto; /* 內文過長時自動出現捲軸 */
+    padding-right: 8px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #34495e;
+}
+
+.terms-content h4 {
+    margin: 14px 0 6px 0;
+    color: #e67e22; /* 溫暖的橘色小標 */
+}
+
+.terms-content p {
+    margin: 0 0 10px 0;
+}
+
+/* 按鈕與勾選區 */
+.terms-actions {
+    border-top: 2px solid #ecf0f1;
+    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.checkbox-container {
+    font-size: 0.95rem;
+    color: #2c3e50;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+    font-weight: bold;
+}
+
+/* 進入網站按鈕基本設定 */
+#btn-enter-site {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 未同意時的按鈕外觀 (灰色、禁止點擊) */
+.btn-enter-disabled {
+    background-color: #bdc3c7 !important;
+    color: #7f8c8d !important;
+    cursor: not-allowed !important;
+}
+
+/* 同意後的按鈕外觀 (皮克敏風格的活力綠色) */
+.btn-enter-active {
+    background-color: #2ecc71 !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+.btn-enter-active:hover {
+    background-color: #27ae60 !important;
+    transform: translateY(-1px);
+}
