@@ -368,10 +368,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const dynamicImgSrc = getIconPath(item.type);
 
+            // 🌟 重新整理 HTML 字串（將釘選按鈕移到右上角，並移除底部釘選）
             htmlContent += `
-                <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
+                <div class="mushroom-card ${isPinned} ${expiredCardClass}" data-id="${id}" id="card-${id}">
                     
-                    <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
+                    ${isStale && !showQuickPanel ? `
+                    <div id="stale-badge-${id}" class="stale-warning-badge">⚠️ 許久未更新</div>
+                    ` : ''}
 
                     <div class="card-header">
                         <img src="${dynamicImgSrc}" class="shroom-img" alt="${item.type}">
@@ -379,7 +382,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             <h4>[${item.size}] ${item.type}</h4>
                             <p>📍 ${item.city}${item.district} - ${item.locationName}</p>
                         </div>
-                        <button class="btn-history-trigger" onclick="toggleHistoryPanel('${id}')" title="顯示上次更新時間">◎</button>
+                        
+                        <div class="header-controls-group" style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
+                            <button class="btn-sm btn-pin-top ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')" title="${pinBtnText}">
+                                ${isPinned ? '⭐' : '📌'}
+                            </button>
+                            <button class="btn-history-trigger" onclick="toggleHistoryPanel('${id}')" title="顯示上次更新時間">◎</button>
+                        </div>
                     </div>
 
                     <div id="history-panel-${id}" class="history-info-panel" style="display: ${isHistoryOpen};">
@@ -395,14 +404,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         <h5>✏️ 修改目前即時狀態：</h5>
                         <div class="edit-row">
                             <label>👥 人數：</label>
-                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${item.currentPlayers}">
+                            <input type="number" id="edit-players-${id}" min="0" max="${displayMaxPlayers}" value="${inputPlayersVal}">
                         </div>
                         <div class="edit-row">
                             <label>⏳ 時間：</label>
                             <div class="edit-time-inputs">
-                                <input type="number" id="edit-h-${id}" min="0" max="23" value="0" placeholder="時">:
-                                <input type="number" id="edit-m-${id}" min="0" max="59" value="0" placeholder="分">:
-                                <input type="number" id="edit-s-${id}" min="0" max="59" value="0" placeholder="秒">
+                                <input type="number" id="edit-h-${id}" min="0" max="23" value="${inputHVal}" placeholder="時">:
+                                <input type="number" id="edit-m-${id}" min="0" max="59" value="${inputMVal}" placeholder="分">:
+                                <input type="number" id="edit-s-${id}" min="0" max="59" value="${inputSVal}" placeholder="秒">
                             </div>
                         </div>
                         <div class="edit-actions">
@@ -412,15 +421,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-sm btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')">${pinBtnText}</button>
-                        <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" id="alert-btn-${id}" onclick="toggleAlert('${id}')">${alertBtnText}</button>
+                        <button class="btn-sm btn-alert ${isAlertEnabled ? 'btn-alert-on' : 'btn-alert-off'}" id="alert-btn-${id}">${alertBtnText}</button>
                         <button class="btn-sm btn-edit-trigger" id="edit-btn-${id}" onclick="toggleEditPanel('${id}')">✏️ 更新狀態</button>
                         <button class="btn-sm btn-verify" id="verify-btn-${id}" style="display:none;" onclick="verifyMushroomStatus('${id}')">✅ 核實狀態</button>
                     </div>
                 </div>
             `;
-        });
-
         if (renderedCount === 0) {
             mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
         } else {
