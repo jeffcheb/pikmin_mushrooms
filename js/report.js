@@ -1,6 +1,56 @@
 // js/report.js
 
 document.addEventListener("DOMContentLoaded", () => {
+    // 控制使用條款彈窗的邏輯
+document.addEventListener("DOMContentLoaded", () => {
+    const termsOverlay = document.getElementById("terms-overlay");
+    const chkAgreeTerms = document.getElementById("chk-agree-terms");
+    const btnEnterSite = document.getElementById("btn-enter-site");
+
+    if (!termsOverlay || !chkAgreeTerms || !btnEnterSite) return;
+
+    // 1. 檢查使用者以前是否曾經同意過條款
+    const hasAgreed = localStorage.getItem("user_agreed_mushrooms_terms");
+
+    if (!hasAgreed) {
+        // 如果沒同意過，強制顯示彈窗遮罩，並禁止後面網頁捲動
+        termsOverlay.style.display = "flex";
+        document.body.style.overflow = "hidden";
+    } else {
+        // 如果同意過，保持隱藏，網頁正常運作
+        termsOverlay.style.display = "none";
+    }
+
+    // 2. 監聽勾選狀態切換（Checkbox change）
+    chkAgreeTerms.addEventListener("change", () => {
+        if (chkAgreeTerms.checked) {
+            // 啟用按鈕，換上綠色活力樣式
+            btnEnterSite.disabled = false;
+            btnEnterSite.className = "btn-enter-active";
+        } else {
+            // 停用按鈕，換回灰色死板樣式
+            btnEnterSite.disabled = true;
+            btnEnterSite.className = "btn-enter-disabled";
+        }
+    });
+
+    // 3. 點擊「進入網站」按鈕後的行為
+    btnEnterSite.addEventListener("click", () => {
+        if (chkAgreeTerms.checked) {
+            // 將同意紀錄永久存入瀏覽器 localStorage
+            localStorage.setItem("user_agreed_mushrooms_terms", "true");
+            
+            // 關閉遮罩並恢復網頁捲動
+            termsOverlay.style.display = "none";
+            document.body.style.overflow = "auto";
+            
+            // 溫馨小提醒 (可選：引導玩家開啟推播)
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+        }
+    });
+});
     const reportForm = document.getElementById("report-form");
     const mushroomBoard = document.getElementById("mushroom-board");
     const mushroomSize = document.getElementById("mushroom-size");
