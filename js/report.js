@@ -246,14 +246,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const nowTimestamp = Date.now();
 
             // 1. 先找出是否有「同縣市、同名稱」的現有蘑菇
+            // ========================================================
+            // 🌟 核心修正：大表單提交時，強制比對所有蘑菇（含已重生的死菇）
+            // ========================================================
             let existingId = null;
-            let finalDistrictsArray = [district.trim()]; // 預設把本次回報的行政區放進去
+            let finalDistrictsArray = [district.trim()]; 
 
+            // 這裡會走訪所有資料庫內的蘑菇，不管牠有沒有過期！
             for (const [id, item] of Object.entries(localMushroomsData)) {
+                // 強制去空格比對縣市與地點名稱
                 if (item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
-                    existingId = id;
+                    existingId = id; // 🎯 只要名字一樣，就算牠是過期的「已重生」狀態，也成功抓到牠的 ID！
                     
-                    // 🌟 核心功能：取出原本資料庫內該地點已有的行政區陣列
+                    // 取出舊的行政區陣列並追加新區
                     let oldDistricts = [];
                     if (Array.isArray(item.district)) {
                         oldDistricts = item.district.map(d => d.trim());
@@ -261,18 +266,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         oldDistricts = [item.district.trim()];
                     }
 
-                    // 🌟 把新的行政區加進去，並使用 Set 去除重複的行政區
                     const mergedSet = new Set([...oldDistricts, district.trim()]);
                     finalDistrictsArray = Array.from(mergedSet);
                     
-                    break; // 找到同名同縣市了，中斷迴圈
+                    break; 
                 }
             }
 
-            // 2. 準備要寫入/更新的蘑菇完整資料
+            // 準備要送入的全新滿血資料
             const mushroomData = {
                 city, 
-                district: finalDistrictsArray, // 🌟 這裡固定送出合併後的行政區陣列
+                district: finalDistrictsArray, 
                 locationName, 
                 type, 
                 size,
@@ -280,27 +284,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentPlayers: players, 
                 maxPlayers: maxPlayersVal,
                 timeReported: { hours, minutes, seconds },
-                createdAt: nowTimestamp, 
+                createdAt: nowTimestamp, // 🌟 核心：把原本的舊菇 createdAt 刷新為「現在」，牠就不會再是已重生狀態，而是滿血復活重新倒數！
                 updatedAt: nowTimestamp
             };
 
-            // 3. 根據有無找到現有資料，決定是覆蓋更新（Update）還是全新發佈（Push）
             if (existingId) {
-                // 原本就有這朵菇 ➡️ 更新狀態，並自動擴增行政區陣列
+                // 🔄 找到同名菇（不論活著還是已重生），直接原地覆蓋更新，並追加行政區！
                 const targetRef = window.fbRef(window.fbDB, `mushrooms/${existingId}`);
-                
-                // 為了避免洗掉 createdAt，這裡只更新變動欄位，或是更新全拿（看你的需求，這裡將 createdAt 維持原本的，還是覆蓋看舊邏輯）
-                // 為了完全符合你原本「覆蓋更新」的行為：
                 window.fbUpdate(targetRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
                         document.getElementById("district").disabled = true;
                         delete firedAlerts[existingId];
-                        alert(`🔄 偵測到相同地點！已自動追加行政區並覆蓋更新！`);
+                        alert(`🔄 成功讓【已重生蘑菇】原地滿血復活並追加行政區！`);
                     })
                     .catch((error) => alert("更新失敗：" + error.message));
             } else {
-                // 雲端完全沒有同名同縣市的菇 ➡️ 全新發佈
+                // 🎉 完全沒這朵菇，正常建立全新的新卡片
                 const shroomRef = window.fbRef(window.fbDB, "mushrooms");
                 window.fbPush(shroomRef, mushroomData)
                     .then(() => {
