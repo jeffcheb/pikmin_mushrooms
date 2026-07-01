@@ -589,6 +589,53 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
         } else {
             mushroomBoard.innerHTML = htmlContent;
+            // 🌟 核心地圖連動：每次看板刷新時，同步重新繪製地圖上的大頭針
+        if (markerGroup) {
+            markerGroup.clearLayers(); // 先清空上一秒的所有大頭針，避免重疊
+
+            let hasValidMarker = false;
+            let bounds = []; // 用來自動縮放地圖，包住所有蘑菇的坐標陣列
+
+            keys.forEach(id => {
+                const item = localMushroomsData[id];
+                if (!item) return;
+
+                // 進行跟看板一模一樣的縣市/行政區/關鍵字篩選（確保地圖跟下方卡片同步連動）
+                if (cityFilter !== "all" && item.city !== cityFilter) return;
+                if (distFilter !== "all") {
+                    let matchPrimaryDistrict = Array.isArray(item.district) ? item.district.includes(distFilter) : item.district === distFilter;
+                    if (!matchPrimaryDistrict && !item.locationName.includes(distFilter)) return;
+                }
+                if (keyword !== "" && !item.locationName.toLowerCase().includes(keyword) && !item.type.toLowerCase().includes(keyword)) return;
+
+                // 如果這朵蘑菇有填經緯度，就把它畫到地圖上
+                if (item.lat !== undefined && item.lat !== null && item.lng !== undefined && item.lng !== null) {
+                    
+                    // 點擊大頭針時要彈出來的泡泡視窗（Popup）內容
+                    const popupContent = `
+                        <div style="font-family: sans-serif; font-size: 14px;">
+                            <strong style="color: #d9383a;">[${item.size}] ${item.type}</strong><br>
+                            📍 ${item.city}${Array.isArray(item.district) ? item.district.join('/') : item.district} - ${item.locationName}<br>
+                            👥 人數: ${item.currentPlayers} 人<br>
+                            <hr style="margin: 5px 0; border: 0; border-top: 1px solid #ccc;">
+                            <a href="https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}" target="_blank" style="color: #1890ff; font-weight: bold; text-decoration: none;">🚗 開啟 Google 導航</a>
+                        </div>
+                    `;
+
+                    // 建立大頭針並加入地圖
+                    const marker = L.marker([item.lat, item.lng]).bindPopup(popupContent);
+                    markerGroup.addLayer(marker);
+
+                    bounds.push([item.lat, item.lng]);
+                    hasValidMarker = true;
+                }
+            });
+
+            // 🤖 貼心功能：如果地圖上有香菇，地圖會自動縮放並移動鏡頭，把所有香菇完美包進畫面中！
+            if (hasValidMarker && bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
+        }
             updateTickCounters();
         }
     }
