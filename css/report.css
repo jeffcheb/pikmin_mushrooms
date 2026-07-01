@@ -654,3 +654,32 @@
     white-space: nowrap !important;
     flex-shrink: 0 !important;
 }
+/* 滿員卡片自動淡化 */
+.mushroom-card.is-full {
+    opacity: 0.5;
+    filter: grayscale(30%);
+    border-style: dashed !important;
+}
+
+/* 依蘑菇種類呈現專屬邊框顏色 */
+.border-fire { border-left: 6px solid #ff4d4d !important; }    /* 火 */
+.border-water { border-left: 6px solid #3399ff !important; }   /* 水 */
+.border-crystal { border-left: 6px solid #cc66ff !important; } /* 水晶 */
+.border-poison { border-left: 6px solid #993399 !important; }  /* 毒 */
+.border-normal { border-left: 6px solid #cccccc !important; }  /* 一般 (灰/白等) */
+
+/* 快填按鈕樣式 */
+.btn-fast-fill {
+    background-color: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+    padding: 2px 8px;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-fast-fill:hover {
+    background-color: #1890ff;
+    color: #fff;
+}
