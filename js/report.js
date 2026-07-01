@@ -245,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const nowTimestamp = Date.now();
 
             const mushroomData = {
-                city, district, locationName, type, size,
+                city, district: [district.trim()], locationName, type, size,
                 mushroomIcon: iconPath,
                 currentPlayers: players, maxPlayers: maxPlayersVal,
                 timeReported: { hours, minutes, seconds },
