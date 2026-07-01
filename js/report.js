@@ -439,11 +439,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const expireTime = item.createdAt + totalReportedMs;
                 
+                // 🌟 核心修正：如果這朵菇過期超過 3 天
                 if (now > expireTime && (now - expireTime) > THREE_DAYS_MS) {
-                    console.log(`🗑️ 偵測到過期超過 3 天的舊蘑菇 [${item.locationName}]，自動從雲端刪除。`);
-                    const deleteRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
-                    window.fbRemove(deleteRef).catch(err => console.error("TTL 刪除失敗:", err));
-                    delete localMushroomsData[id];
+                    
+                    // 檢查這朵菇是不是已經被重置過了，避免重複寫入 Firebase
+                    if (item.type !== "未指定" || item.currentPlayers !== 0) {
+                        console.log(`🧹 偵測到 3 天未更新點 [${item.locationName}]，自動清空即時狀態，保留據點位置。`);
+                        
+                        const updateRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+                        
+                        // 🎯 只清除變動欄位，將種類改為未指定、人數變 0、時間歸零，並把更新時間拉到現在
+                        window.fbUpdate(updateRef, {
+                            type: "未指定",
+                            size: "未知",
+                            mushroomIcon: "picture/mushroom_monthly_special.png", // 變回預設圖標
+                            currentPlayers: 0,
+                            timeReported: { hours: 0, minutes: 0, seconds: 0 },
+                            updatedAt: now,
+                            createdAt: now // 重設基準時間，防止它在下一秒又被判定過期
+                        }).catch(err => console.error("據點重置失敗:", err));
+                    }
                 }
             });
 
@@ -732,7 +747,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const msLeft = expireTime - Date.now();
 
             let isOver5Min = false;
-
+            // 🌟 核心新增：如果這朵菇是過期被重置的固定據點
+            if (item.type === "未指定") {
+                textElement.textContent = `💤 據點休眠中 (等待新菇情報)`;
+                textElement.className = "countdown-text";
+                if (staleBadge) staleBadge.style.display = "none";
+                if (verifyBtn) verifyBtn.style.display = "none";
+                return; // 直接跳過後面的時間計算
+            }
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
