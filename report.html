@@ -62,10 +62,7 @@
     </div>
 </div>
 
-<form id="report-form" action="" method="post">
-
-<form id="report-form">
-    <main class="main-container">
+<main class="main-container">
         
         <section class="card report-section">
             <h2>📢 發佈蘑菇情報</h2>
@@ -75,13 +72,13 @@
                         <label for="city">縣市：</label>
                         <select id="city" name="city" required>
                             <option value="" disabled selected>請選擇縣市</option>
-                            </select>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="district">行政區：</label>
                         <select id="district" name="district" required disabled>
                             <option value="" disabled selected>請先選擇縣市</option>
-                            </select>
+                        </select>
                     </div>
                 </div>
 
@@ -89,15 +86,16 @@
                     <label for="location-name">具體地點名稱：</label>
                     <input type="text" id="location-name" name="locationName" placeholder="例：捷運站3號出口" required>
                 </div>
+                
                 <div class="form-row">
-    <label>🗺️ 經緯度（選填）：</label>
-    <div style="display: flex; gap: 10px;">
-        <input type="number" id="lat" step="any" placeholder="緯度">
-        <input type="number" id="lng" step="any" placeholder="經度">
-    </div>
-</div>
-    <small style="color: #888;">💡 提示：可以在 Google Map 上長按地點，即可複製並貼上經緯度。</small>
-</div>
+                    <label>🗺️ 經緯度（選填）：</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="lat" step="any" placeholder="緯度">
+                        <input type="number" id="lng" step="any" placeholder="經度">
+                    </div>
+                </div>
+                <small style="color: #888; display: block; margin-top: 5px; margin-bottom: 15px;">💡 提示：可以在 Google Map 上長按地點，即可複製並貼上經緯度。</small>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="mushroom-type">蘑菇種類：</label>
@@ -137,7 +135,7 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="current-players">目前參戰人數：</label>
+                        <label for="current-players">目參戰人數：</label>
                         <input type="number" id="current-players" name="currentPlayers" min="0" value="1" required>
                     </div>
                     <div class="form-group time-group">
@@ -153,11 +151,12 @@
                 </div>
 
                 <button type="submit" class="btn-primary">發佈情報</button>
-            </form>
-        </section>
+            </form> </section>
         
         <hr class="divider">
+        
         <div id="map" style="width: 100%; height: 400px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc; display: block;"></div>
+        
         <section class="board-section">
             <div class="board-header">
                 <h2>🌍 即時蘑菇看板</h2>
@@ -173,22 +172,24 @@
                         <select id="filter-district" disabled>
                             <option value="all">所有行政區</option>
                         </select>
+                        
                         <select id="sort-method">
-    <option value="default">📌 預設排序</option>
-    <option value="type">🍄 按蘑菇種類</option>
-    <option value="size">⚖️ 按蘑菇大小</option>
-    <option value="time">⏳ 按剩餘時間</option>
-    <option value="update">🕒 按上次更新時間</option>
-    <option value="players">👥 按目前總人數</option>
-</select>
+                            <option value="default">📌 預設排序</option>
+                            <option value="type">🍄 按蘑菇種類</option>
+                            <option value="size">⚖️ 按蘑菇大小</option>
+                            <option value="time">⏳ 按剩餘時間</option>
+                            <option value="update">🕒 按上次更新時間</option>
+                            <option value="players">👥 按目前總人數</option>
+                        </select>
                         <button id="btn-auto-location" class="btn-sm" type="button" title="自動定位目前區域">🎯 定位</button>
                     </div>
                     <div class="view-toggles">
                         <button type="button" id="btn-grid-view" class="active" title="網格模式">🔲</button>
-<button type="button" id="btn-list-view" title="清單模式">📄</button>
+                        <button type="button" id="btn-list-view" title="清單模式">📄</button>
                     </div>
                 </div>
             </div>
+            
             <div id="mushroom-board" class="board-container grid-view">
                 <p class="loading-text">載入即時情報中...</p>
             </div>
