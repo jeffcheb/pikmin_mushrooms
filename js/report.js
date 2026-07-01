@@ -447,14 +447,12 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (cityFilter !== "all" && item.city !== cityFilter) return;
             if (distFilter !== "all") {
-                // 🌟 核心修改：判定資料庫內的 district 是否包含網頁目前篩選的行政區
                 let matchPrimaryDistrict = false;
                 if (Array.isArray(item.district)) {
                     matchPrimaryDistrict = item.district.includes(distFilter);
                 } else {
                     matchPrimaryDistrict = item.district === distFilter;
                 }
-                
                 const matchLocationText = item.locationName.includes(distFilter);
                 if (!matchPrimaryDistrict && !matchLocationText) return;
             }
@@ -488,6 +486,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const dynamicImgSrc = getIconPath(item.type);
 
+            // 🌟 1. 這裡動態將行政區陣列轉為漂亮的小標籤 HTML
+            let districtBadgesHTML = "";
+            if (Array.isArray(item.district)) {
+                item.district.forEach(dist => {
+                    districtBadgesHTML += `<span class="dist-badge">${dist}</span>`;
+                });
+            } else if (item.district) {
+                districtBadgesHTML = `<span class="dist-badge">${item.district}</span>`;
+            }
+
+            // 🌟 2. 這裡才是完整的 htmlContent 拼接（包含了改好的新頭部，和原本的身體與腳）
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
                     <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
@@ -496,7 +505,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         <img src="${dynamicImgSrc}" class="shroom-img" alt="${item.type}">
                         <div class="shroom-info">
                             <h4>[${item.size}] ${item.type}</h4>
-                            <p>📍 ${item.city}${item.district} - ${item.locationName}</p>
+                            <div class="location-container">
+                                <span class="city-text">📍 ${item.city}</span>
+                                <div class="badges-group">${districtBadgesHTML}</div>
+                                <span class="location-name-text">- ${item.locationName}</span>
+                            </div>
                         </div>
                         
                         <div class="header-controls-group" style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
