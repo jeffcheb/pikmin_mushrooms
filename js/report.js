@@ -256,10 +256,13 @@ document.addEventListener("DOMContentLoaded", () => {
             // 🟢 修改 js/report.js 這段比對迴圈：對齊 Discord 的強制去空格機制
             let existingId = null;
             for (const [id, item] of Object.entries(localMushroomsData)) {
-                // 將資料庫的地點和網頁剛填入的地點，通通加上 .trim() 確保沒有隱形空白干擾
+                // 🌟 新增：相容陣列格式，把資料庫裡的行政區陣列轉回字串，或單一字串直接處理
+                const itemDistrictStr = Array.isArray(item.district) ? item.district.join('/') : String(item.district);
+                
+                // 比對時將雙方都加上 .trim() 去除隱形空格
                 if (
                     item.city.trim() === city.trim() && 
-                    item.district.trim() === district.trim() && 
+                    itemDistrictStr.trim() === district.trim() && 
                     item.locationName.trim() === locationName.trim()
                 ) {
                     existingId = id;
@@ -401,7 +404,14 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (cityFilter !== "all" && item.city !== cityFilter) return;
             if (distFilter !== "all") {
-                const matchPrimaryDistrict = item.district === distFilter;
+                // 🌟 核心修改：判定資料庫內的 district 是否包含網頁目前篩選的行政區
+                let matchPrimaryDistrict = false;
+                if (Array.isArray(item.district)) {
+                    matchPrimaryDistrict = item.district.includes(distFilter);
+                } else {
+                    matchPrimaryDistrict = item.district === distFilter;
+                }
+                
                 const matchLocationText = item.locationName.includes(distFilter);
                 if (!matchPrimaryDistrict && !matchLocationText) return;
             }
