@@ -232,13 +232,22 @@
     color: #e74c3c !important; /* 🔴 5分鐘重生倒數紅色 */
 }
 
+/* 🟢 修正後的卡片底部按鈕區塊 */
 .card-footer {
     display: flex;
-    gap: 8px;
-    padding: 12px 16px;
-    background: #f8fafc;
-    border-top: 1px solid #f1f5f9;
-    border-radius: 0 0 12px 12px;
+    justify-content: flex-end; /* 🌟 強制讓所有按鈕靠右對齊 */
+    align-items: center;
+    gap: 8px; /* 按鈕與按鈕之間的間距 */
+    width: 100%;
+    margin-top: 15px; /* 與上方卡片內容保持舒適的距離 */
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9; /* 加一條淡淡的分割線，看起來更美觀 */
+}
+
+/* 確保按鈕本身不會因為外層擠壓而變形 */
+.card-footer .btn-sm {
+    white-space: nowrap; /* 🌟 防止按鈕內的文字斷行 */
+    flex-shrink: 0;      /* 🌟 防止按鈕被壓扁 */
 }
 
 /* --- 🔘 獨立按鈕與防震動控制 --- */
