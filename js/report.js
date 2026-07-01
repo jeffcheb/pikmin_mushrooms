@@ -1,5 +1,25 @@
 // js/report.js
 
+// 🌟 將地圖相關全域變數宣告在最頂層
+let map; // Leaflet 地圖物件
+let markerGroup; // 用來集中管理大頭針的圖層群組
+
+// 初始化地圖的函式（預設中心點設在高雄，縮放程度 13）
+function initLeafletMap() {
+    if (!document.getElementById('map')) return;
+    
+    // 預設坐標（例如：高雄前鎮 22.613, 120.316）
+    map = L.map('map').setView([22.613, 120.316], 13);
+
+    // 載入 OpenStreetMap 免費圖資
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // 建立一個大頭針群組，方便之後每次重新整理時一鍵清空舊點
+    markerGroup = L.layerGroup().addTo(map);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     // ========================================================
     // 📜 核心新增：使用條款與免責聲明彈窗控制邏輯
@@ -50,29 +70,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-    let map; // Leaflet 地圖物件
-let markerGroup; // 用來集中管理大頭針的圖層群組
 
-// 初始化地圖的函式（預設中心點設在高雄，縮放程度 13）
-function initLeafletMap() {
-    if (!document.getElementById('map')) return;
-    
-    // 預設坐標（例如：高雄前鎮 22.613, 120.316）
-    map = L.map('map').setView([22.613, 120.316], 13);
-
-    // 載入 OpenStreetMap 免費圖資
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
-
-    // 建立一個大頭針群組，方便之後每次重新整理時一鍵清空舊點
-    markerGroup = L.layerGroup().addTo(map);
-}
-
-// 確保網頁載入完成後執行地圖初始化
-document.addEventListener("DOMContentLoaded", () => {
+    // 🌟 在這裡呼叫地圖初始化
     initLeafletMap();
-});
+
     // ========================================================
     // 🌍 原有功能：看板變數與核心元件初始化
     // ========================================================
@@ -241,8 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 情報發佈 (防重複、原地更新)
-    // 情報發佈 (防重複、原地更新、自動合併新行政區)
+    // 情報發佈 (防重複、原地更新、自動合併新行政區、支援已重生死菇復活)
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -266,21 +266,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
+            
             // 抓取選填的經緯度
             const latVal = document.getElementById("lat").value ? parseFloat(document.getElementById("lat").value) : null;
             const lngVal = document.getElementById("lng").value ? parseFloat(document.getElementById("lng").value) : null;
-            // 1. 先找出是否有「同縣市、同名稱」的現有蘑菇
-            // ========================================================
+            
             // 🌟 核心修正：大表單提交時，強制比對所有蘑菇（含已重生的死菇）
-            // ========================================================
             let existingId = null;
             let finalDistrictsArray = [district.trim()]; 
 
-            // 這裡會走訪所有資料庫內的蘑菇，不管牠有沒有過期！
             for (const [id, item] of Object.entries(localMushroomsData)) {
                 // 強制去空格比對縣市與地點名稱
                 if (item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
-                    existingId = id; // 🎯 只要名字一樣，就算牠是過期的「已重生」狀態，也成功抓到牠的 ID！
+                    existingId = id; 
                     
                     // 取出舊的行政區陣列並追加新區
                     let oldDistricts = [];
@@ -310,13 +308,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 timeReported: { hours, minutes, seconds },
                 createdAt: nowTimestamp, 
                 updatedAt: nowTimestamp,
-                // 🌟 新增經緯度欄位
                 lat: latVal,
                 lng: lngVal
             };
 
             if (existingId) {
-                // 🔄 找到同名菇（不論活著還是已重生），直接原地覆蓋更新，並追加行政區！
                 const targetRef = window.fbRef(window.fbDB, `mushrooms/${existingId}`);
                 window.fbUpdate(targetRef, mushroomData)
                     .then(() => {
@@ -327,7 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     })
                     .catch((error) => alert("更新失敗：" + error.message));
             } else {
-                // 🎉 完全沒這朵菇，正常建立全新的新卡片
                 const shroomRef = window.fbRef(window.fbDB, "mushrooms");
                 window.fbPush(shroomRef, mushroomData)
                     .then(() => {
@@ -339,6 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
     // 圖片路抓取引擎
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
@@ -375,22 +371,16 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // 🌟 核心新增：3 天舊資料自動清理機制 (TTL)
             const now = Date.now();
-            const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // 3 天的毫秒數
+            const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; 
 
             Object.entries(localMushroomsData).forEach(([id, item]) => {
-                // 計算這朵菇原本預計的總倒數時間（毫秒）
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const expireTime = item.createdAt + totalReportedMs;
                 
-                // 條件：如果當前時間已經超過「過期時間」，而且距離過期已經超過 3 天 (3天沒人理牠)
                 if (now > expireTime && (now - expireTime) > THREE_DAYS_MS) {
                     console.log(`🗑️ 偵測到過期超過 3 天的舊蘑菇 [${item.locationName}]，自動從雲端刪除。`);
-                    
-                    // 發送刪除指令到 Firebase
                     const deleteRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
                     window.fbRemove(deleteRef).catch(err => console.error("TTL 刪除失敗:", err));
-                    
-                    // 同步從本地快照中移除，避免當次重複渲染
                     delete localMushroomsData[id];
                 }
             });
@@ -413,6 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (keys.length === 0) {
             mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報，快去發佈第一個吧！</p>';
+            if (markerGroup) markerGroup.clearLayers(); // 沒蘑菇時清空地圖點
             return;
         }
 
@@ -513,7 +504,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const dynamicImgSrc = getIconPath(item.type);
 
-            // 🌟 1. 這裡動態將行政區陣列轉為漂亮的小標籤 HTML
+            // 🌟 1. 動態將行政區陣列轉為漂亮的小標籤 HTML
             let districtBadgesHTML = "";
             if (Array.isArray(item.district)) {
                 item.district.forEach(dist => {
@@ -523,7 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 districtBadgesHTML = `<span class="dist-badge">${item.district}</span>`;
             }
 
-            // 🌟 2. 這裡才是完整的 htmlContent 拼接（包含了改好的新頭部，和原本的身體與腳）
+            // 🌟 2. 卡片完整的 htmlContent 拼接
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
                     <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
@@ -589,18 +580,19 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
         } else {
             mushroomBoard.innerHTML = htmlContent;
-            // 🌟 核心地圖連動：每次看板刷新時，同步重新繪製地圖上的大頭針
+        }
+
+        // 🌟 3. 核心地圖連動：在 keys 走訪完成後繪製標記
         if (markerGroup) {
-            markerGroup.clearLayers(); // 先清空上一秒的所有大頭針，避免重疊
+            markerGroup.clearLayers(); 
 
             let hasValidMarker = false;
-            let bounds = []; // 用來自動縮放地圖，包住所有蘑菇的坐標陣列
+            let bounds = []; 
 
             keys.forEach(id => {
                 const item = localMushroomsData[id];
                 if (!item) return;
 
-                // 進行跟看板一模一樣的縣市/行政區/關鍵字篩選（確保地圖跟下方卡片同步連動）
                 if (cityFilter !== "all" && item.city !== cityFilter) return;
                 if (distFilter !== "all") {
                     let matchPrimaryDistrict = Array.isArray(item.district) ? item.district.includes(distFilter) : item.district === distFilter;
@@ -608,10 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 if (keyword !== "" && !item.locationName.toLowerCase().includes(keyword) && !item.type.toLowerCase().includes(keyword)) return;
 
-                // 如果這朵蘑菇有填經緯度，就把它畫到地圖上
                 if (item.lat !== undefined && item.lat !== null && item.lng !== undefined && item.lng !== null) {
-                    
-                    // 點擊大頭針時要彈出來的泡泡視窗（Popup）內容
                     const popupContent = `
                         <div style="font-family: sans-serif; font-size: 14px;">
                             <strong style="color: #d9383a;">[${item.size}] ${item.type}</strong><br>
@@ -622,7 +611,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     `;
 
-                    // 建立大頭針並加入地圖
                     const marker = L.marker([item.lat, item.lng]).bindPopup(popupContent);
                     markerGroup.addLayer(marker);
 
@@ -631,13 +619,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
 
-            // 🤖 貼心功能：如果地圖上有香菇，地圖會自動縮放並移動鏡頭，把所有香菇完美包進畫面中！
             if (hasValidMarker && bounds.length > 0) {
                 map.fitBounds(bounds, { padding: [30, 30] });
             }
         }
-            updateTickCounters();
-        }
+        
+        // 執行完所有渲染與地圖邏輯後，更新一次倒數計時文字
+        updateTickCounters();
     }
 
     function updateTickCounters() {
@@ -768,10 +756,34 @@ document.addEventListener("DOMContentLoaded", () => {
         const m = parseInt(document.getElementById(`edit-m-${id}`).value) || 0;
         const s = parseInt(document.getElementById(`edit-s-${id}`).value) || 0;
 
+        // 🌟 防呆追加：卡片就地更新時，一併捕捉當前主表單選擇的行政區（若有的話）
+        const currentDistrictElement = document.getElementById("district");
+        const currentDistrict = currentDistrictElement ? currentDistrictElement.value.trim() : "";
+
+        const item = localMushroomsData[id];
+        let finalDistrictsArray = [];
+
+        if (item) {
+            let oldDistricts = [];
+            if (Array.isArray(item.district)) {
+                oldDistricts = item.district.map(d => d.trim());
+            } else if (item.district) {
+                oldDistricts = [item.district.trim()];
+            }
+
+            if (currentDistrict) {
+                const mergedSet = new Set([...oldDistricts, currentDistrict]);
+                finalDistrictsArray = Array.from(mergedSet);
+            } else {
+                finalDistrictsArray = oldDistricts;
+            }
+        }
+
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
         const now = Date.now();
 
         window.fbUpdate(shroomRef, {
+            district: finalDistrictsArray, // 覆蓋新追加的行政區清單
             currentPlayers: newPlayers,
             timeReported: { hours: h, minutes: m, seconds: s },
             createdAt: now, 
@@ -798,7 +810,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function triggerWebNotification(item, id) {
         if ("Notification" in window && Notification.permission === "granted") {
             new Notification("🍄 皮克敏蘑菇轉生預告！", {
-                body: `📍【${item.city}${item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
+                body: `📍【${item.city}${Array.isArray(item.district) ? item.district.join('/') : item.district} - ${item.locationName}】將在 1 分鐘後原地出生！`,
                 icon: getIconPath(item.type),
                 requireInteraction: true
             });
