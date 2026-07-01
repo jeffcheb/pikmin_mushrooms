@@ -268,8 +268,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const nowTimestamp = Date.now();
             
             // 抓取選填的經緯度
-            const latVal = document.getElementById("lat").value ? parseFloat(document.getElementById("lat").value) : null;
-            const lngVal = document.getElementById("lng").value ? parseFloat(document.getElementById("lng").value) : null;
+            // 🌟 終極安全防呆：先確認網頁上有沒有這兩個輸入框，再讀取值
+            const latInput = document.getElementById("lat");
+            const lngInput = document.getElementById("lng");
+            
+            const latVal = (latInput && latInput.value) ? parseFloat(latInput.value) : null;
+            const lngVal = (lngInput && lngInput.value) ? parseFloat(lngInput.value) : null;
             
             // 🌟 核心修正：大表單提交時，強制比對所有蘑菇（含已重生的死菇）
             let existingId = null;
@@ -317,6 +321,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.fbUpdate(targetRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
+                        if (latInput) latInput.value = "";
+if (lngInput) lngInput.value = "";
                         document.getElementById("district").disabled = true;
                         delete firedAlerts[existingId];
                         alert(`🔄 成功讓【已重生蘑菇】原地滿血復活並追加行政區！`);
@@ -327,6 +333,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.fbPush(shroomRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
+                        if (latInput) latInput.value = "";
+if (lngInput) lngInput.value = "";
                         document.getElementById("district").disabled = true;
                         alert("🎉 新情報發佈成功！");
                     })
