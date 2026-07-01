@@ -50,7 +50,29 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+    let map; // Leaflet 地圖物件
+let markerGroup; // 用來集中管理大頭針的圖層群組
 
+// 初始化地圖的函式（預設中心點設在高雄，縮放程度 13）
+function initLeafletMap() {
+    if (!document.getElementById('map')) return;
+    
+    // 預設坐標（例如：高雄前鎮 22.613, 120.316）
+    map = L.map('map').setView([22.613, 120.316], 13);
+
+    // 載入 OpenStreetMap 免費圖資
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // 建立一個大頭針群組，方便之後每次重新整理時一鍵清空舊點
+    markerGroup = L.layerGroup().addTo(map);
+}
+
+// 確保網頁載入完成後執行地圖初始化
+document.addEventListener("DOMContentLoaded", () => {
+    initLeafletMap();
+});
     // ========================================================
     // 🌍 原有功能：看板變數與核心元件初始化
     // ========================================================
@@ -244,7 +266,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
-
+            // 抓取選填的經緯度
+            const latVal = document.getElementById("lat").value ? parseFloat(document.getElementById("lat").value) : null;
+            const lngVal = document.getElementById("lng").value ? parseFloat(document.getElementById("lng").value) : null;
             // 1. 先找出是否有「同縣市、同名稱」的現有蘑菇
             // ========================================================
             // 🌟 核心修正：大表單提交時，強制比對所有蘑菇（含已重生的死菇）
@@ -284,8 +308,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentPlayers: players, 
                 maxPlayers: maxPlayersVal,
                 timeReported: { hours, minutes, seconds },
-                createdAt: nowTimestamp, // 🌟 核心：把原本的舊菇 createdAt 刷新為「現在」，牠就不會再是已重生狀態，而是滿血復活重新倒數！
-                updatedAt: nowTimestamp
+                createdAt: nowTimestamp, 
+                updatedAt: nowTimestamp,
+                // 🌟 新增經緯度欄位
+                lat: latVal,
+                lng: lngVal
             };
 
             if (existingId) {
