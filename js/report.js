@@ -245,18 +245,45 @@ document.addEventListener("DOMContentLoaded", () => {
     // 情報發佈 (防重複、原地更新、自動合併新行政區、支援已重生死菇復活)
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            if (!window.fbDB) return;
+            // 🌟 1. 這行一定要在最最最前面！絕對不准瀏覽器重整網頁
+            e.preventDefault(); 
+            
+            if (!window.fbDB) {
+                alert("❌ Firebase 尚未連線成功，請稍後再試！");
+                return;
+            }
 
-            const city = document.getElementById("city").value;
-            const district = document.getElementById("district").value;
-            const locationName = document.getElementById("location-name").value.trim();
-            const type = document.getElementById("mushroom-type").value;
-            const size = mushroomSize.value;
-            const players = parseInt(currentPlayers.value);
-            const hours = parseInt(document.getElementById("time-hours").value) || 0;
-            const minutes = parseInt(document.getElementById("time-minutes").value) || 0;
-            const seconds = parseInt(document.getElementById("time-seconds").value) || 0;
+            // 🌟 2. 安全讀取所有欄位，加上防呆（防止因為找不到欄位直接整條炸開）
+            const cityEl = document.getElementById("city");
+            const districtEl = document.getElementById("district");
+            const locationNameEl = document.getElementById("location-name");
+            const mushroomTypeEl = document.getElementById("mushroom-type");
+
+            if (!cityEl || !districtEl || !locationNameEl || !mushroomTypeEl) {
+                alert("❌ 網頁 HTML 缺少必要欄位元件（縣市/行政區/具體地點/種類），請檢查 HTML 檔案！");
+                return;
+            }
+
+            const city = cityEl.value;
+            const district = districtEl.value;
+            const locationName = locationNameEl.value.trim();
+            const type = mushroomTypeEl.value;
+            
+            if (!locationName) {
+                alert("⚠️ 請輸入具體地點名稱！");
+                return;
+            }
+
+            const size = mushroomSize ? mushroomSize.value : "普通";
+            const players = currentPlayers ? parseInt(currentPlayers.value) : 1;
+            
+            const hEl = document.getElementById("time-hours");
+            const mEl = document.getElementById("time-minutes");
+            const sEl = document.getElementById("time-seconds");
+            
+            const hours = hEl ? (parseInt(hEl.value) || 0) : 0;
+            const minutes = mEl ? (parseInt(mEl.value) || 0) : 0;
+            const seconds = sEl ? (parseInt(sEl.value) || 0) : 0;
 
             let maxPlayersVal = 30;
             if (size === "小型") maxPlayersVal = 25;
@@ -267,24 +294,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
             
-            // 抓取選填的經緯度
-            // 🌟 終極安全防呆：先確認網頁上有沒有這兩個輸入框，再讀取值
+            // 🌟 3. 經緯度終極防卡死：即便 HTML 沒有這兩個欄位，也絕對不會報錯
             const latInput = document.getElementById("lat");
             const lngInput = document.getElementById("lng");
-            
             const latVal = (latInput && latInput.value) ? parseFloat(latInput.value) : null;
             const lngVal = (lngInput && lngInput.value) ? parseFloat(lngInput.value) : null;
             
-            // 🌟 核心修正：大表單提交時，強制比對所有蘑菇（含已重生的死菇）
             let existingId = null;
             let finalDistrictsArray = [district.trim()]; 
 
             for (const [id, item] of Object.entries(localMushroomsData)) {
-                // 強制去空格比對縣市與地點名稱
-                if (item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
+                if (item.city && item.locationName && item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
                     existingId = id; 
                     
-                    // 取出舊的行政區陣列並追加新區
                     let oldDistricts = [];
                     if (Array.isArray(item.district)) {
                         oldDistricts = item.district.map(d => d.trim());
@@ -294,12 +316,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     const mergedSet = new Set([...oldDistricts, district.trim()]);
                     finalDistrictsArray = Array.from(mergedSet);
-                    
                     break; 
                 }
             }
 
-            // 準備要送入的全新滿血資料
             const mushroomData = {
                 city, 
                 district: finalDistrictsArray, 
@@ -321,21 +341,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.fbUpdate(targetRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
-                        if (latInput) latInput.value = "";
-if (lngInput) lngInput.value = "";
-                        document.getElementById("district").disabled = true;
+                        if (districtEl) districtEl.disabled = true;
                         delete firedAlerts[existingId];
                         alert(`🔄 成功讓【已重生蘑菇】原地滿血復活並追加行政區！`);
                     })
-                    .catch((error) => alert("更新失敗：" + error.message));
+                    .catch((error) => alert("寫入失敗：" + error.message));
             } else {
                 const shroomRef = window.fbRef(window.fbDB, "mushrooms");
                 window.fbPush(shroomRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
-                        if (latInput) latInput.value = "";
-if (lngInput) lngInput.value = "";
-                        document.getElementById("district").disabled = true;
+                        if (districtEl) districtEl.disabled = true;
                         alert("🎉 新情報發佈成功！");
                     })
                     .catch((error) => alert("發佈失敗：" + error.message));
