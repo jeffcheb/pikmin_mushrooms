@@ -331,3 +331,37 @@ input:disabled, select:disabled {
     background-color: #27ae60 !important;
     transform: translateY(-1px);
 }
+/* 🟢 蘑菇回報提示區塊美化 */
+.report-instructions {
+    background-color: #fff9e6; /* 溫暖的淺黃色背景 */
+    border-left: 5px solid #ffb84d; /* 左側橘黃色提示邊框 */
+    padding: 15px 20px;
+    margin-bottom: 20px; /* 與下方表單保持距離 */
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.instruction-title {
+    font-weight: bold;
+    color: #b36b00; /* 深橘色標題 */
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.instruction-content ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.instruction-content li {
+    margin-bottom: 5px;
+}
+
+.instruction-content strong {
+    color: #d9383a; /* 重要字眼用紅色或深色強調 */
+}
