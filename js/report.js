@@ -220,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 情報發佈 (防重複、原地更新)
+    // 情報發佈 (防重複、原地更新、自動合併新行政區)
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -244,46 +245,62 @@ document.addEventListener("DOMContentLoaded", () => {
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
 
+            // 1. 先找出是否有「同縣市、同名稱」的現有蘑菇
+            let existingId = null;
+            let finalDistrictsArray = [district.trim()]; // 預設把本次回報的行政區放進去
+
+            for (const [id, item] of Object.entries(localMushroomsData)) {
+                if (item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
+                    existingId = id;
+                    
+                    // 🌟 核心功能：取出原本資料庫內該地點已有的行政區陣列
+                    let oldDistricts = [];
+                    if (Array.isArray(item.district)) {
+                        oldDistricts = item.district.map(d => d.trim());
+                    } else if (item.district) {
+                        oldDistricts = [item.district.trim()];
+                    }
+
+                    // 🌟 把新的行政區加進去，並使用 Set 去除重複的行政區
+                    const mergedSet = new Set([...oldDistricts, district.trim()]);
+                    finalDistrictsArray = Array.from(mergedSet);
+                    
+                    break; // 找到同名同縣市了，中斷迴圈
+                }
+            }
+
+            // 2. 準備要寫入/更新的蘑菇完整資料
             const mushroomData = {
-                city, district: [district.trim()], locationName, type, size,
+                city, 
+                district: finalDistrictsArray, // 🌟 這裡固定送出合併後的行政區陣列
+                locationName, 
+                type, 
+                size,
                 mushroomIcon: iconPath,
-                currentPlayers: players, maxPlayers: maxPlayersVal,
+                currentPlayers: players, 
+                maxPlayers: maxPlayersVal,
                 timeReported: { hours, minutes, seconds },
                 createdAt: nowTimestamp, 
                 updatedAt: nowTimestamp
             };
 
-            // 🟢 終極修正 js/report.js 比對迴圈：完美相容單區、多區、網頁與 Discord
-            let existingId = null;
-            for (const [id, item] of Object.entries(localMushroomsData)) {
-                
-                // 🌟 核心防呆：不管資料庫裡存的是 ["前鎮區"] 還是 "前鎮區"，通通轉成用斜線 "/" 分隔的字串
-                const itemDistrictStr = Array.isArray(item.district) ? item.district.join('/') : String(item.district);
-                
-                // 🌟 同步防呆：不管網頁前端表單送出的是什麼，也通通確保是字串並去除空白
-                const currentDistrictStr = Array.isArray(district) ? district.join('/') : String(district);
-
-                // 強制全部去空格後進行比對
-                if (
-                    item.city.trim() === city.trim() && 
-                    itemDistrictStr.trim() === currentDistrictStr.trim() && 
-                    item.locationName.trim() === locationName.trim()
-                ) {
-                    existingId = id;
-                    break;
-                }
-            }
+            // 3. 根據有無找到現有資料，決定是覆蓋更新（Update）還是全新發佈（Push）
             if (existingId) {
+                // 原本就有這朵菇 ➡️ 更新狀態，並自動擴增行政區陣列
                 const targetRef = window.fbRef(window.fbDB, `mushrooms/${existingId}`);
+                
+                // 為了避免洗掉 createdAt，這裡只更新變動欄位，或是更新全拿（看你的需求，這裡將 createdAt 維持原本的，還是覆蓋看舊邏輯）
+                // 為了完全符合你原本「覆蓋更新」的行為：
                 window.fbUpdate(targetRef, mushroomData)
                     .then(() => {
                         reportForm.reset();
                         document.getElementById("district").disabled = true;
                         delete firedAlerts[existingId];
-                        alert(`🔄 偵測到相同地點！已覆蓋更新狀態！`);
+                        alert(`🔄 偵測到相同地點！已自動追加行政區並覆蓋更新！`);
                     })
                     .catch((error) => alert("更新失敗：" + error.message));
             } else {
+                // 雲端完全沒有同名同縣市的菇 ➡️ 全新發佈
                 const shroomRef = window.fbRef(window.fbDB, "mushrooms");
                 window.fbPush(shroomRef, mushroomData)
                     .then(() => {
@@ -295,7 +312,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-
     // 圖片路抓取引擎
     function getIconPath(type) {
         if (!type) return "picture/mushroom_monthly_special.png";
