@@ -791,30 +791,42 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
+    // 🟢 修正後的切換面板函式：確保每次切換狀態絕對乾淨
     window.toggleEditPanel = (id) => {
-        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        // 如果這個 ID 的面板狀態還沒初始化，就給它一個預設值
+        if (!activePanels[id]) {
+            activePanels[id] = { edit: false, history: false };
+        }
+        
+        // 🌟 核心修正：直接做 true/false 的反向切換
         activePanels[id].edit = !activePanels[id].edit;
         
         if (activePanels[id].edit) {
-            renderBoard(); 
+            // 如果是打開面板，先同步一次當前的倒數時間到輸入框裡
             const item = localMushroomsData[id];
             if (item) {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const msLeft = (item.createdAt + totalReportedMs) - Date.now();
                 if (msLeft > 0) {
                     const totalSec = Math.floor(msLeft / 1000);
-                    if (document.getElementById(`edit-h-${id}`)) {
-                        document.getElementById(`edit-h-${id}`).value = Math.floor(totalSec / 3600);
-                        document.getElementById(`edit-m-${id}`).value = Math.floor((totalSec % 3600) / 60);
-                        document.getElementById(`edit-s-${id}`).value = totalSec % 60;
-                    }
+                    // 延遲一小段時間確保 DOM 渲染好後填入數值
+                    setTimeout(() => {
+                        const hIn = document.getElementById(`edit-h-${id}`);
+                        const mIn = document.getElementById(`edit-m-${id}`);
+                        const sIn = document.getElementById(`edit-s-${id}`);
+                        if (hIn) hIn.value = Math.floor(totalSec / 3600);
+                        if (mIn) mIn.value = Math.floor((totalSec % 3600) / 60);
+                        if (sIn) sIn.value = totalSec % 60;
+                    }, 50);
                 }
             }
-        } else {
-            renderBoard();
         }
+        
+        // 每次切換完狀態，強制重新渲染看板，讓 display 屬性（block/none）立刻生效
+        renderBoard();
     };
 
+    // 🟢 修正後的儲存送出函式
     window.saveStatusEdit = (id) => {
         if (!window.fbDB) return;
         const newPlayers = parseInt(document.getElementById(`edit-players-${id}`).value) || 0;
@@ -843,6 +855,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 finalDistrictsArray = oldDistricts;
             }
         }
+
+        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+        const now = Date.now();
+
+        window.fbUpdate(shroomRef, {
+            district: finalDistrictsArray,
+            currentPlayers: newPlayers,
+            timeReported: { hours: h, minutes: m, seconds: s },
+            createdAt: now, 
+            updatedAt: now,
+            lat: (item && item.lat !== undefined) ? item.lat : null,
+            lng: (item && item.lng !== undefined) ? item.lng : null
+        }).then(() => {
+            // 🌟 核心修正：送出成功後，強制將狀態寫死為 false
+            if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+            activePanels[id].edit = false;
+            
+            delete firedAlerts[id];
+            alert("💾 狀態更新成功！");
+            
+            // 🎯 重大微調：更新完後主動再 renderBoard() 一次，確保面板在網頁畫面上當場消失！
+            renderBoard();
+        }).catch(err => alert("更新失敗：" + err.message));
+    };
 
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
         const now = Date.now();
