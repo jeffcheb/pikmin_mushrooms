@@ -264,7 +264,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         });
                         filterDistrict.value = foundDist;
                         
-                        // 🌟 定位成功時，同步鎖定儲存記憶
                         localStorage.setItem("mushroom_filter_city", closestCity);
                         localStorage.setItem("mushroom_filter_dist", foundDist);
 
@@ -331,7 +330,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const iconPath = getIconPath(type);
             const nowTimestamp = Date.now();
             
-            // 經緯度輸入框防呆读取
             const latInput = document.getElementById("lat");
             const lngInput = document.getElementById("lng");
             const latVal = (latInput && latInput.value) ? parseFloat(latInput.value) : null;
@@ -342,12 +340,9 @@ document.addEventListener("DOMContentLoaded", () => {
             let oldLat = null;
             let oldLng = null;
 
-            // 走訪比對同名同縣市香菇
             for (const [id, item] of Object.entries(localMushroomsData)) {
                 if (item.city && item.locationName && item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
                     existingId = id; 
-                    
-                    // 🎯 核心鎖定：暫存資料庫中已有的舊經緯度
                     oldLat = (item.lat !== undefined) ? item.lat : null;
                     oldLng = (item.lng !== undefined) ? item.lng : null;
                     
@@ -376,7 +371,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 timeReported: { hours, minutes, seconds },
                 createdAt: nowTimestamp, 
                 updatedAt: nowTimestamp,
-                // 🎯 雙重保險：有填新經緯度就用新的，留白就沿用舊有位置，不洗空
                 lat: latVal !== null ? latVal : oldLat,
                 lng: lngVal !== null ? lngVal : oldLng
             };
@@ -438,7 +432,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.fbOnValue(shroomRef, (snapshot) => {
             localMushroomsData = snapshot.val() || {};
             
-            // 🌟 3 天過期舊資料自動清理機制 (TTL)
             const now = Date.now();
             const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; 
 
@@ -649,7 +642,6 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = htmlContent;
         }
 
-        // 🌟 核心地圖連動
         if (markerGroup) {
             markerGroup.clearLayers(); 
 
@@ -791,25 +783,18 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    // 🟢 修正後的切換面板函式：確保每次切換狀態絕對乾淨
     window.toggleEditPanel = (id) => {
-        // 如果這個 ID 的面板狀態還沒初始化，就給它一個預設值
-        if (!activePanels[id]) {
-            activePanels[id] = { edit: false, history: false };
-        }
-        
-        // 🌟 核心修正：直接做 true/false 的反向切換
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
         activePanels[id].edit = !activePanels[id].edit;
         
         if (activePanels[id].edit) {
-            // 如果是打開面板，先同步一次當前的倒數時間到輸入框裡
+            renderBoard(); 
             const item = localMushroomsData[id];
             if (item) {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const msLeft = (item.createdAt + totalReportedMs) - Date.now();
                 if (msLeft > 0) {
                     const totalSec = Math.floor(msLeft / 1000);
-                    // 延遲一小段時間確保 DOM 渲染好後填入數值
                     setTimeout(() => {
                         const hIn = document.getElementById(`edit-h-${id}`);
                         const mIn = document.getElementById(`edit-m-${id}`);
@@ -820,13 +805,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     }, 50);
                 }
             }
+        } else {
+            renderBoard();
         }
-        
-        // 每次切換完狀態，強制重新渲染看板，讓 display 屬性（block/none）立刻生效
-        renderBoard();
     };
 
-    // 🟢 修正後的儲存送出函式
     window.saveStatusEdit = (id) => {
         if (!window.fbDB) return;
         const newPlayers = parseInt(document.getElementById(`edit-players-${id}`).value) || 0;
@@ -868,34 +851,11 @@ document.addEventListener("DOMContentLoaded", () => {
             lat: (item && item.lat !== undefined) ? item.lat : null,
             lng: (item && item.lng !== undefined) ? item.lng : null
         }).then(() => {
-            // 🌟 核心修正：送出成功後，強制將狀態寫死為 false
             if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
             activePanels[id].edit = false;
-            
             delete firedAlerts[id];
             alert("💾 狀態更新成功！");
-            
-            // 🎯 重大微調：更新完後主動再 renderBoard() 一次，確保面板在網頁畫面上當場消失！
             renderBoard();
-        }).catch(err => alert("更新失敗：" + err.message));
-    };
-
-        const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
-        const now = Date.now();
-
-        window.fbUpdate(shroomRef, {
-            district: finalDistrictsArray,
-            currentPlayers: newPlayers,
-            timeReported: { hours: h, minutes: m, seconds: s },
-            createdAt: now, 
-            updatedAt: now,
-            // 🎯 卡片就地狀態更新時，也幫忙保留舊有經緯度，不洗空
-            lat: (item && item.lat !== undefined) ? item.lat : null,
-            lng: (item && item.lng !== undefined) ? item.lng : null
-        }).then(() => {
-            alert("💾 狀態更新成功！");
-            if (activePanels[id]) activePanels[id].edit = false;
-            delete firedAlerts[id];
         }).catch(err => alert("更新失敗：" + err.message));
     };
 
