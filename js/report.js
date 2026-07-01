@@ -342,8 +342,32 @@ document.addEventListener("DOMContentLoaded", () => {
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
         const shroomRef = window.fbRef(window.fbDB, "mushrooms");
+        
         window.fbOnValue(shroomRef, (snapshot) => {
             localMushroomsData = snapshot.val() || {};
+            
+            // 🌟 核心新增：3 天舊資料自動清理機制 (TTL)
+            const now = Date.now();
+            const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // 3 天的毫秒數
+
+            Object.entries(localMushroomsData).forEach(([id, item]) => {
+                // 計算這朵菇原本預計的總倒數時間（毫秒）
+                const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
+                const expireTime = item.createdAt + totalReportedMs;
+                
+                // 條件：如果當前時間已經超過「過期時間」，而且距離過期已經超過 3 天 (3天沒人理牠)
+                if (now > expireTime && (now - expireTime) > THREE_DAYS_MS) {
+                    console.log(`🗑️ 偵測到過期超過 3 天的舊蘑菇 [${item.locationName}]，自動從雲端刪除。`);
+                    
+                    // 發送刪除指令到 Firebase
+                    const deleteRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
+                    window.fbRemove(deleteRef).catch(err => console.error("TTL 刪除失敗:", err));
+                    
+                    // 同步從本地快照中移除，避免當次重複渲染
+                    delete localMushroomsData[id];
+                }
+            });
+
             renderBoard(); 
         });
         setInterval(updateTickCounters, 1000); 
