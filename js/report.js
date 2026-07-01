@@ -821,12 +821,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const shroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
         const now = Date.now();
 
+        // 🌟 修改後的寫法：確保更新狀態時，經緯度不會不見
         window.fbUpdate(shroomRef, {
-            district: finalDistrictsArray, // 覆蓋新追加的行政區清單
+            district: finalDistrictsArray,
             currentPlayers: newPlayers,
             timeReported: { hours: h, minutes: m, seconds: s },
             createdAt: now, 
-            updatedAt: now
+            updatedAt: now,
+            // 🎯 保留舊資料的經緯度（如果有的話）
+            lat: (item && item.lat !== undefined) ? item.lat : null,
+            lng: (item && item.lng !== undefined) ? item.lng : null
         }).then(() => {
             alert("💾 狀態更新成功！");
             if (activePanels[id]) activePanels[id].edit = false;
