@@ -625,3 +625,32 @@
 .btn-pin-top:hover {
     transform: scale(1.1) !important;
 }
+/* 🟢 修正清單模式（橫向長條）下的卡片佈局 */
+.board-container.list-view .mushroom-card {
+    display: flex;
+    flex-direction: row;      /* 讓頭、身、腳橫向排開 */
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;          /* 防止手機板寬度不夠時硬擠 */
+    gap: 15px;
+    padding: 15px 20px;
+}
+
+/* 🎯 關鍵修正：強制讓卡片腳部的按鈕群組在清單模式下推到最右邊 */
+.board-container.list-view .card-footer {
+    display: flex;
+    justify-content: flex-end; /* 按鈕自己向右靠齊 */
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;        /* 🌟 神奇魔法：利用自動左邊距，把整個區塊強行推到最右邊！ */
+    border-top: none;         /* 清單模式下不需要頂部黑線 */
+    padding-top: 0;
+    width: auto;              /* 不要綁死 100%，有多少按鈕就佔多少寬度 */
+}
+
+/* 確保按鈕在任何情況下都不會被壓扁或字體斷行 */
+.card-footer button, 
+.card-footer .btn-sm {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
