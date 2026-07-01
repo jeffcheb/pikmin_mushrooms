@@ -6,21 +6,35 @@ let map; // Leaflet 地圖物件
 let markerGroup; // 用來集中管理大頭針的圖層群組
 
 // 初始化地圖的函式（預設中心點設在高雄，縮放程度 13）
+// 🟢 隔離防護版：就算沒有地圖，也絕對不卡死後面程式碼
 function initLeafletMap() {
-    if (!document.getElementById('map')) return;
-    
-    // 預設坐標（例如：高雄前鎮 22.613, 120.316）
-    map = L.map('map').setView([22.613, 120.316], 13);
+    try {
+        const mapContainer = document.getElementById('map');
+        // 防呆 1：如果 HTML 根本沒寫 id="map"，直接結束，不報錯
+        if (!mapContainer) {
+            console.warn("⚠️ 網頁 HTML 中找不到 id='map' 的地圖容器，暫不初始化地圖。");
+            return;
+        }
+        
+        // 防呆 2：檢查 Leaflet 套件有沒有成功引入
+        if (typeof L === 'undefined') {
+            console.error("❌ 找不到 Leaflet 套件（L is undefined），請檢查 HTML 是否有引入 Leaflet 的 CDN！");
+            return;
+        }
 
-    // 載入 OpenStreetMap 免費圖資
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
+        map = L.map('map').setView([22.613, 120.316], 13);
 
-    // 建立一個大頭針群組，方便之後每次重新整理時一鍵清空舊點
-    markerGroup = L.layerGroup().addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        markerGroup = L.layerGroup().addTo(map);
+        console.log("🗺️ Leaflet 地圖初始化成功！");
+    } catch (error) {
+        // 就算地圖炸了，也用 catch 吞掉，絕對不影響表單回報功能
+        console.error("地圖初始化發生未知錯誤:", error);
+    }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
     // ========================================================
     // 📜 核心新增：使用條款與免責聲明彈窗控制邏輯
