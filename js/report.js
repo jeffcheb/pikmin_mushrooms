@@ -548,7 +548,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let displayMaxPlayers = item.maxPlayers || 30;
             if (item.size === "小型") displayMaxPlayers = 25;
-            else if (item.size === "普通" || item.size === "一般") displayMaxPlayers = 30;
+            else if (item.size === "普通" || size === "一般") displayMaxPlayers = 30;
             else if (item.size === "大型") displayMaxPlayers = 35;
             else if (item.size === "巨大") displayMaxPlayers = 40;
 
@@ -567,22 +567,50 @@ document.addEventListener("DOMContentLoaded", () => {
             const dynamicImgSrc = getIconPath(item.type);
 
             let districtBadgesHTML = "";
+            let firstDistrict = ""; // 🌟 用來記錄第一個行政區，方便快填
             if (Array.isArray(item.district)) {
+                firstDistrict = item.district[0] || "";
                 item.district.forEach(dist => {
                     districtBadgesHTML += `<span class="dist-badge">${dist}</span>`;
                 });
             } else if (item.district) {
+                firstDistrict = item.district;
                 districtBadgesHTML = `<span class="dist-badge">${item.district}</span>`;
             }
 
+            // ========================================================
+            // 🌟 核心新增 1：滿員判斷與專屬顏色邊框邏輯
+            // ========================================================
+            const isFull = (item.currentPlayers || 0) >= displayMaxPlayers;
+            const fullClass = isFull ? "card-full-shroom" : "";
+
+            let colorBorderClass = "border-normal";
+            if (item.type.includes("火")) colorBorderClass = "border-fire";
+            else if (item.type.includes("水")) colorBorderClass = "border-water";
+            else if (item.type.includes("水晶")) colorBorderClass = "border-crystal";
+            else if (item.type.includes("毒")) colorBorderClass = "border-poison";
+            else if (item.type.includes("電")) colorBorderClass = "border-electric";
+            else if (item.type.includes("冰")) colorBorderClass = "border-ice";
+
+            // 安全包裝字串，避免單雙引號導致 HTML 結構破裂
+            const fastFillData = encodeURIComponent(JSON.stringify({
+                city: item.city,
+                district: firstDistrict,
+                locationName: item.locationName
+            }));
+
+            // 🌟 核心新增 2：在 HTML 結構中帶入樣式 Class 與「⚡ 快填」按鈕
             htmlContent += `
-                <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
+                <div class="mushroom-card ${isPinned} ${fullClass} ${colorBorderClass}" data-id="${id}" id="card-${id}">
                     <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
 
                     <div class="card-header">
                         <img src="${dynamicImgSrc}" class="shroom-img" alt="${item.type}">
                         <div class="shroom-info">
-                            <h4>[${item.size}] ${item.type}</h4>
+                            <h4 style="display: flex; align-items: center; gap: 8px;">
+                                [${item.size}] ${item.type}
+                                <button class="btn-fast-fill-trigger" onclick="handleFastFill('${fastFillData}')" title="將此地點帶入上方回報表單">⚡ 更新此點</button>
+                            </h4>
                             <div class="location-container">
                                 <span class="city-text">📍 ${item.city}</span>
                                 <div class="badges-group">${districtBadgesHTML}</div>
@@ -603,7 +631,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
 
                     <div class="card-body">
-                        <p>👥 參戰人數：<strong>${item.currentPlayers} / ${displayMaxPlayers}</strong> 人</p>
+                        <p>👥 參戰人數：<strong>${item.currentPlayers} / ${displayMaxPlayers}</strong> 人 ${isFull ? '<span style="color: #ef4444; font-weight: bold; margin-left: 4px;">(已滿員)</span>' : ''}</p>
                         <p class="countdown-text" id="time-text-${id}">⏳ 計算時間中...</p>
                     </div>
 
@@ -925,4 +953,39 @@ document.addEventListener("DOMContentLoaded", () => {
             startBoardSync(); 
         }
     }, 150);
+    // ========================================================
+    // ⚡ 新增功能：點擊自動帶入上方回報表單並平滑捲動
+    // ========================================================
+    window.handleFastFill = (encodedData) => {
+        try {
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            
+            const cityEl = document.getElementById("city");
+            const districtEl = document.getElementById("district");
+            const locationNameEl = document.getElementById("location-name");
+
+            if (!cityEl || !districtEl || !locationNameEl) return;
+
+            // 1. 填入縣市
+            cityEl.value = data.city;
+            
+            // 2. 手動觸發一次縣市的 change 事件，強迫大表單生成行政區選單
+            cityEl.dispatchEvent(new Event("change"));
+
+            // 3. 稍微延遲 60 毫秒，等行政區的 HTML option 渲染完畢後再填入行政區
+            setTimeout(() => {
+                districtEl.value = data.district;
+                locationNameEl.value = data.locationName;
+                
+                // 4. 平滑捲動回網頁最上方的發佈表單區
+                const reportSection = document.querySelector(".report-section");
+                if (reportSection) {
+                    reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }, 60);
+
+        } catch (error) {
+            console.error("快填解析失敗:", error);
+        }
+    };
 });
