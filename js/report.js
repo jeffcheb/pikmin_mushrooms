@@ -335,6 +335,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            // ❌ 原本的寫法：
+            // const mushroomData = {
+            //     ...
+            //     lat: latVal,
+            //     lng: lngVal
+            // };
+
+            // 🟢 修正後的「萬能保護版」寫法：
+            
+            // 先在迴圈外或迴圈內，找出舊蘑菇的資料物件
+            let oldLat = null;
+            let oldLng = null;
+            
+            for (const [id, item] of Object.entries(localMushroomsData)) {
+                if (item.city && item.locationName && item.city.trim() === city.trim() && item.locationName.trim() === locationName.trim()) {
+                    existingId = id; 
+                    
+                    // 🎯 核心重點：如果比對到舊香菇，先把舊香菇原本的經緯度偷記下來！
+                    oldLat = (item.lat !== undefined) ? item.lat : null;
+                    oldLng = (item.lng !== undefined) ? item.lng : null;
+                    
+                    let oldDistricts = [];
+                    if (Array.isArray(item.district)) {
+                        oldDistricts = item.district.map(d => d.trim());
+                    } else if (item.district) {
+                        oldDistricts = [item.district.trim()];
+                    }
+
+                    const mergedSet = new Set([...oldDistricts, district.trim()]);
+                    finalDistrictsArray = Array.from(mergedSet);
+                    break; 
+                }
+            }
+
             const mushroomData = {
                 city, 
                 district: finalDistrictsArray, 
@@ -347,8 +381,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 timeReported: { hours, minutes, seconds },
                 createdAt: nowTimestamp, 
                 updatedAt: nowTimestamp,
-                lat: latVal,
-                lng: lngVal
+                
+                // 🎯 雙重保險：如果這次「有填新經緯度」就用新的；如果「沒填（latVal是null）」，就自動沿用舊的 (oldLat)
+                lat: latVal !== null ? latVal : oldLat,
+                lng: lngVal !== null ? lngVal : oldLng
             };
 
             if (existingId) {
