@@ -253,23 +253,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 updatedAt: nowTimestamp
             };
 
-            // 🟢 修改 js/report.js 這段比對迴圈：對齊 Discord 的強制去空格機制
+            // 🟢 終極修正 js/report.js 比對迴圈：完美相容單區、多區、網頁與 Discord
             let existingId = null;
             for (const [id, item] of Object.entries(localMushroomsData)) {
-                // 🌟 新增：相容陣列格式，把資料庫裡的行政區陣列轉回字串，或單一字串直接處理
+                
+                // 🌟 核心防呆：不管資料庫裡存的是 ["前鎮區"] 還是 "前鎮區"，通通轉成用斜線 "/" 分隔的字串
                 const itemDistrictStr = Array.isArray(item.district) ? item.district.join('/') : String(item.district);
                 
-                // 比對時將雙方都加上 .trim() 去除隱形空格
+                // 🌟 同步防呆：不管網頁前端表單送出的是什麼，也通通確保是字串並去除空白
+                const currentDistrictStr = Array.isArray(district) ? district.join('/') : String(district);
+
+                // 強制全部去空格後進行比對
                 if (
                     item.city.trim() === city.trim() && 
-                    itemDistrictStr.trim() === district.trim() && 
+                    itemDistrictStr.trim() === currentDistrictStr.trim() && 
                     item.locationName.trim() === locationName.trim()
                 ) {
                     existingId = id;
                     break;
                 }
             }
-
             if (existingId) {
                 const targetRef = window.fbRef(window.fbDB, `mushrooms/${existingId}`);
                 window.fbUpdate(targetRef, mushroomData)
