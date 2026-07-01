@@ -177,6 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (selectedCity === "all") {
                 filterDistrict.value = "all";
                 filterDistrict.disabled = true;
+                localStorage.setItem("mushroom_filter_city", "all"); // 🌟 記憶縣市
+                localStorage.setItem("mushroom_filter_dist", "all"); // 🌟 記憶行政區
             } else {
                 filterDistrict.disabled = false;
                 const districts = window.taiwanData[selectedCity] || [];
@@ -186,7 +188,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     option.textContent = dist;
                     filterDistrict.appendChild(option);
                 });
+                localStorage.setItem("mushroom_filter_city", selectedCity); // 🌟 記憶縣市
             }
+            renderBoard(); 
+        });
+
+        filterDistrict.addEventListener("change", () => {
+            localStorage.setItem("mushroom_filter_dist", filterDistrict.value); // 🌟 記憶行政區
+            renderBoard();
+        });
+
+        sortMethod?.addEventListener("change", () => {
+            localStorage.setItem("mushroom_sort_method", sortMethod.value); // 🌟 記憶排序方式
+            renderBoard();
+        });
+        
+        searchKeyword?.addEventListener("input", renderBoard);
             renderBoard(); 
         });
 
@@ -245,6 +262,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         filterDistrict.value = foundDist;
                         btnAutoLocation.textContent = "🎯 定位";
                         alert(`🎯 定位成功：已自動切換至【${closestCity} ${foundDist}】`);
+                        filterDistrict.value = foundDist;
+                        
+                        // 🌟 定位成功時，也同步鎖定記憶
+                        localStorage.setItem("mushroom_filter_city", closestCity);
+                        localStorage.setItem("mushroom_filter_dist", foundDist);
+
+                        btnAutoLocation.textContent = "🎯 定位";
                         renderBoard();
                     }
                 },
@@ -255,6 +279,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 { enableHighAccuracy: false, timeout: 5000 }
             );
         });
+    // 🌟 網頁載入時，自動回復上次的篩選與排序記憶
+        const savedCity = localStorage.getItem("mushroom_filter_city") || "all";
+        const savedDist = localStorage.getItem("mushroom_filter_dist") || "all";
+        const savedSort = localStorage.getItem("mushroom_sort_method") || "default";
+
+        if (savedCity !== "all" && filterCity) {
+            filterCity.value = savedCity;
+            // 觸發一次縣市變更，把行政區選單生出來
+            filterCity.dispatchEvent(new Event("change")); 
+            if (savedDist !== "all" && filterDistrict) {
+                filterDistrict.value = savedDist;
+            }
+        }
+        
+        if (sortMethod) {
+            sortMethod.value = savedSort;
+        }
     }
 
     // 情報發佈 (防重複、原地更新、自動合併新行政區、支援已重生死菇復活)
