@@ -897,7 +897,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (activePanels[id]) activePanels[id].edit = false;
             delete firedAlerts[id];
         }).catch(err => alert("更新失敗：" + err.message));
-    };
+    });
 
     window.toggleAlert = (id) => {
         const index = alertEnabledList.indexOf(id);
