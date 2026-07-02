@@ -687,3 +687,26 @@
     border-color: #16a34a;
     transform: scale(1.05);
 }
+/* 📍 周邊 600m 篩選按鈕樣式 */
+.btn-nearby-filter {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 8px; /* 讓它跟原本的定位按鈕並排 */
+}
+
+.btn-nearby-filter.active {
+    background-color: #15803d;
+    color: #ffffff;
+    border-color: #15803d;
+}
+
+.btn-nearby-filter:hover {
+    transform: scale(1.03);
+}
