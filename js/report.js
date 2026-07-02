@@ -3,6 +3,9 @@
 // 🌟 將地圖相關全域變數宣告在最頂層
 let map; // Leaflet 地圖物件
 let markerGroup; // 用來集中管理大頭針的圖層群組
+let userCurrentLat = null;  // 儲存玩家目前的精準緯度
+let userCurrentLng = null;  // 儲存玩家目前的精準經緯
+let isNearbyFilterOn = false; // 紀錄「600m篩選」按鈕目前是否開啟
 
 // 🟢 隔離防護版：就算沒有地圖，也絕對不卡死後面程式碼
 function initLeafletMap() {
@@ -91,6 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterCity = document.getElementById("filter-city");
     const filterDistrict = document.getElementById("filter-district");
     const btnAutoLocation = document.getElementById("btn-auto-location");
+    const btnNearbyMushrooms = document.getElementById("btn-nearby-mushrooms"); // 🌟 新增：600m按鈕元件
     
     const sortMethod = document.getElementById("sort-method");
 
@@ -215,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     }
 
-        // 🎯 超高效、真精準的 GPS 逆向地理定位功能
+    // 🎯 超高效、真精準的 GPS 逆向地理定位功能
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
             if (!navigator.geolocation) {
@@ -227,16 +231,17 @@ document.addEventListener("DOMContentLoaded", () => {
             
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
+                    // 🌟 核心修正：儲存精準全域經緯度，供600m篩選計算
+                    userCurrentLat = position.coords.latitude;
+                    userCurrentLng = position.coords.longitude;
 
                     // 🗺️ 1. 讓地圖即時平滑飛移到玩家當前精準位置
                     if (map) {
-                        map.setView([lat, lon], 16); // 放大到 16 級看更清
+                        map.setView([userCurrentLat, userCurrentLng], 16); // 放大到 16 級看更清
                     }
 
                     // 📡 2. 利用開源不收費的 Nominatim API 進行逆向地理編碼查詢
-                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`;
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCurrentLat}&lon=${userCurrentLng}&accept-language=zh-TW`;
 
                     fetch(url, {
                         headers: { 'User-Agent': 'PikminMushroomHubApp/1.0' }
@@ -252,12 +257,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         // 🔍 3. 智慧解析台灣的縣市與行政區欄位
                         const addr = data.address;
-                        // 台灣的縣市可能藏在 city, short_name 或 state 中
                         let detectedCity = addr.city || addr.state || addr.town || "";
-                        // 行政區可能藏在 suburb, district 或 town 中
                         let detectedDistrict = addr.suburb || addr.district || addr.town || addr.city_district || "";
 
-                        // 清洗字串，確保格式乾淨（如：將 "Kaohsiung" 轉為 "高雄市"）
+                        // 清洗字串，確保格式乾淨
                         if (detectedCity.includes("高雄")) detectedCity = "高雄市";
                         if (detectedCity.includes("臺南") || detectedCity.includes("台南")) detectedCity = "台南市";
                         if (detectedCity.includes("臺北") || detectedCity.includes("台北")) detectedCity = "台北市";
@@ -268,24 +271,49 @@ document.addEventListener("DOMContentLoaded", () => {
                         // 移除 Nominatim 有時會帶有的重複字詞
                         detectedDistrict = detectedDistrict.replace(detectedCity, "").trim();
 
-                        // 💼 4. 強制將精準結果塞入網頁下拉選單
+                        // 🌟 核心修復：如果選單裡有「XX區」，但 API 只有「XX」，幫它自動校正防呆
+                        if (filterDistrict) {
+                            const options = Array.from(filterDistrict.options).map(opt => opt.value);
+                            if (!options.includes(detectedDistrict)) {
+                                if (options.includes(detectedDistrict + "區")) {
+                                    detectedDistrict = detectedDistrict + "區";
+                                } else {
+                                    const matchedOpt = options.find(opt => opt.includes(detectedDistrict) || detectedDistrict.includes(opt));
+                                    if (matchedOpt) detectedDistrict = matchedOpt;
+                                }
+                            }
+                        }
+
+                        // 💼 4. 強制將精準結果塞入網頁所有下拉選單（包含篩選區與回報區）
                         if (filterCity && filterDistrict) {
                             filterCity.value = detectedCity;
-                            
-                            // 觸發連動，讓行政區選單更新
                             filterCity.dispatchEvent(new Event("change"));
 
-                            // 稍微延遲讓 DOM 生成完畢後，精準選取行政區
+                            const reportCityEl = document.getElementById("city");
+                            const reportDistrictEl = document.getElementById("district");
+                            const reportLatEl = document.getElementById("lat");
+                            const reportLngEl = document.getElementById("lng");
+
+                            if (reportCityEl) {
+                                reportCityEl.value = detectedCity;
+                                reportCityEl.dispatchEvent(new Event("change"));
+                            }
+
+                            // 稍微延遲讓 DOM 生成完畢後，精準選取行政區與填入座標
                             setTimeout(() => {
                                 filterDistrict.value = detectedDistrict;
+                                if (reportDistrictEl) reportDistrictEl.value = detectedDistrict;
+                                
+                                if (reportLatEl) reportLatEl.value = userCurrentLat.toFixed(5);
+                                if (reportLngEl) reportLngEl.value = userCurrentLng.toFixed(5);
                                 
                                 // 記憶到瀏覽器快取
                                 localStorage.setItem("mushroom_filter_city", detectedCity);
                                 localStorage.setItem("mushroom_filter_dist", detectedDistrict);
 
-                                alert(`🎯 精準定位成功！已切換至【${detectedCity} ${detectedDistrict}】`);
+                                alert(`🎯 精準定位成功！已同步切換至【${detectedCity} ${detectedDistrict}】並自動帶入目前經緯度！`);
                                 renderBoard();
-                            }, 80);
+                            }, 100);
                         }
                     })
                     .catch(err => {
@@ -298,8 +326,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     btnAutoLocation.textContent = "🎯 定位";
                     alert("GPS 定位失敗，請確認手機/瀏覽器是否開啟位置權限。");
                 },
-                { enableHighAccuracy: true, timeout: 6000 } // 🌟 開啟高精準度模式
+                { enableHighAccuracy: true, timeout: 6000 } // 開啟高精準度模式
             );
+        });
+    }
+
+    // 🌟 新增：監聽「方圓 600m 蘑菇篩選」按鈕點擊事件
+    if (btnNearbyMushrooms) {
+        btnNearbyMushrooms.addEventListener("click", () => {
+            if (userCurrentLat === null || userCurrentLng === null) {
+                alert("請先點擊「🎯 定位」按鈕取得您目前的位置，才能計算方圓 600m 的蘑菇唷！");
+                return;
+            }
+
+            isNearbyFilterOn = !isNearbyFilterOn;
+
+            if (isNearbyFilterOn) {
+                btnNearbyMushrooms.classList.add("active");
+                btnNearbyMushrooms.textContent = "🟢 顯示 600m 內";
+            } else {
+                btnNearbyMushrooms.classList.remove("active");
+                btnNearbyMushrooms.textContent = "📍 篩選 600m 內";
+            }
+
+            renderBoard();
         });
     }
 
@@ -462,24 +512,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const expireTime = item.createdAt + totalReportedMs;
                 
-                // 🌟 核心修正：如果這朵菇過期超過 3 天
                 if (now > expireTime && (now - expireTime) > THREE_DAYS_MS) {
-                    
-                    // 檢查這朵菇是不是已經被重置過了，避免重複寫入 Firebase
                     if (item.type !== "未指定" || item.currentPlayers !== 0) {
                         console.log(`🧹 偵測到 3 天未更新點 [${item.locationName}]，自動清空即時狀態，保留據點位置。`);
-                        
                         const updateRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
                         
-                        // 🎯 只清除變動欄位，將種類改為未指定、人數變 0、時間歸零，並把更新時間拉到現在
                         window.fbUpdate(updateRef, {
                             type: "未指定",
                             size: "未知",
-                            mushroomIcon: "picture/mushroom_monthly_special.png", // 變回預設圖標
+                            mushroomIcon: "picture/mushroom_monthly_special.png",
                             currentPlayers: 0,
                             timeReported: { hours: 0, minutes: 0, seconds: 0 },
                             updatedAt: now,
-                            createdAt: now // 重設基準時間，防止它在下一秒又被判定過期
+                            createdAt: now
                         }).catch(err => console.error("據點重置失敗:", err));
                     }
                 }
@@ -560,6 +605,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let renderedCount = 0;
 
+        // 🌟 重新建立地圖圖層管理陣列
+        if (markerGroup) markerGroup.clearLayers();
+        let bounds = [];
+        let hasValidMarker = false;
+
         keys.forEach(id => {
             const item = localMushroomsData[id];
             
@@ -580,13 +630,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!matchLocation && !matchType) return;
             }
 
+            // 🌟 核心新增：方圓 600m 球面距離過濾邏輯（Haversine 公式）
+            if (isNearbyFilterOn && userCurrentLat !== null && userCurrentLng !== null) {
+                if (item.lat === undefined || item.lat === null || item.lng === undefined || item.lng === null) {
+                    return; // 沒有經緯度的不顯示
+                }
+
+                const R = 6371e3; // 地球半徑 (公尺)
+                const phi1 = userCurrentLat * Math.PI / 180;
+                const phi2 = item.lat * Math.PI / 180;
+                const deltaPhi = (item.lat - userCurrentLat) * Math.PI / 180;
+                const deltaLambda = (item.lng - userCurrentLng) * Math.PI / 180;
+
+                const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                          Math.cos(phi1) * Math.cos(phi2) *
+                          Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const distance = R * c; 
+
+                if (distance > 600) return; // 超過 600 公尺直接截斷不加入 HTML
+            }
+
             const lastUpdatedTime = item.updatedAt || item.createdAt;
             const msSinceLastUpdate = Date.now() - lastUpdatedTime;
             const isStale = msSinceLastUpdate > 900000; 
 
             let displayMaxPlayers = item.maxPlayers || 30;
             if (item.size === "小型") displayMaxPlayers = 25;
-            else if (item.size === "普通" || size === "一般") displayMaxPlayers = 30;
+            else if (item.size === "普通" || item.size === "一般") displayMaxPlayers = 30;
             else if (item.size === "大型") displayMaxPlayers = 35;
             else if (item.size === "巨大") displayMaxPlayers = 40;
 
@@ -605,7 +676,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const dynamicImgSrc = getIconPath(item.type);
 
             let districtBadgesHTML = "";
-            let firstDistrict = ""; // 🌟 用來記錄第一個行政區，方便快填
+            let firstDistrict = ""; 
             if (Array.isArray(item.district)) {
                 firstDistrict = item.district[0] || "";
                 item.district.forEach(dist => {
@@ -616,9 +687,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 districtBadgesHTML = `<span class="dist-badge">${item.district}</span>`;
             }
 
-            // ========================================================
-            // 🌟 核心新增 1：滿員判斷與專屬顏色邊框邏輯
-            // ========================================================
             const isFull = (item.currentPlayers || 0) >= displayMaxPlayers;
             const fullClass = isFull ? "card-full-shroom" : "";
 
@@ -630,14 +698,12 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.type.includes("電")) colorBorderClass = "border-electric";
             else if (item.type.includes("冰")) colorBorderClass = "border-ice";
 
-            // 安全包裝字串，避免單雙引號導致 HTML 結構破裂
             const fastFillData = encodeURIComponent(JSON.stringify({
                 city: item.city,
                 district: firstDistrict,
                 locationName: item.locationName
             }));
 
-            // 🌟 核心新增 2：在 HTML 結構中帶入樣式 Class 與「⚡ 快填」按鈕
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${fullClass} ${colorBorderClass}" data-id="${id}" id="card-${id}">
                     <div id="stale-badge-${id}" class="stale-warning-badge" style="display: ${isStale ? 'block' : 'none'};">⚠️ 許久未更新</div>
@@ -700,53 +766,34 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                 </div>
             `;
+
+            // 🌟 順便將過濾後的蘑菇大頭針繪製到地圖上
+            if (markerGroup && item.lat !== undefined && item.lat !== null && item.lng !== undefined && item.lng !== null) {
+                const popupContent = `
+                    <div style="font-family: sans-serif; font-size: 14px;">
+                        <strong style="color: #d9383a;">[${item.size}] ${item.type}</strong><br>
+                        📍 ${item.city}${Array.isArray(item.district) ? item.district.join('/') : item.district} - ${item.locationName}<br>
+                        👥 人數: ${item.currentPlayers} 人<br>
+                        <hr style="margin: 5px 0; border: 0; border-top: 1px solid #ccc;">
+                        <a href="http://googleusercontent.com/maps.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color: #1890ff; font-weight: bold; text-decoration: none;">🚗 開啟 Google 導航</a>
+                    </div>
+                `;
+                const marker = L.marker([item.lat, item.lng]).bindPopup(popupContent);
+                markerGroup.addLayer(marker);
+                bounds.push([item.lat, item.lng]);
+                hasValidMarker = true;
+            }
         });
 
         if (renderedCount === 0) {
-            mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或條件的蘑菇情報。</p>';
+            mushroomBoard.innerHTML = '<p class="loading-text">🔍 找不到符合當前地區或距離條件的蘑菇情報。</p>';
         } else {
             mushroomBoard.innerHTML = htmlContent;
         }
 
-        if (markerGroup) {
-            markerGroup.clearLayers(); 
-
-            let hasValidMarker = false;
-            let bounds = []; 
-
-            keys.forEach(id => {
-                const item = localMushroomsData[id];
-                if (!item) return;
-
-                if (cityFilter !== "all" && item.city !== cityFilter) return;
-                if (distFilter !== "all") {
-                    let matchPrimaryDistrict = Array.isArray(item.district) ? item.district.includes(distFilter) : item.district === distFilter;
-                    if (!matchPrimaryDistrict && !item.locationName.includes(distFilter)) return;
-                }
-                if (keyword !== "" && !item.locationName.toLowerCase().includes(keyword) && !item.type.toLowerCase().includes(keyword)) return;
-
-                if (item.lat !== undefined && item.lat !== null && item.lng !== undefined && item.lng !== null) {
-                    const popupContent = `
-                        <div style="font-family: sans-serif; font-size: 14px;">
-                            <strong style="color: #d9383a;">[${item.size}] ${item.type}</strong><br>
-                            📍 ${item.city}${Array.isArray(item.district) ? item.district.join('/') : item.district} - ${item.locationName}<br>
-                            👥 人數: ${item.currentPlayers} 人<br>
-                            <hr style="margin: 5px 0; border: 0; border-top: 1px solid #ccc;">
-                            <a href="http://googleusercontent.com/maps.google.com/maps?q=${item.lat},${item.lng}" target="_blank" style="color: #1890ff; font-weight: bold; text-decoration: none;">🚗 開啟 Google 導航</a>
-                        </div>
-                    `;
-
-                    const marker = L.marker([item.lat, item.lng]).bindPopup(popupContent);
-                    markerGroup.addLayer(marker);
-
-                    bounds.push([item.lat, item.lng]);
-                    hasValidMarker = true;
-                }
-            });
-
-            if (hasValidMarker && bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30] });
-            }
+        // 🌟 自動飛移縮放至符合條件的大頭針群組
+        if (hasValidMarker && bounds.length > 0 && map) {
+            map.fitBounds(bounds, { padding: [30, 30] });
         }
         
         updateTickCounters();
@@ -765,18 +812,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!textElement) return;
 
+            // 🌟 600m過濾下，未被渲染進 HTML 的節點直接跳過，防報錯
+            if (!cardElement) return;
+
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
             const expireTime = item.createdAt + totalReportedMs;
             const msLeft = expireTime - Date.now();
 
             let isOver5Min = false;
-            // 🌟 核心新增：如果這朵菇是過期被重置的固定據點
+            
             if (item.type === "未指定") {
                 textElement.textContent = `💤 據點休眠中 (等待新菇情報)`;
                 textElement.className = "countdown-text";
                 if (staleBadge) staleBadge.style.display = "none";
                 if (verifyBtn) verifyBtn.style.display = "none";
-                return; // 直接跳過後面的時間計算
+                return; 
             }
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
@@ -998,6 +1048,7 @@ document.addEventListener("DOMContentLoaded", () => {
             startBoardSync(); 
         }
     }, 150);
+
     // ========================================================
     // ⚡ 新增功能：點擊自動帶入上方回報表單並平滑捲動
     // ========================================================
