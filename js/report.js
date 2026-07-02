@@ -215,71 +215,94 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     }
 
-    // 免 API 純前端 GPS 定位
+        // 🎯 超高效、真精準的 GPS 逆向地理定位功能
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
             if (!navigator.geolocation) {
                 alert("您的瀏覽器不支援地理定位功能。");
                 return;
             }
+            
             btnAutoLocation.textContent = "⌛";
+            
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    const TaiwanCityCoordinates = {
-                        "台北市": { lat: 25.0339, lon: 121.5644, defaultDist: "大安區" },
-                        "新北市": { lat: 25.0169, lon: 121.4627, defaultDist: "板橋區" },
-                        "桃園市": { lat: 24.9936, lon: 121.3009, defaultDist: "桃園區" },
-                        "台中市": { lat: 24.1477, lon: 120.6736, defaultDist: "西屯區" },
-                        "台南市": { lat: 22.9908, lon: 120.2133, defaultDist: "中西區" },
-                        "高雄市": { lat: 22.6273, lon: 120.3014, defaultDist: "前鎮區" },
-                        "基隆市": { lat: 25.1283, lon: 121.7391, defaultDist: "仁愛區" },
-                        "宜蘭縣": { lat: 24.7570, lon: 121.7530, defaultDist: "宜蘭市" }
-                    };
 
-                    let closestCity = "高雄市"; 
-                    let minDistance = Infinity;
-                    for (const [cityName, coord] of Object.entries(TaiwanCityCoordinates)) {
-                        const dLat = lat - coord.lat;
-                        const dLon = lon - coord.lon;
-                        const distance = Math.sqrt(dLat * dLat + dLon * dLon);
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                            closestCity = cityName;
-                        }
+                    // 🗺️ 1. 讓地圖即時平滑飛移到玩家當前精準位置
+                    if (map) {
+                        map.setView([lat, lon], 16); // 放大到 16 級看更清
                     }
-                    const foundDist = TaiwanCityCoordinates[closestCity].defaultDist;
-                    if (filterCity && filterDistrict) {
-                        const districtsData = window.taiwanData || {}; 
-                        filterCity.value = closestCity;
-                        filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
-                        filterDistrict.disabled = false;
-                        const districts = districtsData[closestCity] || [];
-                        districts.forEach(dist => {
-                            const option = document.createElement("option");
-                            option.value = dist;
-                            option.textContent = dist;
-                            filterDistrict.appendChild(option);
-                        });
-                        filterDistrict.value = foundDist;
-                        
-                        localStorage.setItem("mushroom_filter_city", closestCity);
-                        localStorage.setItem("mushroom_filter_dist", foundDist);
 
+                    // 📡 2. 利用開源不收費的 Nominatim API 進行逆向地理編碼查詢
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-TW`;
+
+                    fetch(url, {
+                        headers: { 'User-Agent': 'PikminMushroomHubApp/1.0' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
                         btnAutoLocation.textContent = "🎯 定位";
-                        alert(`🎯 定位成功：已自動切換至【${closestCity} ${foundDist}】`);
-                        renderBoard();
-                    }
+                        
+                        if (!data || !data.address) {
+                            alert("定位成功，但無法解析行政區名稱，請手動選擇。");
+                            return;
+                        }
+
+                        // 🔍 3. 智慧解析台灣的縣市與行政區欄位
+                        const addr = data.address;
+                        // 台灣的縣市可能藏在 city, short_name 或 state 中
+                        let detectedCity = addr.city || addr.state || addr.town || "";
+                        // 行政區可能藏在 suburb, district 或 town 中
+                        let detectedDistrict = addr.suburb || addr.district || addr.town || addr.city_district || "";
+
+                        // 清洗字串，確保格式乾淨（如：將 "Kaohsiung" 轉為 "高雄市"）
+                        if (detectedCity.includes("高雄")) detectedCity = "高雄市";
+                        if (detectedCity.includes("臺南") || detectedCity.includes("台南")) detectedCity = "台南市";
+                        if (detectedCity.includes("臺北") || detectedCity.includes("台北")) detectedCity = "台北市";
+                        if (detectedCity.includes("新北")) detectedCity = "新北市";
+                        if (detectedCity.includes("桃園")) detectedCity = "桃園市";
+                        if (detectedCity.includes("臺中") || detectedCity.includes("台中")) detectedCity = "台中市";
+
+                        // 移除 Nominatim 有時會帶有的重複字詞
+                        detectedDistrict = detectedDistrict.replace(detectedCity, "").trim();
+
+                        // 💼 4. 強制將精準結果塞入網頁下拉選單
+                        if (filterCity && filterDistrict) {
+                            filterCity.value = detectedCity;
+                            
+                            // 觸發連動，讓行政區選單更新
+                            filterCity.dispatchEvent(new Event("change"));
+
+                            // 稍微延遲讓 DOM 生成完畢後，精準選取行政區
+                            setTimeout(() => {
+                                filterDistrict.value = detectedDistrict;
+                                
+                                // 記憶到瀏覽器快取
+                                localStorage.setItem("mushroom_filter_city", detectedCity);
+                                localStorage.setItem("mushroom_filter_dist", detectedDistrict);
+
+                                alert(`🎯 精準定位成功！已切換至【${detectedCity} ${detectedDistrict}】`);
+                                renderBoard();
+                            }, 80);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("逆向解析失敗:", err);
+                        btnAutoLocation.textContent = "🎯 定位";
+                        alert("網路忙碌中，未能成功解析行政區。");
+                    });
                 },
                 () => {
                     btnAutoLocation.textContent = "🎯 定位";
-                    alert("GPS 定位失敗，請確認是否開啟權限。");
+                    alert("GPS 定位失敗，請確認手機/瀏覽器是否開啟位置權限。");
                 },
-                { enableHighAccuracy: false, timeout: 5000 }
+                { enableHighAccuracy: true, timeout: 6000 } // 🌟 開啟高精準度模式
             );
         });
     }
+
 
     // 情報發佈 (防重複、原地更新、自動合併新行政區、經緯度萬能鎖定保護)
     if (reportForm) {
