@@ -699,10 +699,13 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.type.includes("冰")) colorBorderClass = "border-ice";
 
             const fastFillData = encodeURIComponent(JSON.stringify({
-                city: item.city,
-                district: firstDistrict,
-                locationName: item.locationName
-            }));
+    city: item.city,
+    district: firstDistrict,
+    locationName: item.locationName,
+    // 🌟 加碼打包：把這朵菇原本的經緯度一起包進去（若沒有則帶空字串）
+    lat: item.lat !== undefined && item.lat !== null ? item.lat : "",
+    lng: item.lng !== undefined && item.lng !== null ? item.lng : ""
+}));
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${fullClass} ${colorBorderClass}" data-id="${id}" id="card-${id}">
