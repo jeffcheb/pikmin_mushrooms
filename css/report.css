@@ -739,3 +739,36 @@
         margin-top: 5px;
     }
 }
+/* ========================================================
+   📱 手機版經緯度輸入欄位防破圖與排版修復
+   ======================================================== */
+
+/* 經緯度包裹容器：支援自動換行與滿版計算 */
+.latlng-inputs-container {
+    display: flex;
+    flex-wrap: wrap; /* 空間不夠時（如手機版）允許自動換行 */
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 讓緯度、經度輸入框在電腦版上對半分 */
+#lat, #lng {
+    flex: 1 1 calc(50% - 5px); /* 平分 50% 寬度並扣除 gap 的一半 */
+    min-width: 100px;         /* 設定基礎防護極限 */
+    padding: 8px 12px;         /* 保持良好的手指點擊高度 */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;   /* 確保內距與邊框不撐大總寬度 */
+}
+
+/* 🎯 當螢幕寬度小於 576px (手機直向螢幕) 時的極致 RWD 優化 */
+@media (max-width: 576px) {
+    .latlng-inputs-container {
+        gap: 8px; /* 稍微縮小手機版的間距 */
+    }
+
+    #lat, #lng {
+        flex: 1 1 100%; /* 手機版切換為 100% 滿版，改為上下堆疊，絕對不跑出去 */
+    }
+}
