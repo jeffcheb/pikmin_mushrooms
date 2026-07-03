@@ -1074,7 +1074,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
             }, 60);
-
+     
         } catch (error) {
             console.error("快填解析失敗:", error);
         }
