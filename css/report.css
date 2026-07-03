@@ -710,3 +710,32 @@
 .btn-nearby-filter:hover {
     transform: scale(1.03);
 }
+/* 📱 手機版經緯度輸入欄位防破圖修復 */
+.report-section .form-row, 
+.latlng-container {
+    display: flex;
+    flex-wrap: wrap; /* 讓手機版在空間不夠時自動換行 */
+    gap: 10px;
+    width: 100%;
+}
+
+/* 讓經度、緯度輸入框在手機上自動填滿或平分空間 */
+#lat, #lng {
+    flex: 1 1 calc(50% - 5px); /* 電腦版並排平分 */
+    min-width: 120px; /* 防止極端窄螢幕文字擠壓 */
+    box-sizing: border-box; /* 防止 padding 撐破邊界 */
+}
+
+/* 🎯 當螢幕寬度小於 576px（一般手機直向）時的極致優化 */
+@media (max-width: 576px) {
+    #lat, #lng {
+        flex: 1 1 100%; /* 手機版直接改成上下堆疊，100% 滿版，絕對不會塞不下跑出去 */
+    }
+    
+    /* 如果你的定位按鈕跟經緯度排在一起，讓按鈕也滿版 */
+    #btn-auto-location, #btn-nearby-mushrooms {
+        width: 100%;
+        margin-left: 0 !important; /* 取消電腦版的左邊距 */
+        margin-top: 5px;
+    }
+}
