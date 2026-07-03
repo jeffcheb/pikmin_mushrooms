@@ -819,13 +819,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let isOver5Min = false;
             
-            if (item.type === "未指定") {
-                textElement.textContent = `💤 據點休眠中 (等待新菇情報)`;
-                textElement.className = "countdown-text";
-                if (staleBadge) staleBadge.style.display = "none";
-                if (verifyBtn) verifyBtn.style.display = "none";
-                return; 
-            }
+if (item.type === "未指定") {
+    textElement.textContent = `💤 據點休眠中 (等待新菇情報)`;
+    textElement.className = "countdown-text";
+    
+    // 🌟 核心新增：讓整張卡片加上休眠專屬的視覺 Class
+    cardElement?.classList.add("card-dormant-mode");
+    
+    if (staleBadge) staleBadge.style.display = "none";
+    if (verifyBtn) verifyBtn.style.display = "none";
+    
+    // 確保隱藏倒數計時多餘的按鈕，只留下更新狀態按鈕
+    if (alertBtn) alertBtn.style.display = "none";
+    return; // 直接跳過後面的時間計算
+} else {
+    // 🌟 核心新增：如果有新菇進來了，移除休眠狀態的 Class
+    cardElement?.classList.remove("card-dormant-mode");
+}
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
