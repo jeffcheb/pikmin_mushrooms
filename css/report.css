@@ -772,3 +772,36 @@
         flex: 1 1 100%; /* 手機版切換為 100% 滿版，改為上下堆疊，絕對不跑出去 */
     }
 }
+/* 💤 據點休眠卡片的視覺加強版 */
+.mushroom-card.card-dormant-mode {
+    background-color: #f8fafc !important; /* 改為極淺的灰色背景 */
+    border: 2px dashed #cbd5e1 !important; /* 改為灰色虛線邊框 */
+    box-shadow: none !important;
+    opacity: 0.85; /* 讓整體稍微有一點點淡化效果 */
+    transition: all 0.3s ease;
+}
+
+/* 讓休眠據點的文字變成醒目的橘黃色或灰色調 */
+.mushroom-card.card-dormant-mode .countdown-text {
+    color: #d97706 !important; /* 溫暖的橘黃色，暗示等待新情報 */
+    font-weight: bold;
+    background-color: #fef3c7;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    animation: pulseDormant 2s infinite ease-in-out; /* 加入微弱的呼吸燈效果 */
+}
+
+/* 呼吸燈動畫 */
+@keyframes pulseDormant {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* 當滑鼠移到休眠卡片上時恢復明亮，方便點擊更新 */
+.mushroom-card.card-dormant-mode:hover {
+    opacity: 1;
+    background-color: #ffffff !important;
+    border-color: #94a3b8 !important;
+}
