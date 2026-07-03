@@ -331,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🌟 新增：監聽「方圓 600m 蘑菇篩選」按鈕點擊事件
+    // 🌟 監聽「方圓 600m 蘑菇篩選」按鈕點擊事件
     if (btnNearbyMushrooms) {
         btnNearbyMushrooms.addEventListener("click", () => {
             if (userCurrentLat === null || userCurrentLng === null) {
@@ -506,15 +506,17 @@ document.addEventListener("DOMContentLoaded", () => {
             localMushroomsData = snapshot.val() || {};
             
             const now = Date.now();
-            const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; 
+            // 🌟 核心修改：將 3 天閒置（3 * 24 * ...）改成 1 天（1 * 24 * 60 * 60 * 1000）
+            const ONE_DAY_MS = 1 * 24 * 60 * 60 * 1000; 
 
             Object.entries(localMushroomsData).forEach(([id, item]) => {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const expireTime = item.createdAt + totalReportedMs;
                 
-                if (now > expireTime && (now - expireTime) > THREE_DAYS_MS) {
+                // 🌟 核心修改：判斷是否過期超過 1 天（ONE_DAY_MS）
+                if (now > expireTime && (now - expireTime) > ONE_DAY_MS) {
                     if (item.type !== "未指定" || item.currentPlayers !== 0) {
-                        console.log(`🧹 偵測到 3 天未更新點 [${item.locationName}]，自動清空即時狀態，保留據點位置。`);
+                        console.log(`🧹 偵測到 1 天未更新點 [${item.locationName}]，自動清空即時狀態，保留據點位置。`);
                         const updateRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
                         
                         window.fbUpdate(updateRef, {
@@ -605,7 +607,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let renderedCount = 0;
 
-        // 🌟 重新建立地圖圖層管理陣列
         if (markerGroup) markerGroup.clearLayers();
         let bounds = [];
         let hasValidMarker = false;
@@ -630,13 +631,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!matchLocation && !matchType) return;
             }
 
-            // 🌟 核心新增：方圓 600m 球面距離過濾邏輯（Haversine 公式）
             if (isNearbyFilterOn && userCurrentLat !== null && userCurrentLng !== null) {
                 if (item.lat === undefined || item.lat === null || item.lng === undefined || item.lng === null) {
-                    return; // 沒有經緯度的不顯示
+                    return; 
                 }
 
-                const R = 6371e3; // 地球半徑 (公尺)
+                const R = 6371e3; 
                 const phi1 = userCurrentLat * Math.PI / 180;
                 const phi2 = item.lat * Math.PI / 180;
                 const deltaPhi = (item.lat - userCurrentLat) * Math.PI / 180;
@@ -648,7 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                 const distance = R * c; 
 
-                if (distance > 600) return; // 超過 600 公尺直接截斷不加入 HTML
+                if (distance > 600) return; 
             }
 
             const lastUpdatedTime = item.updatedAt || item.createdAt;
@@ -699,13 +699,12 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (item.type.includes("冰")) colorBorderClass = "border-ice";
 
             const fastFillData = encodeURIComponent(JSON.stringify({
-    city: item.city,
-    district: firstDistrict,
-    locationName: item.locationName,
-    // 🌟 加碼打包：把這朵菇原本的經緯度一起包進去（若沒有則帶空字串）
-    lat: item.lat !== undefined && item.lat !== null ? item.lat : "",
-    lng: item.lng !== undefined && item.lng !== null ? item.lng : ""
-}));
+                city: item.city,
+                district: firstDistrict,
+                locationName: item.locationName,
+                lat: item.lat !== undefined && item.lat !== null ? item.lat : "",
+                lng: item.lng !== undefined && item.lng !== null ? item.lng : ""
+            }));
 
             htmlContent += `
                 <div class="mushroom-card ${isPinned} ${fullClass} ${colorBorderClass}" data-id="${id}" id="card-${id}">
@@ -770,7 +769,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             `;
 
-            // 🌟 順便將過濾後的蘑菇大頭針繪製到地圖上
             if (markerGroup && item.lat !== undefined && item.lat !== null && item.lng !== undefined && item.lng !== null) {
                 const popupContent = `
                     <div style="font-family: sans-serif; font-size: 14px;">
@@ -794,7 +792,6 @@ document.addEventListener("DOMContentLoaded", () => {
             mushroomBoard.innerHTML = htmlContent;
         }
 
-        // 🌟 自動飛移縮放至符合條件的大頭針群組
         if (hasValidMarker && bounds.length > 0 && map) {
             map.fitBounds(bounds, { padding: [30, 30] });
         }
@@ -814,8 +811,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const staleBadge = document.getElementById(`stale-badge-${id}`);
 
             if (!textElement) return;
-
-            // 🌟 600m過濾下，未被渲染進 HTML 的節點直接跳過，防報錯
             if (!cardElement) return;
 
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
@@ -1052,9 +1047,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 150);
 
-    // ========================================================
-    // ⚡ 新增功能：點擊自動帶入上方回報表單並平滑捲動（含經緯度）
-    // ========================================================
     window.handleFastFill = (encodedData) => {
         try {
             const data = JSON.parse(decodeURIComponent(encodedData));
@@ -1062,28 +1054,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const cityEl = document.getElementById("city");
             const districtEl = document.getElementById("district");
             const locationNameEl = document.getElementById("location-name");
-            // 🌟 抓取經緯度輸入框元件
             const latEl = document.getElementById("lat");
             const lngEl = document.getElementById("lng");
 
             if (!cityEl || !districtEl || !locationNameEl) return;
 
-            // 1. 填入縣市
             cityEl.value = data.city;
-            
-            // 2. 手動觸發一次縣市的 change 事件，強迫大表單生成行政區選單
             cityEl.dispatchEvent(new Event("change"));
 
-            // 3. 稍微延遲 60 毫秒，等行政區的 HTML option 渲染完畢後再填入其他欄位
             setTimeout(() => {
                 districtEl.value = data.district;
                 locationNameEl.value = data.locationName;
                 
-                // 🌟 核心新增：如果原本的菇有存經緯度，就自動塞進去；沒有就清空
                 if (latEl) latEl.value = data.lat;
                 if (lngEl) lngEl.value = data.lng;
                 
-                // 4. 平滑捲動回網頁最上方的發佈表單區
                 const reportSection = document.querySelector(".report-section");
                 if (reportSection) {
                     reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
