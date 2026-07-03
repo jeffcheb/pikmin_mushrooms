@@ -1053,7 +1053,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 150);
 
     // ========================================================
-    // ⚡ 新增功能：點擊自動帶入上方回報表單並平滑捲動
+    // ⚡ 新增功能：點擊自動帶入上方回報表單並平滑捲動（含經緯度）
     // ========================================================
     window.handleFastFill = (encodedData) => {
         try {
@@ -1062,6 +1062,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const cityEl = document.getElementById("city");
             const districtEl = document.getElementById("district");
             const locationNameEl = document.getElementById("location-name");
+            // 🌟 抓取經緯度輸入框元件
+            const latEl = document.getElementById("lat");
+            const lngEl = document.getElementById("lng");
 
             if (!cityEl || !districtEl || !locationNameEl) return;
 
@@ -1071,10 +1074,14 @@ document.addEventListener("DOMContentLoaded", () => {
             // 2. 手動觸發一次縣市的 change 事件，強迫大表單生成行政區選單
             cityEl.dispatchEvent(new Event("change"));
 
-            // 3. 稍微延遲 60 毫秒，等行政區的 HTML option 渲染完畢後再填入行政區
+            // 3. 稍微延遲 60 毫秒，等行政區的 HTML option 渲染完畢後再填入其他欄位
             setTimeout(() => {
                 districtEl.value = data.district;
                 locationNameEl.value = data.locationName;
+                
+                // 🌟 核心新增：如果原本的菇有存經緯度，就自動塞進去；沒有就清空
+                if (latEl) latEl.value = data.lat;
+                if (lngEl) lngEl.value = data.lng;
                 
                 // 4. 平滑捲動回網頁最上方的發佈表單區
                 const reportSection = document.querySelector(".report-section");
