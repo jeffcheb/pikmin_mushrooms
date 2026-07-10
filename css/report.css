@@ -805,3 +805,29 @@
     background-color: #ffffff !important;
     border-color: #94a3b8 !important;
 }
+/* 🗺️ 地圖與主容器排版防撞修復 */
+
+/* 確保主要內容區塊跟上方導覽列保持安全距離，不往上衝 */
+.main-container {
+    margin-top: 20px; /* 視你的 Navbar 高度調整，確保不卡死 */
+    clear: both;      /* 清除可能存在的浮動干擾 */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 幫地圖上下都補上乾淨的間距，強制與上方表單與下方的看板拉開距離 */
+#map {
+    margin-top: 25px !important;    /* 與上方「發佈情報」或「分隔線」拉開距離 */
+    margin-bottom: 25px !important; /* 與下方「即時蘑菇看板」標題拉開距離 */
+    z-index: 1;                     /* 確保地圖的圖層不會蓋在導覽列下拉選單上方 */
+    box-sizing: border-box;
+}
+
+/* 🎯 手機版微調：縮小一點間距，讓手機畫面更緊湊 */
+@media (max-width: 576px) {
+    #map {
+        margin-top: 15px !important;
+        margin-bottom: 15px !important;
+        height: 300px !important; /* 手機版地圖高度稍微縮小，更方便玩家往下滑看卡片 */
+    }
+}
