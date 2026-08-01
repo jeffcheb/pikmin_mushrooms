@@ -328,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(updateTickCounters, 1000);
     }
 
-    // 🌟 渲染主畫板與顯示卡片完整內容
+    // 🌟 渲染主畫板（完整按鈕與面板版）
     function renderBoard() {
         const keys = Object.keys(localMushroomsData);
         if (!mushroomBoard) return;
@@ -337,13 +337,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const cityFilter = filterCity?.value || "all";
         const distFilter = filterDistrict?.value || "all";
         const keyword = searchKeyword?.value.trim().toLowerCase() || "";
+        const currentSort = sortMethod?.value || "default";
 
         if (keys.length === 0) {
-            mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報！</p>';
+            mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報，快去發佈第一個吧！</p>';
+            if (markerGroup) markerGroup.clearLayers();
             return;
         }
 
+        // 排序邏輯
+        keys.sort((a, b) => {
+            const aPinned = pinnedList.includes(a) ? 1 : 0;
+            const bPinned = pinnedList.includes(b) ? 1 : 0;
+            if (bPinned !== aPinned) return bPinned - aPinned;
+
+            const itemA = localMushroomsData[a];
+            const itemB = localMushroomsData[b];
+
+            if (currentSort === "size") {
+                const sizeWeight = { "巨大": 4, "大": 3, "大型": 3, "一般": 2, "普通": 2, "小": 1, "小型": 1 };
+                return (sizeWeight[itemB.size] || 0) - (sizeWeight[itemA.size] || 0);
+            }
+            return 0;
+        });
+
         if (markerGroup) markerGroup.clearLayers();
+        let bounds = [];
+        let hasValidMarker = false;
 
         keys.forEach(id => {
             const item = localMushroomsData[id];
@@ -356,9 +376,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
             const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
+            const isAlertEnabled = alertEnabledList.includes(id);
+            const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
+
             const dynamicImgSrc = getIconPath(displayType);
 
-            // 帶入快填格式
+            // 格式化上次更新時間
+            const lastUpdatedDate = new Date(item.updatedAt || item.createdAt || Date.now());
+            const formattedTime = `${lastUpdatedDate.getMonth()+1}/${lastUpdatedDate.getDate()} ${lastUpdatedDate.getHours().toString().padStart(2,'0')}:${lastUpdatedDate.getMinutes().toString().padStart(2,'0')}:${lastUpdatedDate.getSeconds().toString().padStart(2,'0')}`;
+
+            // 控制開關狀態
+            const isEditOpen = activePanels[id]?.edit ? "block" : "none";
+            const isHistoryOpen = activePanels[id]?.history ? "block" : "none";
+
             const fastFillData = encodeURIComponent(JSON.stringify({
                 city: item.city,
                 district: Array.isArray(item.district) ? item.district[0] : item.district,
@@ -367,23 +397,62 @@ document.addEventListener("DOMContentLoaded", () => {
                 lng: item.lng || ""
             }));
 
-            // 完整補回卡片內的按鈕與介面
+            // 🌟 組合出所有原本的完整按鈕與面板 HTML
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
+                    <div id="stale-badge-${id}" class="stale-warning-badge" style="display:none;">⚠️ 許久未更新</div>
+
                     <div class="card-header">
                         <img src="${dynamicImgSrc}" class="shroom-img" alt="${displayType}">
                         <div class="shroom-info">
-                            <h4 style="display:flex; align-items:center; gap:6px;">
+                            <h4 style="display: flex; align-items: center; gap: 6px;">
                                 [${displaySize}] ${displayType}
-                                <button class="btn-fast-fill-trigger" onclick="handleFastFill('${fastFillData}')" style="font-size:11px; padding:2px 6px; cursor:pointer;">⚡ 更新</button>
+                                <button class="btn-fast-fill-trigger" onclick="handleFastFill('${fastFillData}')" title="快填此地點">⚡ 更新</button>
                             </h4>
-                            <span style="font-size:12px; color:#666;">📍 ${item.city} - ${item.locationName}</span>
+                            <div class="location-container">
+                                <span class="city-text">📍 ${item.city} - ${item.locationName}</span>
+                            </div>
                         </div>
-                        <button class="btn-pin-top" onclick="togglePin('${id}')">${pinBtnText}</button>
+                        
+                        <div class="header-controls-group" style="display: flex; gap: 4px; margin-left: auto;">
+                            <button class="btn-sm btn-pin-top ${isPinned ? 'active' : ''}" onclick="togglePin('${id}')" title="${pinBtnText}">
+                                ${isPinned ? '⭐' : '📌'}
+                            </button>
+                            <button class="btn-history-trigger" onclick="toggleHistoryPanel('${id}')" title="顯示上次更新時間">◎</button>
+                        </div>
                     </div>
+
+                    <div id="history-panel-${id}" class="history-info-panel" style="display: ${isHistoryOpen}; font-size:12px; background:#f8fafc; padding:6px; border-radius:4px; margin-top:4px;">
+                        <p>🕒 上次更新：<strong>${formattedTime}</strong></p>
+                    </div>
+
                     <div class="card-body">
                         <p>👥 參戰人數：<strong>${item.currentPlayers || 0} / ${item.maxPlayers || 30}</strong> 人</p>
                         <p class="countdown-text" id="time-text-${id}">⏳ 計算時間中...</p>
+                    </div>
+
+                    <div id="edit-panel-${id}" class="edit-status-panel" style="display: ${isEditOpen}; padding:8px; background:#f0fdf4; border-radius:6px; margin-bottom:8px;">
+                        <h5 style="margin:0 0 6px 0;">✏️ 修改目前即時狀態：</h5>
+                        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+                            <label>👥 人數：</label>
+                            <input type="number" id="edit-players-${id}" min="0" max="40" value="${item.currentPlayers || 0}" style="width:60px;">
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                            <label>⏳ 時間：</label>
+                            <input type="number" id="edit-h-${id}" min="0" max="23" value="0" placeholder="時" style="width:45px;">:
+                            <input type="number" id="edit-m-${id}" min="0" max="59" value="0" placeholder="分" style="width:45px;">:
+                            <input type="number" id="edit-s-${id}" min="0" max="59" value="0" placeholder="秒" style="width:45px;">
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn-save" onclick="saveStatusEdit('${id}')" style="background:#22c55e; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">💾 儲存</button>
+                            <button class="btn-cancel" onclick="toggleEditPanel('${id}')" style="background:#94a3b8; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">取消</button>
+                        </div>
+                    </div>
+
+                    <div class="card-footer" style="display:flex; gap:6px; margin-top:8px;">
+                        <button class="btn-sm btn-alert" id="alert-btn-${id}" onclick="toggleAlert('${id}')">${alertBtnText}</button>
+                        <button class="btn-sm btn-edit-trigger" id="edit-btn-${id}" onclick="toggleEditPanel('${id}')">✏️ 更新狀態</button>
+                        <button class="btn-sm btn-verify" id="verify-btn-${id}" style="display:none;" onclick="verifyMushroomStatus('${id}')">✅ 核實狀態</button>
                     </div>
                 </div>
             `;
@@ -391,8 +460,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (markerGroup && item.lat && item.lng) {
                 const marker = L.marker([item.lat, item.lng]).bindPopup(`<b>${displayType}</b><br>${item.locationName}`);
                 markerGroup.addLayer(marker);
+                bounds.push([item.lat, item.lng]);
+                hasValidMarker = true;
             }
         });
+
+        mushroomBoard.innerHTML = htmlContent;
+        updateTickCounters();
+    }
 
         mushroomBoard.innerHTML = htmlContent || '<p class="loading-text">🔍 找不到符合條件的蘑菇。</p>';
         updateTickCounters();
