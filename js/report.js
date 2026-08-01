@@ -469,9 +469,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTickCounters();
     }
 
-        mushroomBoard.innerHTML = htmlContent || '<p class="loading-text">🔍 找不到符合條件的蘑菇。</p>';
-        updateTickCounters();
-    }
 
     // ⏰ 倒數計時即時刷新引擎
     function updateTickCounters() {
