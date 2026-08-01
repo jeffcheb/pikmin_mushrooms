@@ -1,5 +1,17 @@
 // js/common.js
-
+/**
+ * 🍄 全站統一蘑菇名稱校正工具
+ * 自動將 巨型->巨大、普通->一般、小型->小、大型->大
+ */
+function normalizeMushroomName(str) {
+    if (!str) return '一般蘑菇';
+    
+    return str.toString().trim()
+        .replace(/巨型/g, '巨大')
+        .replace(/普通/g, '一般')
+        .replace(/小型/g, '小')
+        .replace(/大型/g, '大');
+}
 document.addEventListener("DOMContentLoaded", () => {
     console.log("🌱 皮克敏高階工具站：共用核心模組已載入。");
 
