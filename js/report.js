@@ -538,6 +538,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderBoard() {
+        // 🌟 統計今日回報量邏輯
+        const countEl = document.getElementById("daily-report-count");
+        if (countEl) {
+            // 取得今天半夜 00:00:00 的時間戳記
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const todayTimestamp = startOfToday.getTime();
+
+            // 算算出在今天 00:00 之後有新增或更新過的蘑菇數量
+            const dailyCount = keys.filter(id => {
+                const item = localMushroomsData[id];
+                const lastTime = item.updatedAt || item.createdAt || 0;
+                return lastTime >= todayTimestamp;
+            }).length;
+
+            countEl.textContent = `📊 今日回報量：${dailyCount} 筆`;
+        }
         if (!mushroomBoard) return;
         
         let htmlContent = "";
