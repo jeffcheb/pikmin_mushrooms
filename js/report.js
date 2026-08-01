@@ -1103,3 +1103,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 });
+/**
+ * 將蘑菇種類名稱統一標準化：
+ * 巨型 -> 巨大 | 普通 -> 一般 | 小型 -> 小 | 大型 -> 大
+ */
+function normalizeMushroomType(typeStr) {
+    if (!typeStr) return '一般蘑菇';
+
+    let normalized = typeStr.trim();
+
+    // 替換關鍵字順序：先換詞頭，再補齊標準名稱
+    normalized = normalized
+        .replace(/巨型/g, '巨大')
+        .replace(/普通/g, '一般')
+        .replace(/小型/g, '小')
+        .replace(/大型/g, '大');
+
+    return normalized;
+}
