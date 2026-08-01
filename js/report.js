@@ -506,14 +506,12 @@ document.addEventListener("DOMContentLoaded", () => {
             localMushroomsData = snapshot.val() || {};
             
             const now = Date.now();
-            // 🌟 核心修改：將 3 天閒置（3 * 24 * ...）改成 1 天（1 * 24 * 60 * 60 * 1000）
             const ONE_DAY_MS = 1 * 24 * 60 * 60 * 1000; 
 
             Object.entries(localMushroomsData).forEach(([id, item]) => {
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + item.timeReported.seconds) * 1000;
                 const expireTime = item.createdAt + totalReportedMs;
                 
-                // 🌟 核心修改：判斷是否過期超過 1 天（ONE_DAY_MS）
                 if (now > expireTime && (now - expireTime) > ONE_DAY_MS) {
                     if (item.type !== "未指定" || item.currentPlayers !== 0) {
                         console.log(`🧹 偵測到 1 天未更新點 [${item.locationName}]，自動清空即時狀態，保留據點位置。`);
@@ -538,15 +536,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderBoard() {
-        // 🌟 統計今日回報量邏輯
+        // 🌟 1. 提早取得 keys 陣列，解決未宣告先使用的報錯
+        const keys = Object.keys(localMushroomsData);
+
+        // 🌟 2. 統計今日回報量邏輯
         const countEl = document.getElementById("daily-report-count");
         if (countEl) {
-            // 取得今天半夜 00:00:00 的時間戳記
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
             const todayTimestamp = startOfToday.getTime();
 
-            // 算算出在今天 00:00 之後有新增或更新過的蘑菇數量
             const dailyCount = keys.filter(id => {
                 const item = localMushroomsData[id];
                 const lastTime = item.updatedAt || item.createdAt || 0;
@@ -555,10 +554,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             countEl.textContent = `📊 今日回報量：${dailyCount} 筆`;
         }
+
         if (!mushroomBoard) return;
         
         let htmlContent = "";
-        const keys = Object.keys(localMushroomsData);
 
         const cityFilter = filterCity?.value || "all";
         const distFilter = filterDistrict?.value || "all";
@@ -836,23 +835,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let isOver5Min = false;
             
-if (item.type === "未指定") {
-    textElement.textContent = `💤 據點休眠中 (等待新菇情報)`;
-    textElement.className = "countdown-text";
-    
-    // 🌟 核心新增：讓整張卡片加上休眠專屬的視覺 Class
-    cardElement?.classList.add("card-dormant-mode");
-    
-    if (staleBadge) staleBadge.style.display = "none";
-    if (verifyBtn) verifyBtn.style.display = "none";
-    
-    // 確保隱藏倒數計時多餘的按鈕，只留下更新狀態按鈕
-    if (alertBtn) alertBtn.style.display = "none";
-    return; // 直接跳過後面的時間計算
-} else {
-    // 🌟 核心新增：如果有新菇進來了，移除休眠狀態的 Class
-    cardElement?.classList.remove("card-dormant-mode");
-}
+            if (item.type === "未指定") {
+                textElement.textContent = `💤 據點休眠中 (等待新菇情報)`;
+                textElement.className = "countdown-text";
+                
+                cardElement?.classList.add("card-dormant-mode");
+                
+                if (staleBadge) staleBadge.style.display = "none";
+                if (verifyBtn) verifyBtn.style.display = "none";
+                if (alertBtn) alertBtn.style.display = "none";
+                return; 
+            } else {
+                cardElement?.classList.remove("card-dormant-mode");
+            }
+
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
@@ -1101,7 +1097,7 @@ if (item.type === "未指定") {
                     reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
             }, 60);
-     
+
         } catch (error) {
             console.error("快填解析失敗:", error);
         }
