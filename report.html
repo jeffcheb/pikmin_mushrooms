@@ -104,7 +104,15 @@
 </div>
 
 <main class="main-container">
-        
+        <div class="quick-code-box" style="background: #f0fdf4; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">
+    <label for="input-quick-code" style="font-weight: bold; color: #166534;">⚡ 格式碼/捷徑快速帶入：</label>
+    <div style="display: flex; gap: 8px; margin-top: 5px;">
+        <input type="text" id="input-quick-code" placeholder="#菇,地點名稱,蘑菇種類,02:30,3" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        <button type="button" onclick="parseMushroomCode(document.getElementById('input-quick-code').value)" style="background: #22c55e; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            解析帶入
+        </button>
+    </div>
+</div>
         <section class="card report-section">
             <h2>📢 發佈蘑菇情報</h2>
             <form id="report-form" class="report-form">
@@ -167,11 +175,11 @@
                     <div class="form-group">
                         <label for="mushroom-size">蘑菇大小：</label>
                         <select id="mushroom-size" name="mushroomSize" required>
-                            <option value="小型">小型</option>
-                            <option value="普通">普通</option>
-                            <option value="大型">大型</option>
-                            <option value="巨大">巨大</option>
-                        </select>
+    <option value="小">小</option>
+    <option value="一般" selected>一般</option>
+    <option value="大">大</option>
+    <option value="巨大">巨大</option>
+</select>
                     </div>
                 </div>
 
