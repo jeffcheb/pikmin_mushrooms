@@ -282,19 +282,98 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 定位按鈕
+   // 🎯 超精準 GPS 定位 + 自動填入縣市行政區
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
-            if (!navigator.geolocation) return alert("不支援定位");
+            if (!navigator.geolocation) {
+                alert("您的瀏覽器不支援地理定位功能。");
+                return;
+            }
+            
             btnAutoLocation.textContent = "⌛";
+            
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    userCurrentLat = pos.coords.latitude;
-                    userCurrentLng = pos.coords.longitude;
-                    if (map) map.setView([userCurrentLat, userCurrentLng], 16);
-                    btnAutoLocation.textContent = "🎯 定位";
-                    renderBoard();
+                (position) => {
+                    userCurrentLat = position.coords.latitude;
+                    userCurrentLng = position.coords.longitude;
+
+                    // 🗺️ 1. 地圖平滑飛移至玩家位置
+                    if (map) {
+                        map.setView([userCurrentLat, userCurrentLng], 16);
+                    }
+
+                    // 📡 2. 呼叫逆向地理編碼 API (將經緯度轉為縣市行政區)
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCurrentLat}&lon=${userCurrentLng}&accept-language=zh-TW`;
+
+                    fetch(url, { headers: { 'User-Agent': 'PikminMushroomHubApp/1.0' } })
+                    .then(response => response.json())
+                    .then(data => {
+                        btnAutoLocation.textContent = "🎯 定位";
+                        
+                        if (!data || !data.address) {
+                            alert("定位成功，但無法自動解析縣市名稱，請手動選擇。");
+                            return;
+                        }
+
+                        // 🔍 3. 清洗與正規化縣市名稱
+                        const addr = data.address;
+                        let detectedCity = addr.city || addr.state || addr.town || "";
+                        let detectedDistrict = addr.suburb || addr.district || addr.town || addr.city_district || "";
+
+                        if (detectedCity.includes("高雄")) detectedCity = "高雄市";
+                        if (detectedCity.includes("臺南") || detectedCity.includes("台南")) detectedCity = "台南市";
+                        if (detectedCity.includes("臺北") || detectedCity.includes("台北")) detectedCity = "台北市";
+                        if (detectedCity.includes("新北")) detectedCity = "新北市";
+                        if (detectedCity.includes("桃園")) detectedCity = "桃園市";
+                        if (detectedCity.includes("臺中") || detectedCity.includes("台中")) detectedCity = "台中市";
+
+                        detectedDistrict = detectedDistrict.replace(detectedCity, "").trim();
+
+                        // 💼 4. 強制將定位結果寫入「回報表單」與「看板篩選選單」
+                        const reportCityEl = document.getElementById("city");
+                        const reportDistrictEl = document.getElementById("district");
+                        const filterCityEl = document.getElementById("filter-city");
+                        const filterDistrictEl = document.getElementById("filter-district");
+                        const reportLatEl = document.getElementById("lat");
+                        const reportLngEl = document.getElementById("lng");
+
+                        // 帶入回報表單縣市並觸發 change
+                        if (reportCityEl) {
+                            reportCityEl.value = detectedCity;
+                            reportCityEl.dispatchEvent(new Event("change"));
+                        }
+
+                        // 帶入看板篩選縣市並觸發 change
+                        if (filterCityEl) {
+                            filterCityEl.value = detectedCity;
+                            filterCityEl.dispatchEvent(new Event("change"));
+                        }
+
+                        // 延遲 100ms 等待行政區下拉選單 DOM 生成完畢後寫入行政區與經緯度
+                        setTimeout(() => {
+                            if (reportDistrictEl) reportDistrictEl.value = detectedDistrict;
+                            if (filterDistrictEl) filterDistrictEl.value = detectedDistrict;
+                            if (reportLatEl) reportLatEl.value = userCurrentLat.toFixed(5);
+                            if (reportLngEl) reportLngEl.value = userCurrentLng.toFixed(5);
+
+                            localStorage.setItem("mushroom_filter_city", detectedCity);
+                            localStorage.setItem("mushroom_filter_dist", detectedDistrict);
+
+                            alert(`🎯 定位成功！已自動帶入【${detectedCity} ${detectedDistrict}】！`);
+                            renderBoard();
+                        }, 100);
+                    })
+                    .catch(err => {
+                        console.error("逆向解析失敗:", err);
+                        btnAutoLocation.textContent = "🎯 定位";
+                        alert("網路忙碌中，請稍後再試。");
+                    });
                 },
-                () => { btnAutoLocation.textContent = "🎯 定位"; alert("GPS 定位失敗"); }
+                () => {
+                    btnAutoLocation.textContent = "🎯 定位";
+                    alert("GPS 定位失敗，請確認手機/瀏覽器是否開啟位置權限。");
+                },
+                { enableHighAccuracy: true, timeout: 6000 }
             );
         });
     }
