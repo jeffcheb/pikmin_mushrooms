@@ -29,7 +29,7 @@ function normalizeMushroomSize(sizeStr) {
     return '一般';
 }
 
-// 🍄 2. 種類獨立標準校正 (對齊新版 HTML 選項)
+// 🍄 2. 種類獨立標準校正
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '黃蘑菇';
     let normalized = String(typeStr).trim();
@@ -40,6 +40,7 @@ function normalizeMushroomType(typeStr) {
         normalized.includes("特殊") || 
         normalized.includes("活動") || 
         normalized.includes("每月") ||
+        normalized.includes("本月") ||
         normalized.includes("神秘")
     ) {
         return "每月特殊蘑菇";
@@ -71,7 +72,7 @@ function getIconPath(type) {
     const typeStr = String(type).trim();
 
     if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
-    if (typeStr.includes("每月") || typeStr.includes("特殊") || typeStr.includes("海泡泡")) {
+    if (typeStr.includes("每月") || typeStr.includes("特殊") || typeStr.includes("海泡泡") || typeStr.includes("本月")) {
         return "picture/mushroom_monthly_special.png";
     }
     if (typeStr.includes("火")) return "picture/mushroom_fire.png";
@@ -212,24 +213,23 @@ function parseMushroomCode(code) {
         let matchedDistrict = cleanDistrict;
         let highestScore = 0;
 
-        // 🔍 比對歷史據點
-if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
-    Object.values(localMushroomsData).forEach(item => {
-        if (item && item.locationName) {
-            const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
-            const score = calculateSimilarity(cleanLocation, targetName);
-            
-            if (score > highestScore && score >= 0.55) {
-                highestScore = score;
-                bestMatchedLocation = item.locationName;
-                matchedCity = item.city;
-                if (!matchedDistrict) {
-                    matchedDistrict = Array.isArray(item.district) ? item.district[0] : item.district;
+        if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
+            Object.values(localMushroomsData).forEach(item => {
+                if (item && item.locationName) {
+                    const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
+                    const score = calculateSimilarity(cleanLocation, targetName);
+                    
+                    if (score > highestScore && score >= 0.55) {
+                        highestScore = score;
+                        bestMatchedLocation = item.locationName;
+                        matchedCity = item.city;
+                        if (!matchedDistrict) {
+                            matchedDistrict = Array.isArray(item.district) ? item.district[0] : item.district;
+                        }
+                    }
                 }
-            }
+            });
         }
-    });
-}
 
         // D. 帶入縣市與地區
         const citySelect = document.getElementById("city");
@@ -256,29 +256,51 @@ if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
             }, 150);
         }
 
-        // E. 帶入尺寸與種類 (永遠以捷徑傳入的 rawSize/rawType 為最高優先)
-let finalSize = normalizeMushroomSize(rawSize);
-let finalType = normalizeMushroomType(rawType);
+        // E. 帶入尺寸與種類 (強效匹配選單)
+        let parsedSize = rawSize;
+        let parsedType = rawType;
 
-// 如果捷徑把尺寸跟種類寫在同一欄 (例如 rawType 是 "小紅色蘑菇")
-if (rawType && (rawType.includes("小") || rawType.includes("大") || rawType.includes("巨"))) {
-    const parsed = parseMushroomTypeAndSize(rawType);
-    if (!rawSize) finalSize = normalizeMushroomSize(parsed.size);
-    finalType = normalizeMushroomType(parsed.type);
-}
+        if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
+            const parsed = parseMushroomTypeAndSize(rawType);
+            if (!parsedSize) parsedSize = parsed.size;
+            parsedType = parsed.type;
+        }
 
-// 強制寫入 HTML 下拉選單，覆蓋舊資料
-const sizeSelect = document.getElementById('mushroom-size');
-if (sizeSelect) {
-    sizeSelect.value = finalSize;
-    sizeSelect.dispatchEvent(new Event('change')); // 觸發變更事件
-}
+        let finalSize = normalizeMushroomSize(parsedSize);
+        let finalType = normalizeMushroomType(parsedType);
 
-const typeSelect = document.getElementById('mushroom-type');
-if (typeSelect) {
-    typeSelect.value = finalType;
-    typeSelect.dispatchEvent(new Event('change')); // 觸發變更事件
-}
+        // 帶入尺寸
+        const sizeSelect = document.getElementById('mushroom-size');
+        if (sizeSelect) {
+            let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
+                opt.value === finalSize || opt.text.includes(finalSize) || finalSize.includes(opt.value)
+            );
+            if (matchedSizeOpt) sizeSelect.value = matchedSizeOpt.value;
+            sizeSelect.dispatchEvent(new Event('change'));
+        }
+
+        // 帶入種類
+        const typeSelect = document.getElementById('mushroom-type');
+        if (typeSelect) {
+            const coreKey = finalType.replace(/蘑菇|色|一般|普通/g, '');
+            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => {
+                const val = opt.value;
+                const txt = opt.text;
+                return (
+                    val === finalType || 
+                    txt === finalType ||
+                    (coreKey && (val.includes(coreKey) || txt.includes(coreKey)))
+                );
+            });
+
+            if (matchedTypeOpt) {
+                typeSelect.value = matchedTypeOpt.value;
+            } else if (typeSelect.options.length > 0) {
+                typeSelect.selectedIndex = 0;
+            }
+            typeSelect.dispatchEvent(new Event('change'));
+        }
+
         // F. 人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
         const playerInput = document.getElementById('current-players');
