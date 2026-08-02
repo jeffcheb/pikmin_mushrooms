@@ -20,39 +20,33 @@ async function getUserIP() {
 }
 
 // 🍄 全站蘑菇種類標準校正 (與新 HTML 選項 100% 精準對應)
-function normalizeMushroomType(typeStr) {
-    if (!typeStr) return '黃蘑菇';
-    let normalized = String(typeStr).trim();
+// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
+function parseMushroomTypeAndSize(rawInput) {
+    if (!rawInput) return { size: '一般', type: '未知' };
 
-    // 🌟 1. 當月特殊與活動蘑菇
-    if (
-        normalized.includes("海泡泡") || 
-        normalized.includes("特殊") || 
-        normalized.includes("活動") || 
-        normalized.includes("每月") ||
-        normalized.includes("神秘")
-    ) {
-        return "每月特殊蘑菇";
+    let text = rawInput.trim();
+    let detectedSize = '一般'; // 預設尺寸
+
+    // 1. 偵測常見尺寸關鍵字
+    if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
+        detectedSize = '巨大';
+        text = text.replace(/\[?(巨大|巨型|大)\]?/g, '');
+    } else if (text.includes('小型') || text.includes('小')) {
+        detectedSize = '小';
+        text = text.replace(/\[?(小型|小)\]?/g, '');
+    } else if (text.includes('一般') || text.includes('普通') || text.includes('中')) {
+        detectedSize = '一般';
+        text = text.replace(/\[?(一般|普通|中)\]?/g, '');
     }
 
-    // 🌟 2. 元素蘑菇 (優先判斷水晶，避免被水蘑菇攔截)
-    if (normalized.includes("水晶")) return "水晶蘑菇";
-    if (normalized.includes("火")) return "火蘑菇";
-    if (normalized.includes("水")) return "水蘑菇";
-    if (normalized.includes("毒")) return "毒蘑菇";
-    if (normalized.includes("電")) return "電蘑菇";
+    // 2. 清理多餘符號與空白
+    let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
+    if (!detectedType) detectedType = '黃蘑菇';
 
-    // 🌟 3. 一般/普通顏色蘑菇校正
-    if (normalized.includes("紅")) return "紅蘑菇";
-    if (normalized.includes("藍") && !normalized.includes("冰")) return "藍蘑菇";
-    if (normalized.includes("冰")) return "冰藍蘑菇";
-    if (normalized.includes("黃")) return "黃蘑菇";
-    if (normalized.includes("紫")) return "紫蘑菇";
-    if (normalized.includes("白")) return "白蘑菇";
-    if (normalized.includes("灰") || normalized.includes("岩")) return "灰蘑菇";
-    if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
-
-    return normalized;
+    return {
+        size: detectedSize,
+        type: detectedType
+    };
 }
 // 🍄 2. 圖示路徑精準解析 (水晶關鍵字必須最優先)
 function getIconPath(type) {
