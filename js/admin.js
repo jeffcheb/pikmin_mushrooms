@@ -10,9 +10,9 @@ function showSection(sectionName) {
     event.currentTarget.classList.add('active');
 }
 
-// 🟢 監聽 Firebase 數據同步
+// 🟢 監聽 Firebase 數據同步 (相容全版本)
 function initAdminSync() {
-    if (!window.fbDB) return;
+    if (!window.fbDB || !window.fbOnValue || !window.fbRef) return;
 
     // 1. 監聽蘑菇資料
     window.fbOnValue(window.fbRef(window.fbDB, "mushrooms"), (snapshot) => {
@@ -26,18 +26,22 @@ function initAdminSync() {
         renderBlacklist(snapshot.val() || {});
     });
 
-    // 3. 監聽 Log (限制最近 50 筆)
-    window.fbOnValue(window.fbQuery(window.fbRef(window.fbDB, "audit_logs"), window.fbLimitToLast(50)), (snapshot) => {
+    // 3. 監聽 Log (安全寫法：直接監聽 audit_logs 節點)
+    window.fbOnValue(window.fbRef(window.fbDB, "audit_logs"), (snapshot) => {
         renderLogs(snapshot.val() || {});
     });
 
-    // 4. 在線人數監控 (Firebase 特殊節點)
-    const onlineRef = window.fbRef(window.fbDB, ".info/connected");
-    window.fbOnValue(onlineRef, (snap) => {
-        if (snap.val() === true) {
-            document.getElementById('stat-online').textContent = "🟢 連線中";
-        }
-    });
+    // 4. 在線狀態監控
+    try {
+        window.fbOnValue(window.fbRef(window.fbDB, ".info/connected"), (snap) => {
+            const onlineEl = document.getElementById('stat-online');
+            if (onlineEl) {
+                onlineEl.textContent = snap.val() === true ? "🟢 連線中" : "🔴 離線";
+            }
+        });
+    } catch(e) {
+        console.warn("在線監控跳過:", e);
+    }
 }
 
 // 🟢 渲染數據分析 (Analytics)
