@@ -149,22 +149,27 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="mushroom-type">蘑菇種類：</label>
-                        <select id="mushroom-type" class="form-control" required>
-    <option value="" disabled selected>請選擇蘑菇種類</option>
-    <option value="每月特殊蘑菇">每月特殊蘑菇</option>
-    <option value="水晶蘑菇">水晶蘑菇</option>
-    <option value="黃蘑菇">黃蘑菇</option>
-    <option value="紅蘑菇">紅蘑菇</option>
-    <option value="藍蘑菇">藍蘑菇</option>
-    <option value="紫蘑菇">紫蘑菇</option>
-    <option value="白蘑菇">白蘑菇</option>
-    <option value="羽色蘑菇">羽色蘑菇</option>
-    <option value="岩石蘑菇">岩石蘑菇</option>
-    <option value="火蘑菇">火蘑菇</option>
-    <option value="水蘑菇">水蘑菇</option>
-    <option value="毒蘑菇">毒蘑菇</option>
-    <option value="電蘑菇">電蘑菇</option>
-    <option value="冰蘑菇">冰蘑菇</option>
+                        <select id="mushroom-type" name="mushroomType" class="form-control" required>
+    <optgroup label="🍄 普通/巨大蘑菇">
+        <option value="紅蘑菇">🔴 紅蘑菇</option>
+        <option value="藍蘑菇">🔵 藍蘑菇</option>
+        <option value="黃蘑菇">🟡 黃蘑菇</option>
+        <option value="紫蘑菇">🟣 紫蘑菇</option>
+        <option value="白蘑菇">⚪ 白蘑菇</option>
+        <option value="灰蘑菇">🪨 灰蘑菇</option>
+        <option value="冰藍蘑菇">🥶 冰藍蘑菇</option>
+        <option value="粉紅蘑菇">🪽 粉紅蘑菇</option>
+    </optgroup>
+    <optgroup label="⚡ 元素蘑菇">
+        <option value="火蘑菇">🔥 火蘑菇</option>
+        <option value="水蘑菇">💧 水蘑菇</option>
+        <option value="水晶蘑菇">💎 水晶蘑菇</option>
+        <option value="毒蘑菇">☠️ 毒蘑菇</option>
+        <option value="電蘑菇">⚡ 電蘑菇</option>
+    </optgroup>
+    <optgroup label="🌟 當月限定">
+        <option value="每月特殊蘑菇" selected>✨ 每月特殊蘑菇</option>
+    </optgroup>
 </select>
                     </div>
                     <div class="form-group">
