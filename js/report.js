@@ -706,10 +706,46 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
+    // ✏️ 開啟/關閉狀態修改面板 (自動帶入當前剩餘時/分/秒)
     window.toggleEditPanel = (id) => {
         if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
-        activePanels[id].edit = !activePanels[id].edit;
+        
+        // 切換開關狀態
+        const willOpen = !activePanels[id].edit;
+        activePanels[id].edit = willOpen;
+        
+        // 重新渲染畫板顯示/隱藏面板
         renderBoard();
+
+        // 🌟 關鍵修復：當面板打開時，自動計算並帶入當前剩餘的 時/分/秒
+        if (willOpen && localMushroomsData[id]) {
+            const item = localMushroomsData[id];
+            if (item.timeReported) {
+                // 計算從發佈到現在已經過了多少時間
+                const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
+                const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
+                const msLeft = expireTime - Date.now();
+
+                let h = 0, m = 0, s = 0;
+                if (msLeft > 0) {
+                    const totalSec = Math.floor(msLeft / 1000);
+                    h = Math.floor(totalSec / 3600);
+                    m = Math.floor((totalSec % 3600) / 60);
+                    s = totalSec % 60;
+                }
+
+                // 填入面板輸入框中
+                setTimeout(() => {
+                    const hInput = document.getElementById(`edit-h-${id}`);
+                    const mInput = document.getElementById(`edit-m-${id}`);
+                    const sInput = document.getElementById(`edit-s-${id}`);
+
+                    if (hInput) hInput.value = h;
+                    if (mInput) mInput.value = m;
+                    if (sInput) sInput.value = s;
+                }, 50); // 延遲 50ms 確保 DOM 面板已渲染完成
+            }
+        }
     };
 
     window.saveStatusEdit = (id) => {
