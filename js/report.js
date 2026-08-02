@@ -669,6 +669,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTickCounters();
     }
 
+   // ⏰ 精確倒數計時器 (含 5 分鐘摧毀冷卻機制)
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -676,22 +677,39 @@ document.addEventListener("DOMContentLoaded", () => {
             const textElement = document.getElementById(`time-text-${id}`);
             if (!textElement || !item.timeReported) return;
 
+            // 計算當初回報總秒數 (毫秒)
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
-            const expireTime = item.createdAt + totalReportedMs;
+            const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
             const msLeft = expireTime - Date.now();
 
+            // 1. 戰鬥倒數中
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
                 const s = totalSec % 60;
-                textElement.textContent = `⏳ 剩餘時間：${h}時${m}分${s}秒`;
-            } else {
-                textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
+                textElement.innerHTML = `⏳ 剩餘時間：<strong>${h}時${m}分${s}秒</strong>`;
+                textElement.style.color = "#0284c7"; // 藍色
+            } 
+            // 2. 剛被摧毀，進入 5 分鐘 (300 秒) 新菇冷卻倒數
+            else if (msLeft <= 0 && msLeft > -300000) {
+                const cooldownMsLeft = 300000 + msLeft; // 計算 5 分鐘內的剩餘毫秒
+                const totalCoolSec = Math.floor(cooldownMsLeft / 1000);
+                const coolM = Math.floor(totalCoolSec / 60);
+                const coolS = totalCoolSec % 60;
+                
+                const formattedM = coolM.toString().padStart(2, '0');
+                const formattedS = coolS.toString().padStart(2, '0');
+
+                textElement.innerHTML = `💥 蘑菇已被摧毀！新菇倒數：<strong style="color:#e11d48;">${formattedM}分${formattedS}秒</strong>`;
+            } 
+            // 3. 5 分鐘冷卻結束，新菇已正式出生
+            else {
+                textElement.innerHTML = `✨ 新蘑菇已出生！待現場玩家更新`;
+                textElement.style.color = "#059669"; // 綠色
             }
         });
     }
-
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
         if (index > -1) pinnedList.splice(index, 1);
