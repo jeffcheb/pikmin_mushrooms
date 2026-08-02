@@ -56,7 +56,58 @@
             <p id="login-error" style="color: #e11d48; font-size: 13px; margin-top: 10px; display: none;">密碼錯誤！</p>
         </div>
     </div>
+<div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9998; justify-content:center; align-items:center;">
+    <div style="background:white; padding:25px; border-radius:12px; width:90%; max-width:450px; max-height:90vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.3);">
+        <h3 style="margin-top:0; color:#1e293b;">✏️ 編輯蘑菇全數值</h3>
+        <input type="hidden" id="edit-target-id">
+        
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">📍 地點名稱</label>
+            <input type="text" id="modal-edit-location" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+        </div>
 
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">縣市</label>
+                <input type="text" id="modal-edit-city" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">行政區</label>
+                <input type="text" id="modal-edit-district" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">種類</label>
+                <input type="text" id="modal-edit-type" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">尺寸</label>
+                <input type="text" id="modal-edit-size" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">👥 參戰人數</label>
+            <input type="number" id="modal-edit-players" min="0" max="40" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:13px; font-weight:bold; margin-bottom:4px;">⏳ 重設剩餘時間 (時 : 分 : 秒)</label>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <input type="number" id="modal-edit-h" placeholder="時" min="0" max="23" style="width:33%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"> :
+                <input type="number" id="modal-edit-m" placeholder="分" min="0" max="59" style="width:33%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"> :
+                <input type="number" id="modal-edit-s" placeholder="秒" min="0" max="59" style="width:33%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="closeEditModal()" style="padding:8px 16px; background:#94a3b8; color:white; border:none; border-radius:6px; cursor:pointer;">取消</button>
+            <button onclick="saveFullEdit()" style="padding:8px 16px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">💾 儲存變更</button>
+        </div>
+    </div>
+</div>
     <div class="sidebar">
         <h3>🛠️ 管理員後台</h3>
         <hr style="opacity: 0.2;">
