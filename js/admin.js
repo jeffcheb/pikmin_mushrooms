@@ -99,22 +99,26 @@ window.initAdminSync = function() {
     }
 };
 
-// 🍄 渲染：蘑菇管理列表
+// 🍄 1. 渲染列表 (加入 ⚙️ 編輯 按鈕)
 window.renderAdminDashboard = function() {
     const tbody = document.getElementById('admin-mushroom-list');
     if (!tbody) return;
     tbody.innerHTML = "";
+    
     Object.keys(mushroomsData).forEach(id => {
         const item = mushroomsData[id];
         const isHidden = item.status === 'hidden';
+        const distStr = Array.isArray(item.district) ? item.district.join(', ') : (item.district || '');
+
         tbody.innerHTML += `
             <tr>
                 <td><span class="status-badge ${isHidden ? 'hidden-status' : 'active-status'}">${isHidden ? '已隱藏' : '正常'}</span></td>
-                <td>${item.locationName}</td>
-                <td>${item.city}</td>
-                <td>${item.type}</td>
+                <td><strong>${item.locationName}</strong></td>
+                <td>${item.city} ${distStr}</td>
+                <td>[${item.size || '一般'}] ${item.type}</td>
                 <td>${item.currentPlayers || 0} 人</td>
                 <td>
+                    <button class="btn-action" style="background:#e0f2fe; color:#0369a1;" onclick="openEditModal('${id}')">⚙️ 編輯</button>
                     <button class="btn-action" onclick="toggleVisibility('${id}', '${item.status || 'active'}')">${isHidden ? '👁️ 恢復' : '👁️‍🗨️ 隱藏'}</button>
                     <button class="btn-action" style="background:#fee2e2; color:#991b1b;" onclick="deleteMushroom('${id}', '${item.locationName}')">🗑️</button>
                 </td>
@@ -123,6 +127,90 @@ window.renderAdminDashboard = function() {
     });
 };
 
+// ✏️ 2. 打開全功能編輯 Modal 並帶入舊資料
+window.openEditModal = function(id) {
+    const item = mushroomsData[id];
+    if (!item) return;
+
+    document.getElementById('edit-target-id').value = id;
+    document.getElementById('modal-edit-location').value = item.locationName || '';
+    document.getElementById('modal-edit-city').value = item.city || '';
+    document.getElementById('modal-edit-district').value = Array.isArray(item.district) ? item.district[0] : (item.district || '');
+    document.getElementById('modal-edit-type').value = item.type || '';
+    document.getElementById('modal-edit-size').value = item.size || '';
+    document.getElementById('modal-edit-players').value = item.currentPlayers || 0;
+
+    // 自動計算當前剩餘時/分/秒
+    let h = 0, m = 0, s = 0;
+    if (item.timeReported) {
+        const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
+        const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
+        const msLeft = expireTime - Date.now();
+
+        if (msLeft > 0) {
+            const totalSec = Math.floor(msLeft / 1000);
+            h = Math.floor(totalSec / 3600);
+            m = Math.floor((totalSec % 3600) / 60);
+            s = totalSec % 60;
+        }
+    }
+
+    document.getElementById('modal-edit-h').value = h;
+    document.getElementById('modal-edit-m').value = m;
+    document.getElementById('modal-edit-s').value = s;
+
+    // 顯示 Modal
+    document.getElementById('edit-modal').style.display = 'flex';
+};
+
+// ❌ 3. 關閉 Modal
+window.closeEditModal = function() {
+    document.getElementById('edit-modal').style.display = 'none';
+};
+
+// 💾 4. 儲存所有編輯數值至 Firebase
+window.saveFullEdit = function() {
+    const id = document.getElementById('edit-target-id').value;
+    if (!id || !window.fbDB) return;
+
+    const locationName = document.getElementById('modal-edit-location').value.trim();
+    const city = document.getElementById('modal-edit-city').value.trim();
+    const district = document.getElementById('modal-edit-district').value.trim();
+    const type = document.getElementById('modal-edit-type').value.trim();
+    const size = document.getElementById('modal-edit-size').value.trim();
+    const players = parseInt(document.getElementById('modal-edit-players').value) || 0;
+
+    const h = parseInt(document.getElementById('modal-edit-h').value) || 0;
+    const m = parseInt(document.getElementById('modal-edit-m').value) || 0;
+    const s = parseInt(document.getElementById('modal-edit-s').value) || 0;
+
+    const now = Date.now();
+    const updater = window.fbUpdate || ((ref, data) => ref.update(data));
+    const mkRef = window.fbRef || ((db, path) => db.ref(path));
+
+    const updatedData = {
+        locationName,
+        city,
+        district: [district],
+        type,
+        size,
+        currentPlayers: players,
+        timeReported: { hours: h, minutes: m, seconds: s },
+        createdAt: now,
+        updatedAt: now
+    };
+
+    updater(mkRef(window.fbDB, `mushrooms/${id}`), updatedData)
+        .then(() => {
+            alert(`✅ 已成功修改據點：[${locationName}] 的完整資料！`);
+            writeAuditLog("EDIT_ALL", `全權修改據點 [${locationName}] 的各項數據`);
+            closeEditModal();
+        })
+        .catch(err => {
+            console.error("更新失敗：", err);
+            alert("修改失敗，請檢查網路狀態。");
+        });
+};
 // 📊 渲染：數據分析
 window.renderAnalytics = function() {
     const keys = Object.keys(mushroomsData);
