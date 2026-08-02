@@ -13,6 +13,7 @@ window.showSection = function(sectionName) {
 };
 
 // 🔒 密碼驗證 (加入非同步等待，防爆)
+// 🔒 密碼驗證邏輯
 window.verifyPassword = async function() {
     const inputEl = document.getElementById('admin-pass-input');
     const errorMsg = document.getElementById('login-error');
@@ -30,35 +31,35 @@ window.verifyPassword = async function() {
     try {
         errorMsg.textContent = "驗證中...";
         errorMsg.style.display = "block";
-        errorMsg.style.color = "#0284c7"; // 變成藍色提示
+        errorMsg.style.color = "#0284c7";
 
-        // 🌟 防爆機制：等待 Firebase 模組載入 (最多等 3 秒)
+        // 🌟 等待 Firebase 變數掛載完成
         let retries = 0;
-        while (!window.fbDB && retries < 15) {
+        while ((!window.fbDB || !window.fbGet || !window.fbRef) && retries < 15) {
             await new Promise(r => setTimeout(r, 200));
             retries++;
         }
 
-        if (!window.fbDB) throw new Error("Firebase 尚未連線，請重新整理頁面。");
-
         let realHash = null;
 
-        // 相容多種 Firebase SDK 讀取寫法
-        if (typeof window.fbGet === 'function' && typeof window.fbRef === 'function') {
+        // 判斷讀取方法
+        if (window.fbGet && window.fbRef && window.fbDB) {
             const snap = await window.fbGet(window.fbRef(window.fbDB, "config/adminPasswordHash"));
-            realHash = snap && snap.val ? snap.val() : null;
-        } else if (typeof window.fbDB.ref === 'function') {
+            realHash = snap && snap.exists() ? snap.val() : null;
+        } else if (window.fbDB && typeof window.fbDB.ref === 'function') {
             const snap = await window.fbDB.ref("config/adminPasswordHash").once("value");
-            realHash = snap && snap.val ? snap.val() : null;
+            realHash = snap && snap.exists() ? snap.val() : null;
         } else {
-            throw new Error("找不到 Firebase 讀取方法");
+            throw new Error("找不到 Firebase 讀取方法，請確認 firebase-config.js 是否已正確掛載");
         }
 
-        // 驗證比對
+        // 比對雜湊值
         if (realHash && hashedInput === realHash) {
             document.getElementById('login-modal').style.display = 'none';
             sessionStorage.setItem("adminAuthenticated", "true");
-            initAdminSync(); // 啟動後台
+            if (typeof window.initAdminSync === 'function') {
+                window.initAdminSync();
+            }
         } else {
             errorMsg.textContent = "密碼錯誤！";
             errorMsg.style.color = "#e11d48";
@@ -69,7 +70,6 @@ window.verifyPassword = async function() {
         errorMsg.style.color = "#e11d48";
     }
 };
-
 // 🟢 啟動後台資料同步
 window.initAdminSync = function() {
     if (!window.fbDB) return;
