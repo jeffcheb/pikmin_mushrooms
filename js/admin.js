@@ -12,7 +12,6 @@ window.showSection = function(sectionName) {
     event.currentTarget.classList.add('active');
 };
 
-// 🔒 密碼驗證 (加入非同步等待，防爆)
 // 🔒 密碼驗證邏輯
 window.verifyPassword = async function() {
     const inputEl = document.getElementById('admin-pass-input');
@@ -26,6 +25,7 @@ window.verifyPassword = async function() {
         return;
     }
 
+    // 將 jeff110chen 加密
     const hashedInput = CryptoJS.SHA256(inputPass).toString();
 
     try {
@@ -33,27 +33,20 @@ window.verifyPassword = async function() {
         errorMsg.style.display = "block";
         errorMsg.style.color = "#0284c7";
 
-        // 🌟 等待 Firebase 變數掛載完成
+        // 等待 Firebase 載入
         let retries = 0;
         while ((!window.fbDB || !window.fbGet || !window.fbRef) && retries < 15) {
             await new Promise(r => setTimeout(r, 200));
             retries++;
         }
 
-        let realHash = null;
+        const snap = await window.fbGet(window.fbRef(window.fbDB, "config/adminPasswordHash"));
+        const realHash = snap && snap.exists() ? snap.val() : null;
 
-        // 判斷讀取方法
-        if (window.fbGet && window.fbRef && window.fbDB) {
-            const snap = await window.fbGet(window.fbRef(window.fbDB, "config/adminPasswordHash"));
-            realHash = snap && snap.exists() ? snap.val() : null;
-        } else if (window.fbDB && typeof window.fbDB.ref === 'function') {
-            const snap = await window.fbDB.ref("config/adminPasswordHash").once("value");
-            realHash = snap && snap.exists() ? snap.val() : null;
-        } else {
-            throw new Error("找不到 Firebase 讀取方法，請確認 firebase-config.js 是否已正確掛載");
-        }
+        // 🌟 印出兩邊 Hash 方便確認
+        console.log("🔍 輸入算出的 Hash:", hashedInput);
+        console.log("🔍 資料庫裡的 Hash:", realHash);
 
-        // 比對雜湊值
         if (realHash && hashedInput === realHash) {
             document.getElementById('login-modal').style.display = 'none';
             sessionStorage.setItem("adminAuthenticated", "true");
@@ -66,7 +59,7 @@ window.verifyPassword = async function() {
         }
     } catch (err) {
         console.error("驗證錯誤:", err);
-        errorMsg.textContent = err.message || "驗證失敗，請檢查網路。";
+        errorMsg.textContent = "驗證失敗，請檢查網路。";
         errorMsg.style.color = "#e11d48";
     }
 };
