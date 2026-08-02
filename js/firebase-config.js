@@ -1,35 +1,37 @@
 // js/firebase-config.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+    getDatabase, 
+    ref, 
+    get, 
+    set, 
+    push, 
+    update, 
+    remove, 
+    onValue, 
+    query, 
+    limitToLast 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// 引入 Firebase SDK 模組 (使用官方 CDN)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-// 🚀 依據你的 Firebase Console 圖片自動填入的真實設定資訊
+// 請確認這裡填入你自己的 Firebase 設定
 const firebaseConfig = {
-    apiKey: "AIzaSyBg9WBxj7KbOr0DRYtotI7IxyjkRkaVRzI",
-    authDomain: "pikmin-mushroom-hub.firebaseapp.com",
-    databaseURL: "https://pikmin-mushroom-hub-default-rtdb.firebaseio.com", // 依據你的專案 ID 補全的 Realtime Database 位址
-    projectId: "pikmin-mushroom-hub",
-    storageBucket: "pikmin-mushroom-hub.firebasestorage.app",
-    messagingSenderId: "94609307791",
-    appId: "1:94609307791:web:ec9e5fb8e7tcfe62d658fa"
+    // ... 你的 Firebase 設定資訊 ...
 };
 
-// 初始化 Firebase
+// 初始化
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+const db = getDatabase(app);
 
-// 將資料庫核心方法匯出給全域 Window 物件，方便其他普通 JS 檔案調用
-window.fbDB = database;
+// 🌟 將所有控制函式掛載到 window，供全域（如 admin.js）使用
+window.fbDB = db;
 window.fbRef = ref;
+window.fbGet = get;
+window.fbSet = set;
 window.fbPush = push;
-window.fbOnValue = onValue;
 window.fbUpdate = update;
 window.fbRemove = remove;
-// 在 firebase-config.js 中加入
-window.fbLimitToLast = function(limit) {
-    return window.fbQuery ? window.fbQuery : (ref) => ref.limitToLast(limit);
-};
-// 或者如果是 SDK 語法：
-// window.fbLimitToLast = firebase.database.ServerValue ... 或相關 Query 寫法
+window.fbOnValue = onValue;
+window.fbQuery = query;
+window.fbLimitToLast = limitToLast;
+
 console.log("🔥 皮克敏工具站：Firebase 雲端資料庫連線成功！");
