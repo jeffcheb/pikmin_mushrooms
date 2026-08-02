@@ -209,3 +209,69 @@ window.blockUserIP = (ip, reason = "惡意變更資料") => {
         writeAuditLog("BLOCK_IP", `封鎖了 IP: ${ip}，原因：${reason}`);
     });
 };
+// 🚫 1. 渲染黑名單列表
+function renderBlacklist(blacklistData) {
+    const blacklistBody = document.getElementById('blacklist-list');
+    if (!blacklistBody) return;
+    
+    blacklistBody.innerHTML = "";
+    const keys = Object.keys(blacklistData);
+
+    if (keys.length === 0) {
+        blacklistBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">目前沒有被封鎖的 IP / 用戶</td></tr>`;
+        return;
+    }
+
+    keys.forEach(safeIpKey => {
+        const item = blacklistData[safeIpKey];
+        const displayIp = item.ip || safeIpKey.replace(/_/g, "."); // 將底線轉回 IP 點號格式
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><code>${displayIp}</code></td>
+            <td>${item.reason || '無說明'}</td>
+            <td>
+                <button class="btn-action" style="background:#10b981; color:white;" onclick="unblockUserIP('${safeIpKey}', '${displayIp}')">
+                    🔓 解除封鎖
+                </button>
+            </td>
+        `;
+        blacklistBody.appendChild(tr);
+    });
+}
+
+// 🔓 2. 取消黑名單 (解除封鎖)
+window.unblockUserIP = (safeIpKey, displayIp) => {
+    if (!confirm(`確定要解除對 IP [${displayIp}] 的封鎖嗎？`)) return;
+
+    // 從 Firebase 移除該 IP 節點
+    window.fbRemove(window.fbRef(window.fbDB, `blacklist/${safeIpKey}`))
+        .then(() => {
+            alert(`✅ 已成功解除對 ${displayIp} 的封鎖！`);
+            // 寫入稽核 Log 紀錄
+            writeAuditLog("UNBLOCK_IP", `解除了 IP: ${displayIp} 的封鎖`);
+        })
+        .catch((error) => {
+            console.error("解除封鎖失敗：", error);
+            alert("解除封鎖失敗，請檢查網路設定。");
+        });
+};
+
+// ➕ 3. 手動新增黑名單 (搭配 admin.html 的輸入框與按鈕)
+window.addToBlacklist = () => {
+    const input = document.getElementById('blacklist-input');
+    const ip = input.value.trim();
+    if (!ip) return alert("請輸入要封鎖的 IP 位址！");
+
+    const safeIpKey = ip.replace(/\./g, "_");
+    
+    window.fbUpdate(window.fbRef(window.fbDB, `blacklist/${safeIpKey}`), {
+        ip: ip,
+        reason: "管理員手動封鎖",
+        blockedAt: Date.now()
+    }).then(() => {
+        alert(`⛔ 已將 IP: ${ip} 加入黑名單`);
+        writeAuditLog("BLOCK_IP", `手動封鎖了 IP: ${ip}`);
+        input.value = "";
+    });
+};
