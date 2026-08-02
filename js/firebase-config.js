@@ -12,6 +12,7 @@ import {
     query, 
     limitToLast 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
 const firebaseConfig = {
     apiKey: "eMV7OAD1nRr0X4ZRx2AGyghYogK7DlFZEL9QiZTI",
     authDomain: "https://console.firebase.google.com/project/pikmin-mushroom-hub/database/pikmin-mushroom-hub-default-rtdb/data/~2F?hl=zh-cn",
