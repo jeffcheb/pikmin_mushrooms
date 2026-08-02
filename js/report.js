@@ -220,9 +220,23 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // E. 帶入尺寸與種類
-        let finalSize = normalizeMushroomType(rawSize);
-        let finalType = normalizeMushroomType(rawType);
+       // E. 帶入尺寸與種類 (整合自動切割解析)
+        let parsedSize = rawSize;
+        let parsedType = rawType;
+
+        // 如果捷徑傳入的種類混合了尺寸（例如 "[巨大] 每月特殊蘑菇" 或 "巨大水蘑菇"）
+        if (rawType && (rawType.includes("巨大") || rawType.includes("大") || rawType.includes("普通") || rawType.includes("小型"))) {
+            const parsed = parseMushroomTypeAndSize(rawType);
+            parsedSize = parsed.size;
+            parsedType = parsed.type;
+        } else if (!rawSize && rawType) {
+            const parsed = parseMushroomTypeAndSize(rawType);
+            parsedSize = parsed.size;
+            parsedType = parsed.type;
+        }
+
+        let finalSize = normalizeMushroomType(parsedSize);
+        let finalType = normalizeMushroomType(parsedType);
 
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
