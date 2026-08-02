@@ -488,20 +488,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 150);
 });
 /**
- * ⚡ 格式碼解析 (含模糊相似度比對)
+ * ⚡ 格式碼解析 (支援 OCR 雜字自動清洗 + 模糊相似度比對 + 取消人數強制要求)
+ * 新版格式範例：#菇,轉角遇到電箱 >,巨大 海泡泡蘑菇,剩下6小時 43 分 27 秒
  */
 function parseMushroomCode(code) {
     if (!code || !code.startsWith('#菇')) {
-        alert('❌ 格式碼無效！');
+        alert('❌ 格式碼無效！格式應為：#菇,地點名稱,蘑菇種類,剩餘時間');
         return false;
     }
 
+    // 依逗號切割欄位
     const parts = code.trim().split(',');
-    if (parts.length < 5) return false;
+    // 🌟 修改點：欄位長度要求從 5 降為 4，不再強制要求第五個「人數」參數
+    if (parts.length < 4) {
+        alert('❌ 格式碼欄位不足！請確認包含：#菇,地點,種類,時間');
+        return false;
+    }
 
-    let [prefix, rawLocation, rawType, rawTime, rawPlayers] = parts.map(p => p.trim());
+    // 🌟 修改點：對 parts 使用可選解構，若沒有 rawPlayers 則給空字串
+    let [prefix, rawLocation, rawType, rawTime, rawPlayers] = parts.map(p => p ? p.trim() : '');
 
-    // 🧹 清洗地點名稱
+    // 🧹 1. 清洗地點名稱
     let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
     let bestMatchedLocation = cleanLocation;
     let highestScore = 0;
@@ -511,24 +518,44 @@ function parseMushroomCode(code) {
         Object.values(localMushroomsData).forEach(item => {
             if (item.locationName) {
                 const score = calculateSimilarity(cleanLocation, item.locationName);
-                // 門檻設定：只要相似度最高且大於 55% (0.55)
                 if (score > highestScore && score >= 0.55) {
                     highestScore = score;
-                    bestMatchedLocation = item.locationName; // 自動套用完整全名！
+                    bestMatchedLocation = item.locationName;
                 }
             }
         });
     }
 
-    const finalType = normalizeMushroomType(rawType.replace(/\s+/g, ''));
+    // 🧹 2. 清洗蘑菇種類與大小
+    let cleanType = rawType.replace(/\s+/g, '');
+    let finalType = normalizeMushroomType(cleanType);
 
-    // 1. 帶入自動修正後的相似地點名稱
-    const locationInput = document.getElementById('location-name');
-    if (locationInput) {
-        locationInput.value = bestMatchedLocation;
+    // 🧹 3. 超強時間解析引擎
+    let h = 0, m = 0, s = 0;
+    if (rawTime.includes('小時') || rawTime.includes('分')) {
+        const hMatch = rawTime.match(/(\d+)\s*小時/);
+        const mMatch = rawTime.match(/(\d+)\s*分/);
+        const sMatch = rawTime.match(/(\d+)\s*秒/);
+
+        if (hMatch) h = parseInt(hMatch[1], 10);
+        if (mMatch) m = parseInt(mMatch[1], 10);
+        if (sMatch) s = parseInt(sMatch[1], 10);
+    } else {
+        const timeParts = rawTime.split(':').map(t => parseInt(t, 10) || 0);
+        if (timeParts.length === 3) {
+            h = timeParts[0]; m = timeParts[1]; s = timeParts[2];
+        } else if (timeParts.length === 2) {
+            h = timeParts[0]; m = timeParts[1]; s = 0;
+        }
     }
 
-    // 2. 帶入種類
+    // 🌟 修改點 4. 解析人數 (如果有傳遞就用，沒傳遞則預設為 1 人)
+    let players = rawPlayers ? (parseInt(rawPlayers, 10) || 1) : 1;
+
+    // 💼 自動填入表單
+    const locationInput = document.getElementById('location-name');
+    if (locationInput) locationInput.value = bestMatchedLocation;
+
     const typeSelect = document.getElementById('mushroom-type');
     if (typeSelect) {
         let matchedOption = Array.from(typeSelect.options).find(opt => 
@@ -538,13 +565,23 @@ function parseMushroomCode(code) {
         else typeSelect.value = finalType;
     }
 
-    // 3. 時間解析與人數帶入 (保持原樣)
-    // ... (省略時間解析程式碼) ...
+    const hEl = document.getElementById('time-hours');
+    const mEl = document.getElementById('time-minutes');
+    const sEl = document.getElementById('time-seconds');
+    if (hEl && mEl && sEl) {
+        hEl.value = h;
+        mEl.value = m;
+        sEl.value = s;
+    }
 
+    const playerInput = document.getElementById('current-players');
+    if (playerInput) playerInput.value = players;
+
+    // 顯示提示訊息 (移除強制顯示人數)
     if (highestScore >= 0.55 && cleanLocation !== bestMatchedLocation) {
-        alert(`🎯 偵測到相似據點！\n辨識結果：${cleanLocation}\n自動對齊全名：${bestMatchedLocation}`);
+        alert(`🎯 偵測到相似據點！\n辨識結果：${cleanLocation}\n自動對齊全名：${bestMatchedLocation}\n🍄 種類：${finalType}\n⏳ 時間：${h}時${m}分${s}秒`);
     } else {
-        alert(`✅ 已帶入地點：${bestMatchedLocation}`);
+        alert(`✅ 已成功透過截圖解析自動帶入！\n📍 地點：${bestMatchedLocation}\n🍄 種類：${finalType}\n⏳ 時間：${h}時${m}分${s}秒`);
     }
 
     document.querySelector(".report-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
