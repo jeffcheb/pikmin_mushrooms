@@ -517,6 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderBoard() {
+        if (item.status === 'hidden') return; // 在 forEach 迴圈中加入這行
         const keys = Object.keys(localMushroomsData);
 
         const countEl = document.getElementById("daily-report-count");
