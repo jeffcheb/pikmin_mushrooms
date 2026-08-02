@@ -62,7 +62,10 @@ function renderAnalytics() {
     Object.keys(typeCounts).forEach(type => {
         typeHtml += `<p>${type}: <strong>${typeCounts[type]}</strong></p>`;
     });
-    document.getElementById('type-distribution').innerHTML = typeHtml;
+    const typeBox = document.getElementById('type-distribution');
+if (typeBox) {
+    typeBox.innerHTML = typeHtml;
+}
 }
 
 // 🟢 渲染蘑菇列表與隱藏切換
