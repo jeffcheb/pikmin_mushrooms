@@ -256,39 +256,29 @@ if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
             }, 150);
         }
 
-        // E. 帶入尺寸與種類 (精準分離與校正)
-        let parsedSize = rawSize;
-        let parsedType = rawType;
+        // E. 帶入尺寸與種類 (永遠以捷徑傳入的 rawSize/rawType 為最高優先)
+let finalSize = normalizeMushroomSize(rawSize);
+let finalType = normalizeMushroomType(rawType);
 
-        if (rawType && (rawType.includes("巨大") || rawType.includes("大") || rawType.includes("普通") || rawType.includes("一般") || rawType.includes("小型") || rawType.includes("小"))) {
-            const parsed = parseMushroomTypeAndSize(rawType);
-            if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type;
-        }
+// 如果捷徑把尺寸跟種類寫在同一欄 (例如 rawType 是 "小紅色蘑菇")
+if (rawType && (rawType.includes("小") || rawType.includes("大") || rawType.includes("巨"))) {
+    const parsed = parseMushroomTypeAndSize(rawType);
+    if (!rawSize) finalSize = normalizeMushroomSize(parsed.size);
+    finalType = normalizeMushroomType(parsed.type);
+}
 
-        let finalSize = normalizeMushroomSize(parsedSize);
-        let finalType = normalizeMushroomType(parsedType);
+// 強制寫入 HTML 下拉選單，覆蓋舊資料
+const sizeSelect = document.getElementById('mushroom-size');
+if (sizeSelect) {
+    sizeSelect.value = finalSize;
+    sizeSelect.dispatchEvent(new Event('change')); // 觸發變更事件
+}
 
-        // 帶入尺寸選單
-        const sizeSelect = document.getElementById('mushroom-size');
-        if (sizeSelect) {
-            let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
-                opt.value === finalSize || opt.text.includes(finalSize)
-            );
-            if (matchedSizeOpt) sizeSelect.value = matchedSizeOpt.value;
-        }
-
-        // 帶入種類選單
-        const typeSelect = document.getElementById('mushroom-type');
-        if (typeSelect) {
-            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
-                opt.value === finalType || opt.text.includes(finalType)
-            );
-            if (matchedTypeOpt) {
-                typeSelect.value = matchedTypeOpt.value;
-            }
-        }
-
+const typeSelect = document.getElementById('mushroom-type');
+if (typeSelect) {
+    typeSelect.value = finalType;
+    typeSelect.dispatchEvent(new Event('change')); // 觸發變更事件
+}
         // F. 人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
         const playerInput = document.getElementById('current-players');
