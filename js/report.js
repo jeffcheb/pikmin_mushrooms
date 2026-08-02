@@ -7,6 +7,18 @@ let userCurrentLat = null;
 let userCurrentLng = null;  
 let isNearbyFilterOn = false; 
 
+// 🌐 取得使用者 IP 位址
+async function getUserIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error("無法取得 IP:", error);
+        return "0.0.0.0"; // 抓取失敗時的備用值
+    }
+}
+
 // 🍄 1. 全站蘑菇種類標準校正 (水晶 > 水)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '一般蘑菇';
@@ -91,31 +103,6 @@ function calculateSimilarity(str1, str2) {
 
 // ⚡ 4. 格式碼解析 (8 欄位：#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
-    // 在 reportForm.addEventListener("submit", async (e) => { ... }) 內：
-
-e.preventDefault();
-if (!window.fbDB) return alert("Firebase 尚未連線！");
-
-// 1. 抓取使用者 IP
-const userIP = await getUserIP();
-const safeIpKey = userIP.replace(/\./g, "_"); // Firebase 鍵名不能有句點 "."，所以轉成底線 "_"
-
-// 2. 檢查黑名單
-const blacklistSnap = await window.fbGet(window.fbRef(window.fbDB, `blacklist/${safeIpKey}`));
-if (blacklistSnap.exists()) {
-    alert("⛔ 您的 IP 已被管理員列入黑名單，無法進行發佈或更新！");
-    return; // 攔截，不讓發佈
-}
-
-// 3. 正常寫入資料庫（可順便紀錄誰發佈的）
-const mushroomData = {
-    city, district: [district], locationName, type, size,
-    currentPlayers: players, maxPlayers: 30,
-    timeReported: { hours: h, minutes: m, seconds: s },
-    createdAt: nowTimestamp, updatedAt: nowTimestamp,
-    lat: latVal, lng: lngVal,
-    reporterIP: userIP // 🌟 紀錄發佈者的 IP
-};
     try {
         console.log("📥 執行捷徑自動解析，內容：", code);
 
@@ -252,7 +239,7 @@ const mushroomData = {
                 opt.value === finalType || opt.text.includes(finalType)
             );
             if (matchedTypeOpt) typeSelect.value = matchedTypeOpt.value;
-            else typeSelect.value = finalType; // 找不到則帶入對齊名稱
+            else typeSelect.value = finalType;
         }
 
         // F. 帶入人數、地點與時間
@@ -477,10 +464,27 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // 🌟 修正：宣告為 async 函式以正確處理 await getUserIP()
     if (reportForm) {
-        reportForm.addEventListener("submit", (e) => {
+        reportForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             if (!window.fbDB) return alert("Firebase 尚未連線！");
+
+            // 1. 抓取使用者 IP 並進行黑名單檢查
+            const userIP = await getUserIP();
+            const safeIpKey = userIP.replace(/\./g, "_");
+
+            if (window.fbGet) {
+                try {
+                    const blacklistSnap = await window.fbGet(window.fbRef(window.fbDB, `blacklist/${safeIpKey}`));
+                    if (blacklistSnap && blacklistSnap.exists()) {
+                        alert("⛔ 您的 IP 已被管理員列入黑名單，無法進行發佈或更新！");
+                        return;
+                    }
+                } catch (err) {
+                    console.warn("黑名單比對跳過（無讀取權限或尚未建立）:", err);
+                }
+            }
 
             const cityEl = document.getElementById("city");
             const districtEl = document.getElementById("district");
@@ -512,7 +516,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentPlayers: players, maxPlayers: 30,
                 timeReported: { hours: h, minutes: m, seconds: s },
                 createdAt: nowTimestamp, updatedAt: nowTimestamp,
-                lat: latVal, lng: lngVal
+                lat: latVal, lng: lngVal,
+                reporterIP: userIP,
+                status: "active"
             };
 
             if (existingId) {
@@ -542,7 +548,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderBoard() {
-        if (item.status === 'hidden') return; // 在 forEach 迴圈中加入這行
         const keys = Object.keys(localMushroomsData);
 
         const countEl = document.getElementById("daily-report-count");
@@ -587,6 +592,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         keys.forEach(id => {
             const item = localMushroomsData[id];
+
+            // 🌟 修正：隱藏狀態過濾正確擺放在迴圈內
+            if (item.status === 'hidden') return;
+
             const displayType = normalizeMushroomType(item.type);
             const displaySize = normalizeMushroomType(item.size);
 
@@ -695,7 +704,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTickCounters();
     }
 
-   // ⏰ 精確倒數計時器 (含 5 分鐘摧毀冷卻機制)
+    // ⏰ 精確倒數計時器 (含 5 分鐘摧毀冷卻機制)
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -703,7 +712,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const textElement = document.getElementById(`time-text-${id}`);
             if (!textElement || !item.timeReported) return;
 
-            // 計算當初回報總秒數 (毫秒)
+            // 計算當拆回報總秒數 (毫秒)
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
             const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
             const msLeft = expireTime - Date.now();
@@ -719,7 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } 
             // 2. 剛被摧毀，進入 5 分鐘 (300 秒) 新菇冷卻倒數
             else if (msLeft <= 0 && msLeft > -300000) {
-                const cooldownMsLeft = 300000 + msLeft; // 計算 5 分鐘內的剩餘毫秒
+                const cooldownMsLeft = 300000 + msLeft;
                 const totalCoolSec = Math.floor(cooldownMsLeft / 1000);
                 const coolM = Math.floor(totalCoolSec / 60);
                 const coolS = totalCoolSec % 60;
@@ -736,6 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
         if (index > -1) pinnedList.splice(index, 1);
@@ -754,18 +764,14 @@ document.addEventListener("DOMContentLoaded", () => {
     window.toggleEditPanel = (id) => {
         if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
         
-        // 切換開關狀態
         const willOpen = !activePanels[id].edit;
         activePanels[id].edit = willOpen;
         
-        // 重新渲染畫板顯示/隱藏面板
         renderBoard();
 
-        // 🌟 關鍵修復：當面板打開時，自動計算並帶入當前剩餘的 時/分/秒
         if (willOpen && localMushroomsData[id]) {
             const item = localMushroomsData[id];
             if (item.timeReported) {
-                // 計算從發佈到現在已經過了多少時間
                 const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
                 const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
                 const msLeft = expireTime - Date.now();
@@ -778,7 +784,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     s = totalSec % 60;
                 }
 
-                // 填入面板輸入框中
                 setTimeout(() => {
                     const hInput = document.getElementById(`edit-h-${id}`);
                     const mInput = document.getElementById(`edit-m-${id}`);
@@ -787,7 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (hInput) hInput.value = h;
                     if (mInput) mInput.value = m;
                     if (sInput) sInput.value = s;
-                }, 50); // 延遲 50ms 確保 DOM 面板已渲染完成
+                }, 50);
             }
         }
     };
@@ -846,14 +851,3 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 150);
 });
-// 🌐 取得使用者 IP 位址
-async function getUserIP() {
-    try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        return data.ip;
-    } catch (error) {
-        console.error("無法取得 IP:", error);
-        return "0.0.0.0"; // 抓取失敗時的備用值
-    }
-}
