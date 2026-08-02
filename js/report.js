@@ -6,125 +6,155 @@ let userCurrentLat = null;
 let userCurrentLng = null;  
 let isNearbyFilterOn = false; 
 
-// 🍄 全站統一蘑菇名稱校正工具
+/**
+ * 🍄 全站統一蘑菇名稱校正工具 (支援當月特殊蘑菇自動識別)
+ */
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '一般蘑菇';
     let normalized = String(typeStr).trim();
-    return normalized
+
+    // 🌟 1. 自動辨識「當月特殊/活動蘑菇」關鍵字
+    if (
+        normalized.includes("海泡泡") || 
+        normalized.includes("特殊") || 
+        normalized.includes("活動") || 
+        normalized.includes("每月") ||
+        normalized.includes("神秘")
+    ) {
+        return "每月特殊蘑菇";
+    }
+
+    // 🌟 2. 替換大小詞頭
+    normalized = normalized
         .replace(/巨型/g, '巨大')
         .replace(/普通/g, '一般')
         .replace(/小型/g, '小')
         .replace(/大型/g, '大');
+
+    return normalized;
 }
 
-// ⚡ 格式碼解析 (含自動推算時間 + 模糊比對 + 自動發佈回報)
+/**
+ * ⚡ 格式碼解析 (含全自動當月特殊菇辨識與強制報錯追蹤)
+ */
 function parseMushroomCode(code) {
-    if (!code || !code.startsWith('#菇')) {
-        alert('❌ 格式碼無效！格式應為：#菇,截圖時間,地點名稱,蘑菇種類,剩餘時間');
-        return false;
-    }
+    try {
+        console.log("📥 收到解析請求，原始代碼：", code);
 
-    const parts = code.trim().split(',');
-    if (parts.length < 5) {
-        alert('❌ 格式碼欄位不足！請確認包含：#菇,截圖時間,地點,種類,時間');
-        return false;
-    }
-
-    let [prefix, rawPhotoTime, rawLocation, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
-
-    // 1. 計算截圖時間差
-    let timeOffsetSec = 0;
-    if (rawPhotoTime) {
-        const now = new Date();
-        const photoDate = new Date();
-        const photoTimeParts = rawPhotoTime.split(':').map(t => parseInt(t, 10) || 0);
-        if (photoTimeParts.length >= 2) {
-            photoDate.setHours(photoTimeParts[0], photoTimeParts[1], photoTimeParts[2] || 0, 0);
-            const diffMs = now.getTime() - photoDate.getTime();
-            if (diffMs > 0) timeOffsetSec = Math.floor(diffMs / 1000);
+        if (!code || !code.startsWith('#菇')) {
+            alert('❌ 格式碼無效！格式應為：#菇,截圖時間,地點名稱,蘑菇種類,剩餘時間');
+            return false;
         }
-    }
 
-    // 2. 清洗地點與模糊比對
-    let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
-    let bestMatchedLocation = cleanLocation;
-    let highestScore = 0;
+        const parts = code.trim().split(',');
+        if (parts.length < 5) {
+            alert('❌ 格式碼欄位不足！請確認包含 5 個欄位：#菇,截圖時間,地點,種類,時間');
+            return false;
+        }
 
-    if (typeof localMushroomsData !== 'undefined') {
-        Object.values(localMushroomsData).forEach(item => {
-            if (item.locationName) {
-                const score = calculateSimilarity(cleanLocation, item.locationName);
-                if (score > highestScore && score >= 0.55) {
-                    highestScore = score;
-                    bestMatchedLocation = item.locationName;
-                }
+        let [prefix, rawPhotoTime, rawLocation, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
+
+        // 1. 計算時間差
+        let timeOffsetSec = 0;
+        if (rawPhotoTime) {
+            const now = new Date();
+            const photoDate = new Date();
+            const photoTimeParts = rawPhotoTime.split(':').map(t => parseInt(t, 10) || 0);
+            if (photoTimeParts.length >= 2) {
+                photoDate.setHours(photoTimeParts[0], photoTimeParts[1], photoTimeParts[2] || 0, 0);
+                const diffMs = now.getTime() - photoDate.getTime();
+                if (diffMs > 0) timeOffsetSec = Math.floor(diffMs / 1000);
             }
-        });
+        }
+
+        // 2. 清洗地點名稱與模糊比對
+        let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
+        let bestMatchedLocation = cleanLocation;
+        let highestScore = 0;
+
+        if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
+            Object.values(localMushroomsData).forEach(item => {
+                if (item && item.locationName && typeof calculateSimilarity === 'function') {
+                    const score = calculateSimilarity(cleanLocation, item.locationName);
+                    if (score > highestScore && score >= 0.55) {
+                        highestScore = score;
+                        bestMatchedLocation = item.locationName;
+                    }
+                }
+            });
+        }
+
+        // 3. 辨識蘑菇種類（含海泡泡/當月特殊菇）
+        let cleanType = rawType.replace(/\s+/g, '');
+        let finalType = normalizeMushroomType(cleanType);
+
+        // 4. 解析剩餘時間並扣除時間差
+        let h = 0, m = 0, s = 0;
+        if (rawTime.includes('小時') || rawTime.includes('分')) {
+            const hMatch = rawTime.match(/(\d+)\s*小時/);
+            const mMatch = rawTime.match(/(\d+)\s*分/);
+            const sMatch = rawTime.match(/(\d+)\s*秒/);
+            if (hMatch) h = parseInt(hMatch[1], 10);
+            if (mMatch) m = parseInt(mMatch[1], 10);
+            if (sMatch) s = parseInt(sMatch[1], 10);
+        } else {
+            const timeParts = rawTime.split(':').map(t => parseInt(t, 10) || 0);
+            if (timeParts.length === 3) { h = timeParts[0]; m = timeParts[1]; s = timeParts[2]; }
+            else if (timeParts.length === 2) { h = timeParts[0]; m = timeParts[1]; s = 0; }
+        }
+
+        let totalLeftSec = (h * 3600) + (m * 60) + s - timeOffsetSec;
+        if (totalLeftSec < 0) totalLeftSec = 0;
+
+        const finalH = Math.floor(totalLeftSec / 3600);
+        const finalM = Math.floor((totalLeftSec % 3600) / 60);
+        const finalS = totalLeftSec % 60;
+
+        // 5. 填入 DOM 表單
+        const locationInput = document.getElementById('location-name');
+        if (locationInput) locationInput.value = bestMatchedLocation;
+
+        const typeSelect = document.getElementById('mushroom-type');
+        if (typeSelect) {
+            let matchedOption = Array.from(typeSelect.options).find(opt => 
+                opt.value === finalType || opt.text.includes(finalType)
+            );
+            if (matchedOption) typeSelect.value = matchedOption.value;
+            else typeSelect.value = "每月特殊蘑菇"; // 找不到時預設帶入特殊蘑菇
+        }
+
+        const hEl = document.getElementById('time-hours');
+        const mEl = document.getElementById('time-minutes');
+        const sEl = document.getElementById('time-seconds');
+        if (hEl && mEl && sEl) {
+            hEl.value = finalH;
+            hEl.dispatchEvent(new Event('input'));
+            mEl.value = finalM;
+            mEl.dispatchEvent(new Event('input'));
+            sEl.value = finalS;
+            sEl.dispatchEvent(new Event('input'));
+        }
+
+        const playerInput = document.getElementById('current-players');
+        if (playerInput) playerInput.value = 1;
+
+        alert(`✅ 截圖自動解析成功！\n📍 地點：${bestMatchedLocation}\n🍄 種類：${finalType}\n⏳ 計算後時間：${finalH}時${finalM}分${finalS}秒\n\n系統正在為您自動發佈情報...`);
+
+        // 6. 自動觸發送出
+        const reportForm = document.getElementById("report-form");
+        if (reportForm) {
+            setTimeout(() => {
+                reportForm.requestSubmit();
+            }, 500);
+        }
+
+        return true;
+    } catch (err) {
+        alert("❌ 解析過程中發生錯誤：" + err.message);
+        console.error("parseMushroomCode 致命錯誤：", err);
+        return false;
     }
-
-    // 3. 清洗種類
-    let cleanType = rawType.replace(/\s+/g, '');
-    let finalType = normalizeMushroomType(cleanType);
-
-    // 4. 解析剩餘時間並扣除時間差
-    let h = 0, m = 0, s = 0;
-    if (rawTime.includes('小時') || rawTime.includes('分')) {
-        const hMatch = rawTime.match(/(\d+)\s*小時/);
-        const mMatch = rawTime.match(/(\d+)\s*分/);
-        const sMatch = rawTime.match(/(\d+)\s*秒/);
-        if (hMatch) h = parseInt(hMatch[1], 10);
-        if (mMatch) m = parseInt(mMatch[1], 10);
-        if (sMatch) s = parseInt(sMatch[1], 10);
-    } else {
-        const timeParts = rawTime.split(':').map(t => parseInt(t, 10) || 0);
-        if (timeParts.length === 3) { h = timeParts[0]; m = timeParts[1]; s = timeParts[2]; }
-        else if (timeParts.length === 2) { h = timeParts[0]; m = timeParts[1]; s = 0; }
-    }
-
-    let totalLeftSec = (h * 3600) + (m * 60) + s - timeOffsetSec;
-    if (totalLeftSec < 0) totalLeftSec = 0;
-
-    const finalH = Math.floor(totalLeftSec / 3600);
-    const finalM = Math.floor((totalLeftSec % 3600) / 60);
-    const finalS = totalLeftSec % 60;
-
-    // 5. 自動帶入表單欄位
-    const locationInput = document.getElementById('location-name');
-    if (locationInput) locationInput.value = bestMatchedLocation;
-
-    const typeSelect = document.getElementById('mushroom-type');
-    if (typeSelect) {
-        let matchedOption = Array.from(typeSelect.options).find(opt => 
-            opt.value === finalType || opt.text.includes(finalType)
-        );
-        if (matchedOption) typeSelect.value = matchedOption.value;
-        else typeSelect.value = finalType;
-    }
-
-    const hEl = document.getElementById('time-hours');
-    const mEl = document.getElementById('time-minutes');
-    const sEl = document.getElementById('time-seconds');
-    if (hEl && mEl && sEl) {
-        hEl.value = finalH;
-        mEl.value = finalM;
-        sEl.value = finalS;
-    }
-
-    const playerInput = document.getElementById('current-players');
-    if (playerInput) playerInput.value = 1;
-
-    // 🌟 核心修復：自動觸發表單送出 (寫入 Firebase)
-    const reportForm = document.getElementById("report-form");
-    if (reportForm) {
-        // 使用 setTimeout 確保 Firebase 資料庫連線準備好後立刻送出
-        setTimeout(() => {
-            reportForm.requestSubmit(); 
-        }, 300);
-    }
-
-    return true;
 }
-
 // 🟢 地圖初始化
 function initLeafletMap() {
     try {
