@@ -2,66 +2,104 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皮克敏工具站 | 蘑菇數據後台管理系統</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Pikmin Mushroom - 管理員後台</title>
+    <link rel="stylesheet" href="css/style.css"> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* 後台專用極簡風格 */
-        .admin-container { max-width: 1200px; margin: 40px auto; padding: 20px; }
-        .login-box { max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: #fff; text-align: center; }
-        .login-box input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; }
-        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .admin-table th, .admin-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
-        .admin-table th { background-color: #2c3e50; color: white; }
-        .admin-table tr:hover { background-color: #f7fafc; }
-        .btn-delete { background-color: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-        .btn-delete:hover { background-color: #c0392b; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
-        .shroom-thumb { width: 30px; height: 30px; object-fit: contain; vertical-align: middle; margin-right: 8px; }
+        /* 後台專用簡約樣式 */
+        body { background: #f1f5f9; display: flex; min-height: 100vh; margin:0; }
+        .sidebar { width: 240px; background: #1e293b; color: white; padding: 20px; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .nav-item { padding: 12px; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.3s; }
+        .nav-item:hover, .nav-item.active { background: #334155; }
+        .admin-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 20px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .stat-box { background: #fff; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid #0284c7; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .active-status { background: #dcfdce; color: #166534; }
+        .hidden-status { background: #fee2e2; color: #991b1b; }
+        .btn-action { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; }
     </style>
 </head>
 <body>
-
-    <div id="admin-login" class="login-box">
-        <h2>🔒 管理員登入</h2>
-        <p>請輸入後台管理密碼以存取資料庫</p>
-        <input type="password" id="admin-password" placeholder="請輸入密碼...">
-        <button id="btn-login" class="btn-primary" style="width:100%;">驗證並登入</button>
+    <div class="sidebar">
+        <h3>🛠️ 管理員後台</h3>
+        <hr style="opacity: 0.2;">
+        <div class="nav-item active" onclick="showSection('analytics')"><i class="fa-solid fa-chart-line"></i> 數據分析</div>
+        <div class="nav-item" onclick="showSection('mushrooms')"><i class="fa-solid fa-mushrooms"></i> 蘑菇管理</div>
+        <div class="nav-item" onclick="showSection('blacklist')"><i class="fa-solid fa-user-slash"></i> 黑名單管理</div>
+        <div class="nav-item" onclick="showSection('logs')"><i class="fa-solid fa-clock-rotate-left"></i> 稽核紀錄</div>
+        <div class="nav-item" onclick="showSection('maintenance')"><i class="fa-solid fa-screwdriver-wrench"></i> 系統維護</div>
     </div>
 
-    <div id="admin-dashboard" class="admin-container" style="display: none;">
-    <div class="admin-header">
-        <h2>🛠️ 蘑菇情報資料庫管理後台</h2>
-        <button id="btn-logout" class="btn-sm" style="background:#7f8c8d; color:#fff;">安全登出</button>
+    <div class="main-content">
+        <div id="section-analytics" class="admin-section">
+            <h2>📊 全站即時數據分析</h2>
+            <div class="stat-grid" id="analytics-grid">
+                <div class="stat-box"><h3>總據點數</h3><p id="stat-total">0</p></div>
+                <div class="stat-box"><h3>今日更新</h3><p id="stat-today">0</p></div>
+                <div class="stat-box"><h3>連線人數</h3><p id="stat-online">1</p></div>
+            </div>
+            <div class="admin-card" style="margin-top:20px;">
+                <h4>蘑菇種類分布</h4>
+                <div id="type-distribution"></div>
+            </div>
+        </div>
+
+        <div id="section-mushrooms" class="admin-section" style="display:none;">
+            <h2>🍄 蘑菇資料管理</h2>
+            <div class="admin-card">
+                <table id="mushroom-table">
+                    <thead>
+                        <tr>
+                            <th>狀態</th>
+                            <th>名稱</th>
+                            <th>地區</th>
+                            <th>種類</th>
+                            <th>剩餘時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-mushroom-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="section-blacklist" class="admin-section" style="display:none;">
+            <h2>🚫 黑名單管理</h2>
+            <div class="admin-card">
+                <input type="text" id="blacklist-input" placeholder="輸入用戶 ID 或 IP">
+                <button onclick="addToBlacklist()">封鎖用戶</button>
+                <table id="blacklist-table">
+                    <thead><tr><th>識別碼</th><th>原因</th><th>操作</th></tr></thead>
+                    <tbody id="blacklist-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="section-logs" class="admin-section" style="display:none;">
+            <h2>📜 回報紀錄歷史檔 (Audit Logs)</h2>
+            <div class="admin-card">
+                <table id="logs-table">
+                    <thead><tr><th>時間</th><th>動作</th><th>詳情</th></tr></thead>
+                    <tbody id="logs-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="section-maintenance" class="admin-section" style="display:none;">
+            <h2>⚡ 系統連線與效能維護</h2>
+            <div class="admin-card">
+                <h3>🧹 一鍵清理過期資料</h3>
+                <p>這將從資料庫中永久刪除所有已經「出生超過 2 小時」且無人更新的舊據點。</p>
+                <button id="btn-purge" style="background:#e11d48; color:white; padding:10px 20px; border:none; border-radius:8px;">執行批次清理</button>
+            </div>
+        </div>
     </div>
 
-    <div style="margin: 20px 0; display: flex; gap: 10px;">
-        <input type="text" id="admin-search" placeholder="🔍 🔍 輸入關鍵字搜尋（例：火、巨大、前鎮區、電箱）..." style="padding: 10px; width: 100%; max-width: 400px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
-    </div>
-
-    <table class="admin-table">
-
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>種類</th>
-                    <th>大小</th>
-                    <th>位置地區</th>
-                    <th>具體地點</th>
-                    <th>目前人數 / 上限</th>
-                    <th>建立時間</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="admin-table-body">
-                <tr>
-                    <td colspan="7" style="text-align:center; color:#7f8c8d;">正在即時同步雲端資料庫...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <script type="module" src="js/firebase-config.js"></script>
-    <script src="js/admin-backend.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script> <script src="js/admin.js"></script>
 </body>
 </html>
