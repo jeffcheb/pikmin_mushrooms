@@ -99,7 +99,7 @@ window.initAdminSync = function() {
     }
 };
 
-// 🍄 1. 渲染列表 (加入 ⚙️ 編輯 按鈕)
+// 🍄 渲染蘑菇資料 (修復欄位對齊 + 剩餘時間 + 按鈕排版)
 window.renderAdminDashboard = function() {
     const tbody = document.getElementById('admin-mushroom-list');
     if (!tbody) return;
@@ -110,6 +110,21 @@ window.renderAdminDashboard = function() {
         const isHidden = item.status === 'hidden';
         const distStr = Array.isArray(item.district) ? item.district.join(', ') : (item.district || '');
 
+        // ⏳ 計算剩餘時間字串
+        let timeLeftStr = "已結束";
+        if (item.timeReported) {
+            const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
+            const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
+            const msLeft = expireTime - Date.now();
+
+            if (msLeft > 0) {
+                const totalSec = Math.floor(msLeft / 1000);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                timeLeftStr = `${h}時 ${m}分`;
+            }
+        }
+
         tbody.innerHTML += `
             <tr>
                 <td><span class="status-badge ${isHidden ? 'hidden-status' : 'active-status'}">${isHidden ? '已隱藏' : '正常'}</span></td>
@@ -117,10 +132,13 @@ window.renderAdminDashboard = function() {
                 <td>${item.city} ${distStr}</td>
                 <td>[${item.size || '一般'}] ${item.type}</td>
                 <td>${item.currentPlayers || 0} 人</td>
+                <td><span style="color:#0284c7; font-weight:bold;">${timeLeftStr}</span></td>
                 <td>
-                    <button class="btn-action" style="background:#e0f2fe; color:#0369a1;" onclick="openEditModal('${id}')">⚙️ 編輯</button>
-                    <button class="btn-action" onclick="toggleVisibility('${id}', '${item.status || 'active'}')">${isHidden ? '👁️ 恢復' : '👁️‍🗨️ 隱藏'}</button>
-                    <button class="btn-action" style="background:#fee2e2; color:#991b1b;" onclick="deleteMushroom('${id}', '${item.locationName}')">🗑️</button>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn-action" style="background:#e0f2fe; color:#0369a1; white-space:nowrap;" onclick="openEditModal('${id}')">⚙️ 編輯</button>
+                        <button class="btn-action" style="white-space:nowrap;" onclick="toggleVisibility('${id}', '${item.status || 'active'}')">${isHidden ? '👁️ 恢復' : '👁️‍🗨️ 隱藏'}</button>
+                        <button class="btn-action" style="background:#fee2e2; color:#991b1b; white-space:nowrap;" onclick="deleteMushroom('${id}', '${item.locationName}')">🗑️</button>
+                    </div>
                 </td>
             </tr>
         `;
