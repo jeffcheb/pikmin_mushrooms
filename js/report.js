@@ -212,23 +212,24 @@ function parseMushroomCode(code) {
         let matchedDistrict = cleanDistrict;
         let highestScore = 0;
 
-        if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
-            Object.values(localMushroomsData).forEach(item => {
-                if (item && item.locationName) {
-                    const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
-                    const score = calculateSimilarity(cleanLocation, targetName);
-                    
-                    if (score > highestScore && score >= 0.55) {
-                        highestScore = score;
-                        bestMatchedLocation = item.locationName;
-                        matchedCity = item.city;
-                        if (!matchedDistrict) {
-                            matchedDistrict = Array.isArray(item.district) ? item.district[0] : item.district;
-                        }
-                    }
+        // 🔍 比對歷史據點
+if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
+    Object.values(localMushroomsData).forEach(item => {
+        if (item && item.locationName) {
+            const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
+            const score = calculateSimilarity(cleanLocation, targetName);
+            
+            if (score > highestScore && score >= 0.55) {
+                highestScore = score;
+                bestMatchedLocation = item.locationName;
+                matchedCity = item.city;
+                if (!matchedDistrict) {
+                    matchedDistrict = Array.isArray(item.district) ? item.district[0] : item.district;
                 }
-            });
+            }
         }
+    });
+}
 
         // D. 帶入縣市與地區
         const citySelect = document.getElementById("city");
