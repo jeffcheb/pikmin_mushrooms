@@ -1,11 +1,13 @@
 // js/report.js
 
+// 🌟 全域變數宣告
 let map; 
 let markerGroup; 
 let userCurrentLat = null;  
 let userCurrentLng = null;  
+let isNearbyFilterOn = false; 
 
-// 🍄 全站統一蘑菇名稱校正工具
+// 🍄 1. 全站統一蘑菇名稱校正 (含當月特殊菇自動識別)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '一般蘑菇';
     let normalized = String(typeStr).trim();
@@ -29,7 +31,7 @@ function normalizeMushroomType(typeStr) {
     return normalized;
 }
 
-// 📊 計算字串相似度 (0 ~ 1)
+// 📊 2. 字串相似度算法 (0 ~ 1)
 function calculateSimilarity(str1, str2) {
     if (!str1 || !str2) return 0;
     const s1 = str1.trim().toLowerCase();
@@ -58,10 +60,10 @@ function calculateSimilarity(str1, str2) {
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
 }
 
-// ⚡ 格式碼解析 (含全自動縣市/行政區補全與自動發佈)
+// ⚡ 3. 格式碼/捷徑解析與自動發佈
 function parseMushroomCode(code) {
     try {
-        console.log("📥 執行捷徑解析，內容：", code);
+        console.log("📥 執行捷徑自動解析，內容：", code);
 
         if (!code || !code.startsWith('#菇')) {
             alert('❌ 格式碼無效！格式應為：#菇,截圖時間,地點名稱,蘑菇種類,剩餘時間');
@@ -70,13 +72,13 @@ function parseMushroomCode(code) {
 
         const parts = code.trim().split(',');
         if (parts.length < 5) {
-            alert('❌ 格式碼欄位不足！');
+            alert('❌ 格式碼欄位不足！請確認包含 5 個欄位');
             return false;
         }
 
         let [prefix, rawPhotoTime, rawLocation, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
 
-        // 1. 計算時間差
+        // 時間差計算
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -89,7 +91,7 @@ function parseMushroomCode(code) {
             }
         }
 
-        // 2. 清洗地點與模糊比對
+        // 地點模糊比對
         let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
         let bestMatchedLocation = cleanLocation;
         let matchedCity = null;
@@ -110,14 +112,13 @@ function parseMushroomCode(code) {
             });
         }
 
-        // 3. 帶入與補全「縣市」與「行政區」（避免觸發瀏覽器下拉選單必填警告）
+        // 自動寫入縣市與行政區 (防選單阻擋)
         const citySelect = document.getElementById("city");
         const distSelect = document.getElementById("district");
 
         if (citySelect) {
-            // 如果地點資料庫有記錄到的縣市，帶入該縣市；否則預設帶入第一個有效縣市 (如 高雄市)
             citySelect.value = matchedCity || "高雄市";
-            citySelect.dispatchEvent(new Event('change')); // 手動觸發 change 讓行政區產生選項
+            citySelect.dispatchEvent(new Event('change'));
         }
 
         if (distSelect) {
@@ -125,13 +126,13 @@ function parseMushroomCode(code) {
                 if (matchedDistrict && Array.from(distSelect.options).some(o => o.value === matchedDistrict)) {
                     distSelect.value = matchedDistrict;
                 } else if (distSelect.options.length > 1) {
-                    distSelect.selectedIndex = 1; // 預設選擇第一個非預設的行政區
+                    distSelect.selectedIndex = 1;
                 }
                 distSelect.dispatchEvent(new Event('change'));
             }, 100);
         }
 
-        // 4. 帶入種類
+        // 種類自動匹配
         let cleanType = rawType.replace(/\s+/g, '');
         let finalType = normalizeMushroomType(cleanType);
 
@@ -144,7 +145,7 @@ function parseMushroomCode(code) {
             else typeSelect.value = "每月特殊蘑菇";
         }
 
-        // 5. 解析剩餘時間並扣除時間差
+        // 剩餘時間換算
         let h = 0, m = 0, s = 0;
         if (rawTime.includes('小時') || rawTime.includes('分')) {
             const hMatch = rawTime.match(/(\d+)\s*小時/);
@@ -166,7 +167,6 @@ function parseMushroomCode(code) {
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
-        // 6. 填入地點與時間
         const locationInput = document.getElementById('location-name');
         if (locationInput) locationInput.value = bestMatchedLocation;
 
@@ -182,12 +182,12 @@ function parseMushroomCode(code) {
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = 1;
 
-        // 7. 🌟 關鍵修復：延遲 600ms 確保縣市與行政區下拉選單皆載入且選取成功後，再自動發佈！
+        // 觸發自動發佈
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
                 reportForm.requestSubmit();
-            }, 600);
+            }, 650);
         }
 
         return true;
@@ -197,7 +197,7 @@ function parseMushroomCode(code) {
     }
 }
 
-// 🟢 地圖初始化
+// 🗺️ 4. 地圖初始化
 function initLeafletMap() {
     try {
         const mapContainer = document.getElementById('map');
@@ -205,7 +205,7 @@ function initLeafletMap() {
         map = L.map('map').setView([22.613, 120.316], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
         markerGroup = L.layerGroup().addTo(map);
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("地圖載入失敗:", error); }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -213,17 +213,103 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const reportForm = document.getElementById("report-form");
     const mushroomBoard = document.getElementById("mushroom-board");
+    const filterCity = document.getElementById("filter-city");
+    const filterDistrict = document.getElementById("filter-district");
+    const searchKeyword = document.getElementById("search-keyword");
+    const sortMethod = document.getElementById("sort-method");
+    const btnGridView = document.getElementById("btn-grid-view");
+    const btnListView = document.getElementById("btn-list-view");
+    const btnAutoLocation = document.getElementById("btn-auto-location");
+    const btnNearbyMushrooms = document.getElementById("btn-nearby-mushrooms");
 
     let localMushroomsData = {};
     let pinnedList = JSON.parse(localStorage.getItem("pinned_mushrooms")) || [];
+    let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
+    let activePanels = {};
 
+    // 視圖切換
     window.setViewMode = function(mode) {
         if (!mushroomBoard) return;
         mushroomBoard.className = `board-container ${mode}-view`;
+        btnGridView?.classList.toggle("active", mode === "grid");
+        btnListView?.classList.toggle("active", mode === "list");
         localStorage.setItem("board_view_pref", mode);
         renderBoard();
     };
 
+    if (btnGridView && btnListView) {
+        btnGridView.addEventListener("click", () => window.setViewMode("grid"));
+        btnListView.addEventListener("click", () => window.setViewMode("list"));
+    }
+
+    const savedView = localStorage.getItem("board_view_pref") || "grid";
+    window.setViewMode(savedView);
+
+    // 篩選選單
+    function initFilterDistricts() {
+        if (!filterCity || !filterDistrict || !window.taiwanData) return;
+
+        filterCity.innerHTML = '<option value="all">所有縣市</option>';
+        Object.keys(window.taiwanData).forEach(city => {
+            const option = document.createElement("option");
+            option.value = city; option.textContent = city;
+            filterCity.appendChild(option);
+        });
+
+        filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+        filterDistrict.disabled = true;
+
+        filterCity.addEventListener("change", () => {
+            const selectedCity = filterCity.value;
+            filterDistrict.innerHTML = '<option value="all">所有行政區</option>';
+            if (selectedCity === "all") {
+                filterDistrict.disabled = true;
+            } else {
+                filterDistrict.disabled = false;
+                (window.taiwanData[selectedCity] || []).forEach(dist => {
+                    const option = document.createElement("option");
+                    option.value = dist; option.textContent = dist;
+                    filterDistrict.appendChild(option);
+                });
+            }
+            renderBoard();
+        });
+
+        filterDistrict.addEventListener("change", renderBoard);
+        sortMethod?.addEventListener("change", renderBoard);
+        searchKeyword?.addEventListener("input", renderBoard);
+        renderBoard();
+    }
+
+    // 定位按鈕
+    if (btnAutoLocation) {
+        btnAutoLocation.addEventListener("click", () => {
+            if (!navigator.geolocation) return alert("不支援定位");
+            btnAutoLocation.textContent = "⌛";
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userCurrentLat = pos.coords.latitude;
+                    userCurrentLng = pos.coords.longitude;
+                    if (map) map.setView([userCurrentLat, userCurrentLng], 16);
+                    btnAutoLocation.textContent = "🎯 定位";
+                    renderBoard();
+                },
+                () => { btnAutoLocation.textContent = "🎯 定位"; alert("GPS 定位失敗"); }
+            );
+        });
+    }
+
+    if (btnNearbyMushrooms) {
+        btnNearbyMushrooms.addEventListener("click", () => {
+            if (userCurrentLat === null || userCurrentLng === null) return alert("請先點擊「🎯 定位」！");
+            isNearbyFilterOn = !isNearbyFilterOn;
+            btnNearbyMushrooms.classList.toggle("active", isNearbyFilterOn);
+            btnNearbyMushrooms.textContent = isNearbyFilterOn ? "🟢 顯示 600m 內" : "📍 篩選 600m 內";
+            renderBoard();
+        });
+    }
+
+    // 發佈情報表單監聽
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -244,6 +330,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const s = parseInt(document.getElementById("time-seconds").value) || 0;
 
             const nowTimestamp = Date.now();
+            const latVal = parseFloat(document.getElementById("lat")?.value) || null;
+            const lngVal = parseFloat(document.getElementById("lng")?.value) || null;
 
             let existingId = null;
             for (const [id, item] of Object.entries(localMushroomsData)) {
@@ -256,7 +344,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 city, district: [district], locationName, type, size,
                 currentPlayers: players, maxPlayers: 30,
                 timeReported: { hours: h, minutes: m, seconds: s },
-                createdAt: nowTimestamp, updatedAt: nowTimestamp
+                createdAt: nowTimestamp, updatedAt: nowTimestamp,
+                lat: latVal, lng: lngVal
             };
 
             if (existingId) {
@@ -302,43 +391,126 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(updateTickCounters, 1000);
     }
 
+    // 🎨 5. 完整畫板渲染 (包含全數功能按鈕)
     function renderBoard() {
         const keys = Object.keys(localMushroomsData);
+
+        const countEl = document.getElementById("daily-report-count");
+        if (countEl) {
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const todayTimestamp = startOfToday.getTime();
+            const dailyCount = keys.filter(id => (localMushroomsData[id].updatedAt || localMushroomsData[id].createdAt || 0) >= todayTimestamp).length;
+            countEl.textContent = `📊 今日回報量：${dailyCount} 筆`;
+        }
+
         if (!mushroomBoard) return;
+
         let htmlContent = "";
+        const cityFilter = filterCity?.value || "all";
+        const distFilter = filterDistrict?.value || "all";
+        const keyword = searchKeyword?.value.trim().toLowerCase() || "";
 
         if (keys.length === 0) {
             mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報，快去發佈第一個吧！</p>';
+            if (markerGroup) markerGroup.clearLayers();
             return;
         }
+
+        if (markerGroup) markerGroup.clearLayers();
 
         keys.forEach(id => {
             const item = localMushroomsData[id];
             const displayType = normalizeMushroomType(item.type);
             const displaySize = normalizeMushroomType(item.size);
+
+            if (cityFilter !== "all" && item.city !== cityFilter) return;
+            if (distFilter !== "all" && item.district && !item.district.includes(distFilter)) return;
+            if (keyword && !item.locationName.toLowerCase().includes(keyword) && !displayType.toLowerCase().includes(keyword)) return;
+
+            const isPinned = pinnedList.includes(id) ? "pinned" : "";
+            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
+            const isAlertEnabled = alertEnabledList.includes(id);
+            const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
+
             const dynamicImgSrc = getIconPath(displayType);
+            const lastUpdatedDate = new Date(item.updatedAt || item.createdAt || Date.now());
+            const formattedTime = `${lastUpdatedDate.getMonth()+1}/${lastUpdatedDate.getDate()} ${lastUpdatedDate.getHours().toString().padStart(2,'0')}:${lastUpdatedDate.getMinutes().toString().padStart(2,'0')}`;
+
+            const isEditOpen = activePanels[id]?.edit ? "block" : "none";
+            const isHistoryOpen = activePanels[id]?.history ? "block" : "none";
+
+            const fastFillData = encodeURIComponent(JSON.stringify({
+                city: item.city,
+                district: Array.isArray(item.district) ? item.district[0] : item.district,
+                locationName: item.locationName,
+                lat: item.lat || "",
+                lng: item.lng || ""
+            }));
 
             htmlContent += `
-                <div class="mushroom-card" data-id="${id}" id="card-${id}">
+                <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
                     <div class="card-header">
                         <img src="${dynamicImgSrc}" class="shroom-img" alt="${displayType}">
                         <div class="shroom-info">
-                            <h4>[${displaySize}] ${displayType}</h4>
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;">
+                                <h4 style="margin:0; white-space:nowrap;">[${displaySize}] ${displayType}</h4>
+                                <button class="btn-fast-fill-trigger" onclick="handleFastFill('${fastFillData}')" style="font-size:11px; padding:2px 6px; cursor:pointer; white-space:nowrap; border-radius:4px; background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd;">⚡ 更新</button>
+                            </div>
                             <span style="font-size:12px; color:#666;">📍 ${item.city || ''} - ${item.locationName}</span>
                         </div>
+                        
+                        <div class="header-controls-group" style="display: flex; gap: 4px; margin-left: auto;">
+                            <button class="btn-sm btn-pin-top" onclick="togglePin('${id}')">${isPinned ? '⭐' : '📌'}</button>
+                            <button class="btn-history-trigger" onclick="toggleHistoryPanel('${id}')">◎</button>
+                        </div>
                     </div>
+
+                    <div id="history-panel-${id}" class="history-info-panel" style="display: ${isHistoryOpen}; font-size:12px; background:#f8fafc; padding:6px; border-radius:4px; margin-top:4px;">
+                        <p style="margin:0;">🕒 上次更新：<strong>${formattedTime}</strong></p>
+                    </div>
+
                     <div class="card-body">
                         <p style="margin:4px 0;">👥 參戰人數：<strong>${item.currentPlayers || 0} / ${item.maxPlayers || 30}</strong> 人</p>
                         <p class="countdown-text" id="time-text-${id}" style="margin:4px 0;">⏳ 計算時間中...</p>
                     </div>
+
+                    <div id="edit-panel-${id}" class="edit-status-panel" style="display: ${isEditOpen}; padding:8px; background:#f0fdf4; border-radius:6px; margin-top:6px;">
+                        <h5 style="margin:0 0 6px 0;">✏️ 修改目前即時狀態：</h5>
+                        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+                            <label>👥 人數：</label>
+                            <input type="number" id="edit-players-${id}" min="0" max="40" value="${item.currentPlayers || 0}" style="width:60px;">
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                            <label>⏳ 時間：</label>
+                            <input type="number" id="edit-h-${id}" min="0" max="23" value="0" placeholder="時" style="width:40px;">:
+                            <input type="number" id="edit-m-${id}" min="0" max="59" value="0" placeholder="分" style="width:40px;">:
+                            <input type="number" id="edit-s-${id}" min="0" max="59" value="0" placeholder="秒" style="width:40px;">
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn-save" onclick="saveStatusEdit('${id}')" style="background:#22c55e; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">💾 儲存</button>
+                            <button class="btn-cancel" onclick="toggleEditPanel('${id}')" style="background:#94a3b8; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">取消</button>
+                        </div>
+                    </div>
+
+                    <div class="card-footer" style="display:flex; gap:6px; margin-top:8px;">
+                        <button class="btn-sm btn-alert" id="alert-btn-${id}" onclick="toggleAlert('${id}')">${alertBtnText}</button>
+                        <button class="btn-sm btn-edit-trigger" id="edit-btn-${id}" onclick="toggleEditPanel('${id}')">✏️ 更新狀態</button>
+                    </div>
                 </div>
             `;
+
+            if (markerGroup && item.lat && item.lng) {
+                const marker = L.marker([item.lat, item.lng]).bindPopup(`<b>${displayType}</b><br>${item.locationName}`);
+                markerGroup.addLayer(marker);
+            }
         });
 
         mushroomBoard.innerHTML = htmlContent;
         updateTickCounters();
     }
 
+    // ⏰ 計時器
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -360,6 +532,77 @@ document.addEventListener("DOMContentLoaded", () => {
                 textElement.textContent = `🔄 待現場玩家更新 (新菇已出生)`;
             }
         });
+    }
+
+    // 全域綁定按鈕動作
+    window.togglePin = (id) => {
+        const index = pinnedList.indexOf(id);
+        if (index > -1) pinnedList.splice(index, 1);
+        else pinnedList.push(id);
+        localStorage.setItem("pinned_mushrooms", JSON.stringify(pinnedList));
+        renderBoard();
+    };
+
+    window.toggleHistoryPanel = (id) => {
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        activePanels[id].history = !activePanels[id].history;
+        renderBoard();
+    };
+
+    window.toggleEditPanel = (id) => {
+        if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
+        activePanels[id].edit = !activePanels[id].edit;
+        renderBoard();
+    };
+
+    window.saveStatusEdit = (id) => {
+        if (!window.fbDB) return;
+        const players = parseInt(document.getElementById(`edit-players-${id}`).value) || 0;
+        const h = parseInt(document.getElementById(`edit-h-${id}`).value) || 0;
+        const m = parseInt(document.getElementById(`edit-m-${id}`).value) || 0;
+        const s = parseInt(document.getElementById(`edit-s-${id}`).value) || 0;
+
+        const now = Date.now();
+        window.fbUpdate(window.fbRef(window.fbDB, `mushrooms/${id}`), {
+            currentPlayers: players,
+            timeReported: { hours: h, minutes: m, seconds: s },
+            createdAt: now, updatedAt: now
+        }).then(() => {
+            if (activePanels[id]) activePanels[id].edit = false;
+            alert("💾 狀態更新成功！");
+            renderBoard();
+        });
+    };
+
+    window.toggleAlert = (id) => {
+        const index = alertEnabledList.indexOf(id);
+        if (index > -1) alertEnabledList.splice(index, 1);
+        else alertEnabledList.push(id);
+        localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
+        renderBoard();
+    };
+
+    window.handleFastFill = (encodedData) => {
+        try {
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            document.getElementById("city").value = data.city;
+            document.getElementById("location-name").value = data.locationName;
+            document.querySelector(".report-section")?.scrollIntoView({ behavior: "smooth" });
+        } catch (e) { console.error(e); }
+    };
+
+    function bootstrapFilter() {
+        if (window.taiwanData) {
+            initFilterDistricts();
+            return true;
+        }
+        return false;
+    }
+
+    if (!bootstrapFilter()) {
+        const forceLoadInterval = setInterval(() => {
+            if (bootstrapFilter()) clearInterval(forceLoadInterval);
+        }, 30);
     }
 
     const checkFbInterval = setInterval(() => {
