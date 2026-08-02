@@ -851,3 +851,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 150);
 });
+// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
+function parseMushroomTypeAndSize(rawInput) {
+    if (!rawInput) return { size: '一般', type: '未知' };
+
+    let text = rawInput.trim();
+    let detectedSize = '一般'; // 預設尺寸
+
+    // 1. 偵測常見尺寸關鍵字
+    if (text.includes('巨大') || text.includes('大')) {
+        detectedSize = '巨大';
+        text = text.replace(/\[?巨大\]?|大/g, ''); // 移除尺寸字眼
+    } else if (text.includes('小型') || text.includes('小')) {
+        detectedSize = '小型';
+        text = text.replace(/\[?小型\]?|小/g, '');
+    } else if (text.includes('普通') || text.includes('中')) {
+        detectedSize = '普通';
+        text = text.replace(/\[?普通\]?|中/g, '');
+    }
+
+    // 2. 清理多餘的符號與空白
+    let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
+
+    // 若清理後變空字串，給予預設值
+    if (!detectedType) detectedType = '特殊蘑菇';
+
+    return {
+        size: detectedSize,
+        type: detectedType
+    };
+}
