@@ -194,3 +194,18 @@ document.addEventListener("DOMContentLoaded", () => {
         initAdminSync();
     }
 });
+// 🚫 後台把指定 IP 加入黑名單
+window.blockUserIP = (ip, reason = "惡意變更資料") => {
+    if (!ip || ip === "0.0.0.0") return alert("無效的 IP 位址");
+    
+    const safeIpKey = ip.replace(/\./g, "_");
+    
+    window.fbUpdate(window.fbRef(window.fbDB, `blacklist/${safeIpKey}`), {
+        ip: ip,
+        reason: reason,
+        blockedAt: Date.now()
+    }).then(() => {
+        alert(`⛔ 已成功封鎖 IP：${ip}`);
+        writeAuditLog("BLOCK_IP", `封鎖了 IP: ${ip}，原因：${reason}`);
+    });
+};
