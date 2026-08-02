@@ -154,11 +154,13 @@ document.getElementById('btn-purge')?.addEventListener('click', () => {
 // 黑名單與其他功能... (以此類推)
 
 document.addEventListener("DOMContentLoaded", initAdminSync);
-// 🔒 密碼驗證邏輯
-// 🔒 密碼驗證邏輯 (相容版)
+// 🔒 密碼驗證邏輯 (模組化 SDK 相容版)
 window.verifyPassword = async () => {
-    const inputPass = document.getElementById('admin-pass-input').value;
+    const inputEl = document.getElementById('admin-pass-input');
     const errorMsg = document.getElementById('login-error');
+    if (!inputEl) return;
+
+    const inputPass = inputEl.value.trim();
 
     if (!inputPass) {
         errorMsg.textContent = "請輸入密碼！";
@@ -166,31 +168,31 @@ window.verifyPassword = async () => {
         return;
     }
 
-    // 1. 將使用者輸入的密碼進行 SHA-256 加密
+    // 1. 將輸入的密碼轉成 SHA-256
     const hashedInput = CryptoJS.SHA256(inputPass).toString();
 
     try {
-        // 2. 優先使用原生 SDK 語法讀取 Firebase (避免自訂函式未定義問題)
+        // 🌟 使用相容模組語法的 fbRef + fbGet
         let realHash = null;
-        
-        if (window.fbDB) {
-            // 使用內建的 once('value') 抓取
-            const snap = await window.fbDB.ref("config/adminPasswordHash").once("value");
-            realHash = snap.val();
-        } else if (window.fbGet && window.fbRef) {
+
+        if (window.fbGet && window.fbRef && window.fbDB) {
             const snap = await window.fbGet(window.fbRef(window.fbDB, "config/adminPasswordHash"));
             realHash = snap.val();
+        } else if (window.fbDB && typeof window.fbDB.ref === 'function') {
+            const snap = await window.fbDB.ref("config/adminPasswordHash").once("value");
+            realHash = snap.val();
+        } else {
+            throw new Error("Firebase DB 物件未初始化完成");
         }
 
         console.log("🔍 輸入的 Hash:", hashedInput);
         console.log("🔍 資料庫 Hash:", realHash);
 
-        // 3. 比對兩者的 Hash 是否一致
+        // 2. 比對 Hash
         if (realHash && hashedInput === realHash) {
             document.getElementById('login-modal').style.display = 'none';
             sessionStorage.setItem("adminAuthenticated", "true");
-            
-            // 啟動後台資料同步
+
             if (typeof initAdminSync === "function") {
                 initAdminSync();
             }
