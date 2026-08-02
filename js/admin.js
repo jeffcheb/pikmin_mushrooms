@@ -155,6 +155,7 @@ document.getElementById('btn-purge')?.addEventListener('click', () => {
 
 document.addEventListener("DOMContentLoaded", initAdminSync);
 // 🔒 密碼驗證邏輯
+// 🔒 密碼驗證邏輯 (相容版)
 window.verifyPassword = async () => {
     const inputPass = document.getElementById('admin-pass-input').value;
     const errorMsg = document.getElementById('login-error');
@@ -169,27 +170,40 @@ window.verifyPassword = async () => {
     const hashedInput = CryptoJS.SHA256(inputPass).toString();
 
     try {
-        // 2. 從 Firebase 抓取正確的密碼 Hash
-        const snapshot = await window.fbGet(window.fbRef(window.fbDB, "config/adminPasswordHash"));
-        const realHash = snapshot.val();
+        // 2. 優先使用原生 SDK 語法讀取 Firebase (避免自訂函式未定義問題)
+        let realHash = null;
+        
+        if (window.fbDB) {
+            // 使用內建的 once('value') 抓取
+            const snap = await window.fbDB.ref("config/adminPasswordHash").once("value");
+            realHash = snap.val();
+        } else if (window.fbGet && window.fbRef) {
+            const snap = await window.fbGet(window.fbRef(window.fbDB, "config/adminPasswordHash"));
+            realHash = snap.val();
+        }
 
-        // 3. 比對兩者的 Hash 是否完全符合
+        console.log("🔍 輸入的 Hash:", hashedInput);
+        console.log("🔍 資料庫 Hash:", realHash);
+
+        // 3. 比對兩者的 Hash 是否一致
         if (realHash && hashedInput === realHash) {
-            // 驗證成功：隱藏登入視窗，啟動後台數據同步
             document.getElementById('login-modal').style.display = 'none';
-            sessionStorage.setItem("adminAuthenticated", "true"); // 紀錄登入狀態 (當前分頁有效)
-            initAdminSync();
+            sessionStorage.setItem("adminAuthenticated", "true");
+            
+            // 啟動後台資料同步
+            if (typeof initAdminSync === "function") {
+                initAdminSync();
+            }
         } else {
             errorMsg.textContent = "密碼錯誤！";
             errorMsg.style.display = "block";
         }
     } catch (err) {
-        console.error("驗證過程發生錯誤：", err);
-        errorMsg.textContent = "驗證失敗，請檢查網路狀態";
+        console.error("❌ 驗證過程發生詳細錯誤：", err);
+        errorMsg.textContent = "驗證失敗，請檢查 Firebase 讀取權限或網路狀態！";
         errorMsg.style.display = "block";
     }
 };
-
 // 頁面載入時檢查是否已經登入過
 document.addEventListener("DOMContentLoaded", () => {
     if (sessionStorage.getItem("adminAuthenticated") === "true") {
