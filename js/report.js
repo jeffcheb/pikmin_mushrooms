@@ -7,7 +7,7 @@ let userCurrentLat = null;
 let userCurrentLng = null;  
 let isNearbyFilterOn = false; 
 
-// 🍄 1. 全站統一蘑菇名稱校正 (含當月特殊菇自動識別)
+// 🍄 蘑菇名稱校正 (含海泡泡/每月特殊菇自動識別)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '一般蘑菇';
     let normalized = String(typeStr).trim();
@@ -22,16 +22,14 @@ function normalizeMushroomType(typeStr) {
         return "每月特殊蘑菇";
     }
 
-    normalized = normalized
+    return normalized
         .replace(/巨型/g, '巨大')
         .replace(/普通/g, '一般')
         .replace(/小型/g, '小')
         .replace(/大型/g, '大');
-
-    return normalized;
 }
 
-// 📊 2. 字串相似度算法 (0 ~ 1)
+// 📊 字串相似度算法
 function calculateSimilarity(str1, str2) {
     if (!str1 || !str2) return 0;
     const s1 = str1.trim().toLowerCase();
@@ -60,25 +58,16 @@ function calculateSimilarity(str1, str2) {
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
 }
 
-// ⚡ 3. 格式碼/捷徑解析與自動發佈
+// ⚡ 捷徑格式碼解析
 function parseMushroomCode(code) {
     try {
-        console.log("📥 執行捷徑自動解析，內容：", code);
-
-        if (!code || !code.startsWith('#菇')) {
-            alert('❌ 格式碼無效！格式應為：#菇,截圖時間,地點名稱,蘑菇種類,剩餘時間');
-            return false;
-        }
+        if (!code || !code.startsWith('#菇')) return false;
 
         const parts = code.trim().split(',');
-        if (parts.length < 5) {
-            alert('❌ 格式碼欄位不足！請確認包含 5 個欄位');
-            return false;
-        }
+        if (parts.length < 5) return false;
 
         let [prefix, rawPhotoTime, rawLocation, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
 
-        // 時間差計算
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -91,7 +80,6 @@ function parseMushroomCode(code) {
             }
         }
 
-        // 地點模糊比對
         let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
         let bestMatchedLocation = cleanLocation;
         let matchedCity = null;
@@ -112,7 +100,6 @@ function parseMushroomCode(code) {
             });
         }
 
-        // 自動寫入縣市與行政區 (防選單阻擋)
         const citySelect = document.getElementById("city");
         const distSelect = document.getElementById("district");
 
@@ -132,7 +119,6 @@ function parseMushroomCode(code) {
             }, 100);
         }
 
-        // 種類自動匹配
         let cleanType = rawType.replace(/\s+/g, '');
         let finalType = normalizeMushroomType(cleanType);
 
@@ -145,7 +131,6 @@ function parseMushroomCode(code) {
             else typeSelect.value = "每月特殊蘑菇";
         }
 
-        // 剩餘時間換算
         let h = 0, m = 0, s = 0;
         if (rawTime.includes('小時') || rawTime.includes('分')) {
             const hMatch = rawTime.match(/(\d+)\s*小時/);
@@ -182,7 +167,6 @@ function parseMushroomCode(code) {
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = 1;
 
-        // 觸發自動發佈
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
@@ -197,7 +181,7 @@ function parseMushroomCode(code) {
     }
 }
 
-// 🗺️ 4. 地圖初始化
+// 🗺️ 地圖初始化
 function initLeafletMap() {
     try {
         const mapContainer = document.getElementById('map');
@@ -245,14 +229,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedView = localStorage.getItem("board_view_pref") || "grid";
     window.setViewMode(savedView);
 
-    // 篩選選單
+    // 🌟 修正選單載入防爆：輪詢等待 taiwanData 載入完成
     function initFilterDistricts() {
-        if (!filterCity || !filterDistrict || !window.taiwanData) return;
+        const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
+        if (!filterCity || !filterDistrict || !availableData) return false;
 
         filterCity.innerHTML = '<option value="all">所有縣市</option>';
-        Object.keys(window.taiwanData).forEach(city => {
+        Object.keys(availableData).forEach(city => {
             const option = document.createElement("option");
-            option.value = city; option.textContent = city;
+            option.value = city; 
+            option.textContent = city;
             filterCity.appendChild(option);
         });
 
@@ -266,9 +252,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 filterDistrict.disabled = true;
             } else {
                 filterDistrict.disabled = false;
-                (window.taiwanData[selectedCity] || []).forEach(dist => {
+                (availableData[selectedCity] || []).forEach(dist => {
                     const option = document.createElement("option");
-                    option.value = dist; option.textContent = dist;
+                    option.value = dist; 
+                    option.textContent = dist;
                     filterDistrict.appendChild(option);
                 });
             }
@@ -278,7 +265,20 @@ document.addEventListener("DOMContentLoaded", () => {
         filterDistrict.addEventListener("change", renderBoard);
         sortMethod?.addEventListener("change", renderBoard);
         searchKeyword?.addEventListener("input", renderBoard);
+
+        // 恢復上次選擇
+        const savedCity = localStorage.getItem("mushroom_filter_city") || "all";
+        const savedDist = localStorage.getItem("mushroom_filter_dist") || "all";
+        if (savedCity !== "all" && filterCity) {
+            filterCity.value = savedCity;
+            filterCity.dispatchEvent(new Event("change"));
+            if (savedDist !== "all" && filterDistrict) {
+                filterDistrict.value = savedDist;
+            }
+        }
+
         renderBoard();
+        return true;
     }
 
     // 定位按鈕
@@ -391,7 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(updateTickCounters, 1000);
     }
 
-    // 🎨 5. 完整畫板渲染 (包含全數功能按鈕)
+    // 🎨 完整畫板渲染 (包含全數舊版按鈕與完整相容的行政區標籤)
     function renderBoard() {
         const keys = Object.keys(localMushroomsData);
 
@@ -410,12 +410,29 @@ document.addEventListener("DOMContentLoaded", () => {
         const cityFilter = filterCity?.value || "all";
         const distFilter = filterDistrict?.value || "all";
         const keyword = searchKeyword?.value.trim().toLowerCase() || "";
+        const currentSort = sortMethod?.value || "default";
 
         if (keys.length === 0) {
             mushroomBoard.innerHTML = '<p class="loading-text">目前沒有即時情報，快去發佈第一個吧！</p>';
             if (markerGroup) markerGroup.clearLayers();
             return;
         }
+
+        // 排序邏輯
+        keys.sort((a, b) => {
+            const aPinned = pinnedList.includes(a) ? 1 : 0;
+            const bPinned = pinnedList.includes(b) ? 1 : 0;
+            if (bPinned !== aPinned) return bPinned - aPinned;
+
+            const itemA = localMushroomsData[a];
+            const itemB = localMushroomsData[b];
+
+            if (currentSort === "size") {
+                const sizeWeight = { "巨大": 4, "大": 3, "大型": 3, "一般": 2, "普通": 2, "小": 1, "小型": 1 };
+                return (sizeWeight[itemB.size] || 0) - (sizeWeight[itemA.size] || 0);
+            }
+            return 0;
+        });
 
         if (markerGroup) markerGroup.clearLayers();
 
@@ -425,11 +442,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const displaySize = normalizeMushroomType(item.size);
 
             if (cityFilter !== "all" && item.city !== cityFilter) return;
-            if (distFilter !== "all" && item.district && !item.district.includes(distFilter)) return;
+            
+            // 🌟 修正：完美相容陣列與單一字串的行政區篩選
+            if (distFilter !== "all") {
+                if (!item.district) return;
+                if (Array.isArray(item.district)) {
+                    if (!item.district.includes(distFilter)) return;
+                } else if (typeof item.district === "string") {
+                    if (item.district !== distFilter) return;
+                }
+            }
+
             if (keyword && !item.locationName.toLowerCase().includes(keyword) && !displayType.toLowerCase().includes(keyword)) return;
 
             const isPinned = pinnedList.includes(id) ? "pinned" : "";
-            const pinBtnText = pinnedList.includes(id) ? "⭐ 已釘選" : "📌 釘選";
             const isAlertEnabled = alertEnabledList.includes(id);
             const alertBtnText = isAlertEnabled ? "🔔 提醒已開" : "🔕 開啟提醒";
 
@@ -448,6 +474,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 lng: item.lng || ""
             }));
 
+            // 🌟 處理行政區標籤顯示
+            let districtBadgeHTML = "";
+            if (Array.isArray(item.district) && item.district.length > 0) {
+                districtBadgeHTML = item.district.map(d => `<span class="dist-badge" style="background:#e2e8f0; color:#334155; padding:1px 5px; border-radius:4px; font-size:11px; margin-right:4px;">${d}</span>`).join('');
+            } else if (typeof item.district === "string" && item.district.trim() !== "") {
+                districtBadgeHTML = `<span class="dist-badge" style="background:#e2e8f0; color:#334155; padding:1px 5px; border-radius:4px; font-size:11px; margin-right:4px;">${item.district}</span>`;
+            }
+
             htmlContent += `
                 <div class="mushroom-card ${isPinned}" data-id="${id}" id="card-${id}">
                     <div class="card-header">
@@ -457,7 +491,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 <h4 style="margin:0; white-space:nowrap;">[${displaySize}] ${displayType}</h4>
                                 <button class="btn-fast-fill-trigger" onclick="handleFastFill('${fastFillData}')" style="font-size:11px; padding:2px 6px; cursor:pointer; white-space:nowrap; border-radius:4px; background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd;">⚡ 更新</button>
                             </div>
-                            <span style="font-size:12px; color:#666;">📍 ${item.city || ''} - ${item.locationName}</span>
+                            <div style="font-size:12px; color:#666; margin-top:2px; display:flex; align-items:center; flex-wrap:wrap;">
+                                <span>📍 ${item.city || ''}</span>
+                                ${districtBadgeHTML}
+                                <span>- ${item.locationName}</span>
+                            </div>
                         </div>
                         
                         <div class="header-controls-group" style="display: flex; gap: 4px; margin-left: auto;">
@@ -534,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 全域綁定按鈕動作
+    // 按鈕動作掛載
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
         if (index > -1) pinnedList.splice(index, 1);
@@ -591,19 +629,17 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) { console.error(e); }
     };
 
-    function bootstrapFilter() {
-        if (window.taiwanData) {
-            initFilterDistricts();
-            return true;
+    // 🌟 修正選單載入：安全重試機制
+    function forceInitFilter() {
+        if (!initFilterDistricts()) {
+            const filterRetryInterval = setInterval(() => {
+                if (initFilterDistricts()) {
+                    clearInterval(filterRetryInterval);
+                }
+            }, 50);
         }
-        return false;
     }
-
-    if (!bootstrapFilter()) {
-        const forceLoadInterval = setInterval(() => {
-            if (bootstrapFilter()) clearInterval(forceLoadInterval);
-        }, 30);
-    }
+    forceInitFilter();
 
     const checkFbInterval = setInterval(() => {
         if (window.fbDB) {
