@@ -29,7 +29,7 @@ function normalizeMushroomSize(sizeStr) {
     return '一般';
 }
 
-// 🍄 2. 種類獨立標準校正 (精準對齊 HTML 的「色」字)
+// 🍄 2. 種類獨立標準校正 (包含「色」字，精準對齊 HTML 選項)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '黃色蘑菇';
     let normalized = String(typeStr).trim();
@@ -53,7 +53,7 @@ function normalizeMushroomType(typeStr) {
     if (normalized.includes("毒")) return "毒蘑菇";
     if (normalized.includes("電")) return "電蘑菇";
 
-    // 🌟 3. 普通顏色蘑菇 (包含「色」字)
+    // 🌟 3. 普通顏色蘑菇
     if (normalized.includes("紅")) return "紅色蘑菇";
     if (normalized.includes("藍") && !normalized.includes("冰")) return "藍色蘑菇";
     if (normalized.includes("冰")) return "冰藍蘑菇";
@@ -120,7 +120,7 @@ function calculateSimilarity(str1, str2) {
 
 // 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
 function parseMushroomTypeAndSize(rawInput) {
-    if (!rawInput) return { size: '一般', type: '黃蘑菇' };
+    if (!rawInput) return { size: '一般', type: '黃色蘑菇' };
 
     let text = rawInput.trim();
     let detectedSize = '一般';
@@ -137,7 +137,7 @@ function parseMushroomTypeAndSize(rawInput) {
     }
 
     let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
-    if (!detectedType) detectedType = '黃蘑菇';
+    if (!detectedType) detectedType = '黃色蘑菇';
 
     return {
         size: detectedSize,
@@ -256,7 +256,7 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // E. 帶入尺寸與種類 (強效匹配選單)
+        // E. 帶入尺寸與種類 (強效動態選單匹配)
         let parsedSize = rawSize;
         let parsedType = rawType;
 
@@ -269,7 +269,7 @@ function parseMushroomCode(code) {
         let finalSize = normalizeMushroomSize(parsedSize);
         let finalType = normalizeMushroomType(parsedType);
 
-        // 帶入尺寸
+        // 帶入尺寸選單
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
             let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
@@ -279,10 +279,10 @@ function parseMushroomCode(code) {
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 帶入種類
+        // 帶入種類選單
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            const coreKey = finalType.replace(/蘑菇|色|一般|普通/g, '');
+            const coreKey = finalType.replace(/蘑菇|一般|普通/g, '');
             let matchedTypeOpt = Array.from(typeSelect.options).find(opt => {
                 const val = opt.value;
                 const txt = opt.text;
@@ -620,6 +620,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        // 🎯 蘑菇卡牌完整排序修復邏輯
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
@@ -629,10 +630,24 @@ document.addEventListener("DOMContentLoaded", () => {
             const itemB = localMushroomsData[b];
 
             if (currentSort === "size") {
-                const sizeWeight = { "巨大": 4, "大": 3, "大型": 3, "一般": 2, "普通": 2, "小": 1, "小型": 1 };
-                return (sizeWeight[itemB.size] || 0) - (sizeWeight[itemA.size] || 0);
+                const sizeWeight = { "巨大": 3, "一般": 2, "普通": 2, "小": 1, "小型": 1 };
+                const weightA = sizeWeight[itemA.size] || 2;
+                const weightB = sizeWeight[itemB.size] || 2;
+                return weightB - weightA;
+            } 
+            else if (currentSort === "time") {
+                const getMsLeft = (item) => {
+                    if (!item.timeReported) return Infinity;
+                    const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
+                    return ((item.createdAt || 0) + totalReportedMs) - Date.now();
+                };
+                return getMsLeft(itemA) - getMsLeft(itemB);
+            } 
+            else {
+                const timeA = itemA.updatedAt || itemA.createdAt || 0;
+                const timeB = itemB.updatedAt || itemB.createdAt || 0;
+                return timeB - timeA;
             }
-            return 0;
         });
 
         if (markerGroup) markerGroup.clearLayers();
