@@ -58,12 +58,53 @@ function calculateSimilarity(str1, str2) {
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
 }
 
-/**
- * ⚡ 格式碼解析 (尺寸與種類拆開格式：#菇,截圖時間,地點,尺寸,種類,剩餘時間)
- */
-/**
- * ⚡ 格式碼解析 (支援全形 〉 符號清洗 + 選單安全容錯機制)
- */
+// 🍄 1. 圖示路徑精準解析引擎 (徹底解決水晶、水、電等關鍵字衝突)
+function getIconPath(type) {
+    if (!type) return "picture/mushroom_monthly_special.png";
+    const typeStr = String(type).trim();
+
+    // 🌟 核心修復：優先比對「字數較長」的特殊蘑菇，避免被單字關鍵字攔截 (例如 "水晶" 被 "水" 搶走)
+    if (typeStr.includes("每月") || typeStr.includes("特殊") || typeStr.includes("海泡泡") || typeStr.includes("神秘")) {
+        return "picture/mushroom_monthly_special.png";
+    }
+    if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png"; // 水晶蘑菇專用圖示
+    if (typeStr.includes("火")) return "picture/mushroom_fire.png";
+    if (typeStr.includes("水")) return "picture/mushroom_water.png";
+    if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
+    if (typeStr.includes("電")) return "picture/mushroom_electric.png";
+    if (typeStr.includes("冰")) return "picture/mushroom_ice.png";
+    if (typeStr.includes("紅")) return "picture/mushroom_red.png";
+    if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
+    if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
+    if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
+    if (typeStr.includes("白")) return "picture/mushroom_white.png";
+
+    return "picture/mushroom_monthly_special.png";
+}
+
+// 🍄 2. 蘑菇名稱標準化
+function normalizeMushroomType(typeStr) {
+    if (!typeStr) return '一般蘑菇';
+    let normalized = String(typeStr).trim();
+
+    if (
+        normalized.includes("海泡泡") || 
+        normalized.includes("特殊") || 
+        normalized.includes("活動") || 
+        normalized.includes("每月") ||
+        normalized.includes("神秘")
+    ) {
+        return "每月特殊蘑菇";
+    }
+
+    return normalized
+        .replace(/巨型/g, '巨大')
+        .replace(/普通/g, '一般')
+        .replace(/小型/g, '小')
+        .replace(/大型/g, '大');
+}
+
+// ⚡ 3. 格式碼解析 (支援 8 欄位：#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
     try {
         console.log("📥 執行捷徑自動解析，內容：", code);
@@ -71,9 +112,18 @@ function parseMushroomCode(code) {
         if (!code || !code.startsWith('#菇')) return false;
 
         const parts = code.trim().split(',');
-        if (parts.length < 7) return false;
+        // 🌟 升級為 8 個欄位
+        if (parts.length < 8) {
+            console.warn("⚠️ 格式碼欄位未滿 8 個，嘗試向下相容解析");
+        }
 
-        let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
+        let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawPlayers, rawTime] = parts.map(p => p ? p.trim() : '');
+
+        // 如果傳入的是舊版 7 欄位，自動彈性調整欄位對應
+        if (parts.length === 7) {
+            rawTime = rawPlayers;
+            rawPlayers = "1";
+        }
 
         // 1. 時間差計算
         let timeOffsetSec = 0;
@@ -88,9 +138,9 @@ function parseMushroomCode(code) {
             }
         }
 
-        // 🧹 2. 升級版地點清洗 (濾除 >、＞、〉、⟩、» 等符號)
+        // 🧹 2. 升級版地點與符號清洗 (濾除 >、＞、〉、⟩、» 等所有符號)
         let cleanLocation = rawLocation
-            .replace(/[>＞〉⟩»›]/g, '') // 濾除所有箭頭與角括號
+            .replace(/[>＞〉⟩»›]/g, '')
             .replace(/\s+/g, ' ')
             .trim();
 
@@ -167,7 +217,12 @@ function parseMushroomCode(code) {
             else typeSelect.value = "每月特殊蘑菇";
         }
 
-        // 5. 解析剩餘時間並扣除時間差
+        // 5. 解析參戰人數
+        let parsedPlayers = parseInt(rawPlayers, 10) || 1;
+        const playerInput = document.getElementById('current-players');
+        if (playerInput) playerInput.value = parsedPlayers;
+
+        // 6. 解析剩餘時間並扣除時間差
         let h = 0, m = 0, s = 0;
         if (rawTime.includes('小時') || rawTime.includes('分')) {
             const hMatch = rawTime.match(/(\d+)\s*小時/);
@@ -189,7 +244,7 @@ function parseMushroomCode(code) {
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
-        // 6. 帶入地點名稱與時間
+        // 7. 帶入地點名稱與時間
         const locationInput = document.getElementById('location-name');
         if (locationInput) locationInput.value = bestMatchedLocation;
 
@@ -202,10 +257,7 @@ function parseMushroomCode(code) {
             sEl.value = finalS;
         }
 
-        const playerInput = document.getElementById('current-players');
-        if (playerInput) playerInput.value = 1;
-
-        // 7. 自動發佈
+        // 8. 自動發佈
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
