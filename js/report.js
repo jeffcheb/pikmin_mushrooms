@@ -19,43 +19,58 @@ async function getUserIP() {
     }
 }
 
-// 🍄 全站蘑菇種類標準校正 (與新 HTML 選項 100% 精準對應)
-// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
-function parseMushroomTypeAndSize(rawInput) {
-    if (!rawInput) return { size: '一般', type: '未知' };
+// 🍄 1. 尺寸獨立標準校正
+function normalizeMushroomSize(sizeStr) {
+    if (!sizeStr) return '一般';
+    let s = String(sizeStr).trim();
+    if (s.includes('巨') || s.includes('大')) return '巨大';
+    if (s.includes('小')) return '小';
+    if (s.includes('普') || s.includes('般') || s.includes('中')) return '一般';
+    return '一般';
+}
 
-    let text = rawInput.trim();
-    let detectedSize = '一般'; // 預設尺寸
+// 🍄 2. 種類獨立標準校正 (對齊新版 HTML 選項)
+function normalizeMushroomType(typeStr) {
+    if (!typeStr) return '黃蘑菇';
+    let normalized = String(typeStr).trim();
 
-    // 1. 偵測常見尺寸關鍵字
-    if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
-        detectedSize = '巨大';
-        text = text.replace(/\[?(巨大|巨型|大)\]?/g, '');
-    } else if (text.includes('小型') || text.includes('小')) {
-        detectedSize = '小';
-        text = text.replace(/\[?(小型|小)\]?/g, '');
-    } else if (text.includes('一般') || text.includes('普通') || text.includes('中')) {
-        detectedSize = '一般';
-        text = text.replace(/\[?(一般|普通|中)\]?/g, '');
+    // 🌟 1. 當月特殊與活動蘑菇
+    if (
+        normalized.includes("海泡泡") || 
+        normalized.includes("特殊") || 
+        normalized.includes("活動") || 
+        normalized.includes("每月") ||
+        normalized.includes("神秘")
+    ) {
+        return "每月特殊蘑菇";
     }
 
-    // 2. 清理多餘符號與空白
-    let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
-    if (!detectedType) detectedType = '黃蘑菇';
+    // 🌟 2. 元素蘑菇
+    if (normalized.includes("水晶")) return "水晶蘑菇";
+    if (normalized.includes("火")) return "火蘑菇";
+    if (normalized.includes("水")) return "水蘑菇";
+    if (normalized.includes("毒")) return "毒蘑菇";
+    if (normalized.includes("電")) return "電蘑菇";
 
-    return {
-        size: detectedSize,
-        type: detectedType
-    };
+    // 🌟 3. 普通顏色蘑菇
+    if (normalized.includes("紅")) return "紅蘑菇";
+    if (normalized.includes("藍") && !normalized.includes("冰")) return "藍蘑菇";
+    if (normalized.includes("冰")) return "冰藍蘑菇";
+    if (normalized.includes("黃")) return "黃蘑菇";
+    if (normalized.includes("紫")) return "紫蘑菇";
+    if (normalized.includes("白")) return "白蘑菇";
+    if (normalized.includes("灰") || normalized.includes("岩")) return "灰蘑菇";
+    if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
+
+    return normalized;
 }
-// 🍄 2. 圖示路徑精準解析 (水晶關鍵字必須最優先)
+
+// 🍄 3. 圖示路徑解析
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
     const typeStr = String(type).trim();
 
-    // 🌟 關鍵修復：水晶圖示優先於水蘑菇，防止被 includes("水") 誤攔劫
     if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
-    
     if (typeStr.includes("每月") || typeStr.includes("特殊") || typeStr.includes("海泡泡")) {
         return "picture/mushroom_monthly_special.png";
     }
@@ -73,7 +88,7 @@ function getIconPath(type) {
     return "picture/mushroom_monthly_special.png";
 }
 
-// 📊 3. 字串相似度算法
+// 📊 4. 字串相似度算法
 function calculateSimilarity(str1, str2) {
     if (!str1 || !str2) return 0;
     const s1 = str1.trim().toLowerCase();
@@ -102,7 +117,34 @@ function calculateSimilarity(str1, str2) {
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
 }
 
-// ⚡ 4. 格式碼解析 (8 欄位：#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
+// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
+function parseMushroomTypeAndSize(rawInput) {
+    if (!rawInput) return { size: '一般', type: '黃蘑菇' };
+
+    let text = rawInput.trim();
+    let detectedSize = '一般';
+
+    if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
+        detectedSize = '巨大';
+        text = text.replace(/\[?(巨大|巨型|大)\]?/g, '');
+    } else if (text.includes('小型') || text.includes('小')) {
+        detectedSize = '小';
+        text = text.replace(/\[?(小型|小)\]?/g, '');
+    } else if (text.includes('一般') || text.includes('普通') || text.includes('中')) {
+        detectedSize = '一般';
+        text = text.replace(/\[?(一般|普通|中)\]?/g, '');
+    }
+
+    let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
+    if (!detectedType) detectedType = '黃蘑菇';
+
+    return {
+        size: detectedSize,
+        type: detectedType
+    };
+}
+
+// ⚡ 5. 格式碼解析 (#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
     try {
         console.log("📥 執行捷徑自動解析，內容：", code);
@@ -112,13 +154,12 @@ function parseMushroomCode(code) {
         const parts = code.trim().split(',');
         let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawPlayers, rawTime] = parts.map(p => p ? p.trim() : '');
 
-        // 7 欄位向下相容機制
         if (parts.length === 7) {
             rawTime = rawPlayers;
             rawPlayers = "1";
         }
 
-        // ⏰ A. 嚴謹防跨日時間差計算
+        // A. 時間計算
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -129,8 +170,6 @@ function parseMushroomCode(code) {
                 photoDate.setHours(photoTimeParts[0], photoTimeParts[1], photoTimeParts[2] || 0, 0);
 
                 let diffMs = now.getTime() - photoDate.getTime();
-                
-                // 跨日修正：若截圖時間大於現在超過 12 小時，表示是昨天的截圖
                 if (diffMs < 0 && Math.abs(diffMs) > 12 * 3600 * 1000) {
                     photoDate.setDate(photoDate.getDate() - 1);
                     diffMs = now.getTime() - photoDate.getTime();
@@ -142,7 +181,7 @@ function parseMushroomCode(code) {
             }
         }
 
-        // ⏰ B. 解析截圖當下的剩餘時間並扣除時間差
+        // B. 剩餘時間解析
         let h = 0, m = 0, s = 0;
         if (rawTime.includes('小時') || rawTime.includes('分')) {
             const hMatch = rawTime.match(/(\d+)\s*小時/);
@@ -164,12 +203,8 @@ function parseMushroomCode(code) {
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
-        // 🧹 C. 升級版地點名稱清洗
-        let cleanLocation = rawLocation
-            .replace(/[>＞〉⟩»›]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-
+        // C. 地點清洗與匹配
+        let cleanLocation = rawLocation.replace(/[>＞〉⟩»›]/g, '').replace(/\s+/g, ' ').trim();
         let cleanDistrict = rawDistrict ? rawDistrict.replace(/\s+/g, '').trim() : null;
 
         let bestMatchedLocation = cleanLocation;
@@ -177,7 +212,6 @@ function parseMushroomCode(code) {
         let matchedDistrict = cleanDistrict;
         let highestScore = 0;
 
-        // 🔍 比對歷史據點
         if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
             Object.values(localMushroomsData).forEach(item => {
                 if (item && item.locationName) {
@@ -196,7 +230,7 @@ function parseMushroomCode(code) {
             });
         }
 
-        // D. 連動縣市與行政區選單
+        // D. 帶入縣市與地區
         const citySelect = document.getElementById("city");
         const distSelect = document.getElementById("district");
 
@@ -221,47 +255,40 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-       // E. 帶入尺寸與種類 (整合自動切割解析)
+        // E. 帶入尺寸與種類 (精準分離與校正)
         let parsedSize = rawSize;
         let parsedType = rawType;
 
-        // 如果捷徑傳入的種類混合了尺寸（例如 "[巨大] 每月特殊蘑菇" 或 "巨大水蘑菇"）
-        if (rawType && (rawType.includes("巨大") || rawType.includes("大") || rawType.includes("普通") || rawType.includes("小型"))) {
+        if (rawType && (rawType.includes("巨大") || rawType.includes("大") || rawType.includes("普通") || rawType.includes("一般") || rawType.includes("小型") || rawType.includes("小"))) {
             const parsed = parseMushroomTypeAndSize(rawType);
-            parsedSize = parsed.size;
-            parsedType = parsed.type;
-        } else if (!rawSize && rawType) {
-            const parsed = parseMushroomTypeAndSize(rawType);
-            parsedSize = parsed.size;
+            if (!parsedSize) parsedSize = parsed.size;
             parsedType = parsed.type;
         }
 
-        let finalSize = normalizeMushroomType(parsedSize);
+        let finalSize = normalizeMushroomSize(parsedSize);
         let finalType = normalizeMushroomType(parsedType);
 
+        // 帶入尺寸選單
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
             let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
                 opt.value === finalSize || opt.text.includes(finalSize)
             );
             if (matchedSizeOpt) sizeSelect.value = matchedSizeOpt.value;
-            else sizeSelect.value = finalSize;
         }
 
+        // 帶入種類選單
         const typeSelect = document.getElementById('mushroom-type');
-if (typeSelect) {
-    let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
-        opt.value === finalType || 
-        opt.text.includes(finalType) || 
-        finalType.includes(opt.value) ||
-        finalType.includes(opt.text.replace('蘑菇',''))
-    );
-    if (matchedTypeOpt) {
-        typeSelect.value = matchedTypeOpt.value;
-    }
-}
+        if (typeSelect) {
+            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
+                opt.value === finalType || opt.text.includes(finalType)
+            );
+            if (matchedTypeOpt) {
+                typeSelect.value = matchedTypeOpt.value;
+            }
+        }
 
-        // F. 帶入人數、地點與時間
+        // F. 人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = parsedPlayers;
@@ -278,7 +305,7 @@ if (typeSelect) {
             sEl.value = finalS;
         }
 
-        // G. 自動送出表單
+        // G. 自動送出
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
@@ -293,7 +320,7 @@ if (typeSelect) {
     }
 }
 
-// 🗺️ 5. 地圖初始化
+// 🗺️ 6. 地圖初始化
 function initLeafletMap() {
     try {
         const mapContainer = document.getElementById('map');
@@ -392,11 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
-            if (!navigator.geolocation) {
-                alert("您的瀏覽器不支援地理定位功能。");
-                return;
-            }
-            
+            if (!navigator.geolocation) return alert("您的瀏覽器不支援地理定位功能。");
             btnAutoLocation.textContent = "⌛";
             
             navigator.geolocation.getCurrentPosition(
@@ -404,9 +427,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     userCurrentLat = position.coords.latitude;
                     userCurrentLng = position.coords.longitude;
 
-                    if (map) {
-                        map.setView([userCurrentLat, userCurrentLng], 16);
-                    }
+                    if (map) map.setView([userCurrentLat, userCurrentLng], 16);
 
                     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCurrentLat}&lon=${userCurrentLng}&accept-language=zh-TW`;
 
@@ -414,11 +435,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     .then(response => response.json())
                     .then(data => {
                         btnAutoLocation.textContent = "🎯 定位";
-                        
-                        if (!data || !data.address) {
-                            alert("定位成功，但無法自動解析縣市名稱，請手動選擇。");
-                            return;
-                        }
+                        if (!data || !data.address) return alert("定位成功，但無法自動解析縣市名稱，請手動選擇。");
 
                         const addr = data.address;
                         let detectedCity = addr.city || addr.state || addr.town || "";
@@ -483,13 +500,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🌟 修正：宣告為 async 函式以正確處理 await getUserIP()
     if (reportForm) {
         reportForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             if (!window.fbDB) return alert("Firebase 尚未連線！");
 
-            // 1. 抓取使用者 IP 並進行黑名單檢查
             const userIP = await getUserIP();
             const safeIpKey = userIP.replace(/\./g, "_");
 
@@ -501,7 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         return;
                     }
                 } catch (err) {
-                    console.warn("黑名單比對跳過（無讀取權限或尚未建立）:", err);
+                    console.warn("黑名單比對跳過:", err);
                 }
             }
 
@@ -512,7 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const locationName = document.getElementById("location-name").value.trim();
             const type = normalizeMushroomType(document.getElementById("mushroom-type").value);
-            const size = normalizeMushroomType(document.getElementById("mushroom-size").value);
+            const size = normalizeMushroomSize(document.getElementById("mushroom-size").value);
             const players = parseInt(document.getElementById("current-players").value) || 1;
 
             const h = parseInt(document.getElementById("time-hours").value) || 0;
@@ -611,12 +626,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         keys.forEach(id => {
             const item = localMushroomsData[id];
-
-            // 🌟 修正：隱藏狀態過濾正確擺放在迴圈內
             if (item.status === 'hidden') return;
 
             const displayType = normalizeMushroomType(item.type);
-            const displaySize = normalizeMushroomType(item.size);
+            const displaySize = normalizeMushroomSize(item.size);
 
             if (cityFilter !== "all" && item.city !== cityFilter) return;
             
@@ -723,7 +736,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTickCounters();
     }
 
-    // ⏰ 精確倒數計時器 (含 5 分鐘摧毀冷卻機制)
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -731,22 +743,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const textElement = document.getElementById(`time-text-${id}`);
             if (!textElement || !item.timeReported) return;
 
-            // 計算當拆回報總秒數 (毫秒)
             const totalReportedMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60) + (item.timeReported.seconds || 0)) * 1000;
             const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
             const msLeft = expireTime - Date.now();
 
-            // 1. 戰鬥倒數中
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
                 const m = Math.floor((totalSec % 3600) / 60);
                 const s = totalSec % 60;
                 textElement.innerHTML = `⏳ 剩餘時間：<strong>${h}時${m}分${s}秒</strong>`;
-                textElement.style.color = "#0284c7"; // 藍色
-            } 
-            // 2. 剛被摧毀，進入 5 分鐘 (300 秒) 新菇冷卻倒數
-            else if (msLeft <= 0 && msLeft > -300000) {
+                textElement.style.color = "#0284c7";
+            } else if (msLeft <= 0 && msLeft > -300000) {
                 const cooldownMsLeft = 300000 + msLeft;
                 const totalCoolSec = Math.floor(cooldownMsLeft / 1000);
                 const coolM = Math.floor(totalCoolSec / 60);
@@ -756,11 +764,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const formattedS = coolS.toString().padStart(2, '0');
 
                 textElement.innerHTML = `💥 蘑菇已被摧毀！新菇倒數：<strong style="color:#e11d48;">${formattedM}分${formattedS}秒</strong>`;
-            } 
-            // 3. 5 分鐘冷卻結束，新菇已正式出生
-            else {
+            } else {
                 textElement.innerHTML = `✨ 新蘑菇已出生！待現場玩家更新`;
-                textElement.style.color = "#059669"; // 綠色
+                textElement.style.color = "#059669";
             }
         });
     }
@@ -779,13 +785,10 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard();
     };
 
-    // ✏️ 開啟/關閉狀態修改面板 (自動帶入當前剩餘時/分/秒)
     window.toggleEditPanel = (id) => {
         if (!activePanels[id]) activePanels[id] = { edit: false, history: false };
-        
         const willOpen = !activePanels[id].edit;
         activePanels[id].edit = willOpen;
-        
         renderBoard();
 
         if (willOpen && localMushroomsData[id]) {
@@ -870,33 +873,3 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 150);
 });
-// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
-function parseMushroomTypeAndSize(rawInput) {
-    if (!rawInput) return { size: '一般', type: '未知' };
-
-    let text = rawInput.trim();
-    let detectedSize = '一般'; // 預設尺寸
-
-    // 1. 偵測常見尺寸關鍵字
-    if (text.includes('巨大') || text.includes('大')) {
-        detectedSize = '巨大';
-        text = text.replace(/\[?巨大\]?|大/g, ''); // 移除尺寸字眼
-    } else if (text.includes('小型') || text.includes('小')) {
-        detectedSize = '小型';
-        text = text.replace(/\[?小型\]?|小/g, '');
-    } else if (text.includes('普通') || text.includes('中')) {
-        detectedSize = '普通';
-        text = text.replace(/\[?普通\]?|中/g, '');
-    }
-
-    // 2. 清理多餘的符號與空白
-    let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
-
-    // 若清理後變空字串，給予預設值
-    if (!detectedType) detectedType = '特殊蘑菇';
-
-    return {
-        size: detectedSize,
-        type: detectedType
-    };
-}
