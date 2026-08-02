@@ -58,16 +58,28 @@ function calculateSimilarity(str1, str2) {
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
 }
 
-// ⚡ 捷徑格式碼解析
+/**
+ * ⚡ 格式碼解析 (尺寸與種類拆開格式：#菇,截圖時間,地點,尺寸,種類,剩餘時間)
+ */
 function parseMushroomCode(code) {
     try {
-        if (!code || !code.startsWith('#菇')) return false;
+        console.log("📥 執行捷徑自動解析，內容：", code);
+
+        if (!code || !code.startsWith('#菇')) {
+            alert('❌ 格式碼無效！格式應為：#菇,截圖時間,地點,尺寸,種類,剩餘時間');
+            return false;
+        }
 
         const parts = code.trim().split(',');
-        if (parts.length < 5) return false;
+        // 🌟 核心修正 1：現在改為 6 個欄位 (包含 #菇 前綴)
+        if (parts.length < 6) {
+            alert('❌ 格式碼欄位不足！請確認包含：#菇,截圖時間,地點,尺寸,種類,剩餘時間');
+            return false;
+        }
 
-        let [prefix, rawPhotoTime, rawLocation, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
+        let [prefix, rawPhotoTime, rawLocation, rawSize, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
 
+        // 1. 計算截圖時間差 (秒)
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -80,6 +92,7 @@ function parseMushroomCode(code) {
             }
         }
 
+        // 2. 清洗地點名稱與模糊比對
         let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
         let bestMatchedLocation = cleanLocation;
         let matchedCity = null;
@@ -100,6 +113,7 @@ function parseMushroomCode(code) {
             });
         }
 
+        // 3. 自動選擇與補全「縣市」與「行政區」
         const citySelect = document.getElementById("city");
         const distSelect = document.getElementById("district");
 
@@ -119,18 +133,37 @@ function parseMushroomCode(code) {
             }, 100);
         }
 
-        let cleanType = rawType.replace(/\s+/g, '');
-        let finalType = normalizeMushroomType(cleanType);
+        // 🌟 核心修正 2：分別處理蘑菇尺寸與蘑菇種類
+        let finalSize = normalizeMushroomType(rawSize); // 尺寸標準化 (巨型->巨大, 普通->一般 等)
+        let finalType = normalizeMushroomType(rawType); // 種類標準化 (含海泡泡/當月特殊菇自動識別)
 
-        const typeSelect = document.getElementById('mushroom-type');
-        if (typeSelect) {
-            let matchedOption = Array.from(typeSelect.options).find(opt => 
-                opt.value === finalType || opt.text.includes(finalType)
+        // 帶入「蘑菇尺寸」選單 (`#mushroom-size`)
+        const sizeSelect = document.getElementById('mushroom-size');
+        if (sizeSelect) {
+            let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
+                opt.value === finalSize || opt.text.includes(finalSize)
             );
-            if (matchedOption) typeSelect.value = matchedOption.value;
-            else typeSelect.value = "每月特殊蘑菇";
+            if (matchedSizeOpt) {
+                sizeSelect.value = matchedSizeOpt.value;
+            } else {
+                sizeSelect.value = finalSize;
+            }
         }
 
+        // 帶入「蘑菇種類」選單 (`#mushroom-type`)
+        const typeSelect = document.getElementById('mushroom-type');
+        if (typeSelect) {
+            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
+                opt.value === finalType || opt.text.includes(finalType)
+            );
+            if (matchedTypeOpt) {
+                typeSelect.value = matchedTypeOpt.value;
+            } else {
+                typeSelect.value = "每月特殊蘑菇"; // 找不到預設帶入特殊蘑菇
+            }
+        }
+
+        // 4. 解析剩餘時間並扣除時間差
         let h = 0, m = 0, s = 0;
         if (rawTime.includes('小時') || rawTime.includes('分')) {
             const hMatch = rawTime.match(/(\d+)\s*小時/);
@@ -152,6 +185,7 @@ function parseMushroomCode(code) {
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
+        // 5. 填入地點與時間
         const locationInput = document.getElementById('location-name');
         if (locationInput) locationInput.value = bestMatchedLocation;
 
@@ -167,6 +201,7 @@ function parseMushroomCode(code) {
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = 1;
 
+        // 6. 觸發自動發佈
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
