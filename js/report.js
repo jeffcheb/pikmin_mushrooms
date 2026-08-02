@@ -254,13 +254,17 @@ function parseMushroomCode(code) {
         }
 
         const typeSelect = document.getElementById('mushroom-type');
-        if (typeSelect) {
-            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
-                opt.value === finalType || opt.text.includes(finalType)
-            );
-            if (matchedTypeOpt) typeSelect.value = matchedTypeOpt.value;
-            else typeSelect.value = finalType;
-        }
+if (typeSelect) {
+    let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
+        opt.value === finalType || 
+        opt.text.includes(finalType) || 
+        finalType.includes(opt.value) ||
+        finalType.includes(opt.text.replace('蘑菇',''))
+    );
+    if (matchedTypeOpt) {
+        typeSelect.value = matchedTypeOpt.value;
+    }
+}
 
         // F. 帶入人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
