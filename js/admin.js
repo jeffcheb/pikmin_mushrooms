@@ -1,97 +1,153 @@
 // js/admin.js
 
-document.addEventListener("DOMContentLoaded", () => {
-    // 預設一個簡單的管理密碼 (實務上如 PRD 提及，建議走後端或 Firebase Rules 安全驗證)
-    // 這裡我們示範前端隱藏觸發機制：在網頁上快速連點 Logo 5 次，即跳出密碼輸入框
-    const logoContainer = document.querySelector(".logo");
-    let clickCount = 0;
-    let isAdmin = sessionStorage.getItem("is_admin") === "true";
+let mushroomsData = {};
 
-    if (!logoContainer) return;
+// 🟢 初始化頁面與側邊欄切換
+function showSection(sectionName) {
+    document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`section-${sectionName}`).style.display = 'block';
+    event.currentTarget.classList.add('active');
+}
 
-    // 監聽 Logo 連點
-    logoContainer.addEventListener("click", () => {
-        if (isAdmin) return; // 已經是管理員就不用再點了
+// 🟢 監聽 Firebase 數據同步
+function initAdminSync() {
+    if (!window.fbDB) return;
 
-        clickCount++;
-        if (clickCount === 5) {
-            clickCount = 0; // 重置
-            const password = prompt("🔑 請輸入管理員通行密碼：");
-            
-            // 範例密碼設為 "pikmin888"
-            if (password === "pikmin888") {
-                isAdmin = true;
-                sessionStorage.setItem("is_admin", "true");
-                alert("🔓 管理員模式已啟用！已解鎖刪除權限。");
-                activateAdminMode();
-            } else if (password !== null) {
-                alert("❌ 密碼錯誤，拒絕存取。");
-            }
-        }
-        
-        // 3 秒內沒點滿 5 次就重置計數
-        setTimeout(() => { clickCount = 0; }, 3000);
+    // 1. 監聽蘑菇資料
+    window.fbOnValue(window.fbRef(window.fbDB, "mushrooms"), (snapshot) => {
+        mushroomsData = snapshot.val() || {};
+        renderAdminDashboard();
+        renderAnalytics();
     });
 
-    // 啟用管理員模式的邏輯
-    function activateAdminMode() {
-        // 1. 為看板容器加上 admin class，方便透過 CSS 微調樣式（若有需要）
-        const board = document.getElementById("mushroom-board");
-        if (board) board.classList.add("admin-mode");
+    // 2. 監聽黑名單
+    window.fbOnValue(window.fbRef(window.fbDB, "blacklist"), (snapshot) => {
+        renderBlacklist(snapshot.val() || {});
+    });
 
-        // 2. 由於卡片是由 report.js 動態渲染的，我們需要利用「事件代理 (Event Delegation)」
-        // 監聽整個看板，當點擊到我們未來動態塞進去的刪除按鈕時，執行刪除
-        board.addEventListener("click", (e) => {
-            if (e.target && e.target.classList.contains("btn-delete-shroom")) {
-                const shroomCard = e.target.closest(".mushroom-card");
-                const shroomId = shroomCard ? shroomCard.dataset.id : null;
+    // 3. 監聽 Log (限制最近 50 筆)
+    window.fbOnValue(window.fbQuery(window.fbRef(window.fbDB, "audit_logs"), window.fbLimitToLast(50)), (snapshot) => {
+        renderLogs(snapshot.val() || {});
+    });
 
-                if (shroomId && confirm("⚠️ 確定要從雲端資料庫刪除這筆情報嗎？")) {
-                    deleteMushroomFromServer(shroomId);
-                }
-            }
-        });
-
-        // 3. 修改 report.js 的渲染行為（動態注入刪除按鈕）
-        // 這裡透過劫持或定時監聽，確保只要畫面上出現卡片，就在 footer 補上刪除按鈕
-        setInterval(() => {
-            const cards = document.querySelectorAll(".mushroom-card");
-            cards.forEach(card => {
-                const footer = card.querySelector(".card-footer");
-                // 如果還沒有刪除按鈕，且撈得到 ID，就補上去
-                if (footer && !footer.querySelector(".btn-delete-shroom")) {
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.className = "btn-sm btn-delete-shroom";
-                    deleteBtn.style.color = "white";
-                    deleteBtn.style.backgroundColor = "var(--danger-color)";
-                    deleteBtn.style.borderColor = "var(--danger-color)";
-                    deleteBtn.textContent = "❌ 刪除";
-                    footer.appendChild(deleteBtn);
-                }
-            });
-        }, 500);
-    }
-
-    // 從 Firebase 刪除資料節點
-    function deleteMushroomFromServer(id) {
-        if (!window.fbDB || !window.fbRef || !window.fbRemove) {
-            alert("Firebase 未就緒，無法執行刪除。");
-            return;
+    // 4. 在線人數監控 (Firebase 特殊節點)
+    const onlineRef = window.fbRef(window.fbDB, ".info/connected");
+    window.fbOnValue(onlineRef, (snap) => {
+        if (snap.val() === true) {
+            document.getElementById('stat-online').textContent = "🟢 連線中";
         }
+    });
+}
 
-        const exactShroomRef = window.fbRef(window.fbDB, `mushrooms/${id}`);
-        window.fbRemove(exactShroomRef)
-            .then(() => {
-                alert("🗑️ 情報已成功從雲端資料庫移除。");
-            })
-            .catch((error) => {
-                alert("刪除失敗：" + error.message);
-            });
-    }
+// 🟢 渲染數據分析 (Analytics)
+function renderAnalytics() {
+    const keys = Object.keys(mushroomsData);
+    document.getElementById('stat-total').textContent = keys.length;
+    
+    // 今日更新統計
+    const startOfToday = new Date();
+    startOfToday.setHours(0,0,0,0);
+    const todayCount = keys.filter(id => (mushroomsData[id].updatedAt || 0) >= startOfToday.getTime()).length;
+    document.getElementById('stat-today').textContent = todayCount;
 
-    // 重新整理網頁時，如果 session 還在，自動保持管理員狀態
-    if (isAdmin) {
-        // 稍微延遲確保 report.js 把基本看板容器建好
-        setTimeout(activateAdminMode, 500);
+    // 種類分布統計 (簡單顯示)
+    const typeCounts = {};
+    keys.forEach(id => {
+        const type = mushroomsData[id].type || "未知";
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    
+    let typeHtml = "";
+    Object.keys(typeCounts).forEach(type => {
+        typeHtml += `<p>${type}: <strong>${typeCounts[type]}</strong></p>`;
+    });
+    document.getElementById('type-distribution').innerHTML = typeHtml;
+}
+
+// 🟢 渲染蘑菇列表與隱藏切換
+function renderAdminDashboard() {
+    const listBody = document.getElementById('admin-mushroom-list');
+    listBody.innerHTML = "";
+
+    Object.keys(mushroomsData).forEach(id => {
+        const item = mushroomsData[id];
+        const isHidden = item.status === 'hidden';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="status-badge ${isHidden ? 'hidden-status' : 'active-status'}">${isHidden ? '已隱藏' : '正常'}</span></td>
+            <td>${item.locationName}</td>
+            <td>${item.city}</td>
+            <td>${item.type}</td>
+            <td id="admin-time-${id}">計算中...</td>
+            <td>
+                <button class="btn-action" onclick="toggleVisibility('${id}', '${item.status || 'active'}')">
+                    ${isHidden ? '👁️ 恢復' : '👁️‍🗨️ 隱藏'}
+                </button>
+                <button class="btn-action" style="background:#fee2e2; color:#991b1b;" onclick="deleteMushroom('${id}', '${item.locationName}')">🗑️</button>
+            </td>
+        `;
+        listBody.appendChild(tr);
+    });
+}
+
+// 👁️ 切換顯示/隱藏 (Soft Delete) + 寫入稽核 Log
+window.toggleVisibility = (id, currentStatus) => {
+    const newStatus = currentStatus === 'hidden' ? 'active' : 'hidden';
+    window.fbUpdate(window.fbRef(window.fbDB, `mushrooms/${id}`), {
+        status: newStatus,
+        updatedAt: Date.now()
+    }).then(() => {
+        writeAuditLog("TOGGLE_VISIBILITY", `將據點 [${mushroomsData[id].locationName}] 設定為 ${newStatus}`);
+    });
+};
+
+// 🗑️ 刪除據點
+window.deleteMushroom = (id, name) => {
+    if (!confirm(`確定要永久刪除 [${name}] 嗎？此動作無法復原。`)) return;
+    window.fbRemove(window.fbRef(window.fbDB, `mushrooms/${id}`))
+    .then(() => {
+        writeAuditLog("DELETE_MUSHROOM", `永久刪除了據點 [${name}]`);
+    });
+};
+
+// 📜 寫入稽核紀錄
+function writeAuditLog(action, details) {
+    const logData = {
+        action: action,
+        details: details,
+        timestamp: Date.now(),
+        admin: "AdminUser" // 之後可連動登入系統
+    };
+    window.fbPush(window.fbRef(window.fbDB, "audit_logs"), logData);
+}
+
+// 🧹 一鍵清理過期菇 (Batch Purge)
+document.getElementById('btn-purge')?.addEventListener('click', () => {
+    const now = Date.now();
+    let purgeCount = 0;
+    
+    Object.keys(mushroomsData).forEach(id => {
+        const item = mushroomsData[id];
+        const totalMs = ((item.timeReported.hours * 3600) + (item.timeReported.minutes * 60)) * 1000;
+        const expireTime = item.createdAt + totalMs;
+        
+        // 如果已經過期 (包含冷卻 5 分鐘) 超過 2 小時
+        if (now - expireTime > (2 * 3600 * 1000 + 300000)) {
+            window.fbRemove(window.fbRef(window.fbDB, `mushrooms/${id}`));
+            purgeCount++;
+        }
+    });
+    
+    if (purgeCount > 0) {
+        alert(`🧹 清理完成：已刪除 ${purgeCount} 筆過期據點。`);
+        writeAuditLog("BATCH_PURGE", `執行了批次清理，刪除 ${purgeCount} 筆資料`);
+    } else {
+        alert("目前沒有可清理的過期資料。");
     }
 });
+
+// 黑名單與其他功能... (以此類推)
+
+document.addEventListener("DOMContentLoaded", initAdminSync);
