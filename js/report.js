@@ -19,7 +19,7 @@ async function getUserIP() {
     }
 }
 
-// 🍄 1. 全站蘑菇種類標準校正 (水晶 > 水)
+// 🍄 1. 全站蘑菇種類標準校正 (自動修飾「色」與常見稱呼)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '一般蘑菇';
     let normalized = String(typeStr).trim();
@@ -35,18 +35,24 @@ function normalizeMushroomType(typeStr) {
         return "每月特殊蘑菇";
     }
 
-    // 🌟 關鍵修復：優先保留水晶蘑菇，防止被拆解
+    // 🌟 水晶蘑菇優先保留
     if (normalized.includes("水晶")) {
         return "水晶蘑菇";
     }
 
+    // 🧹 自動去除「色」字與正規化名稱（例如：黃色蘑菇 -> 黃蘑菇）
     return normalized
         .replace(/巨型/g, '巨大')
         .replace(/普通/g, '一般')
         .replace(/小型/g, '小')
-        .replace(/大型/g, '大');
+        .replace(/大型/g, '大')
+        .replace(/黃色/g, '黃')
+        .replace(/紅色/g, '紅')
+        .replace(/藍色/g, '藍')
+        .replace(/紫色/g, '紫')
+        .replace(/白色/g, '白')
+        .replace(/粉紅色|粉色/g, '羽色');
 }
-
 // 🍄 2. 圖示路徑精準解析 (水晶關鍵字必須最優先)
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
