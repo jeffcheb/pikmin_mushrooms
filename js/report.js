@@ -19,12 +19,11 @@ async function getUserIP() {
     }
 }
 
-// 🍄 1. 全站蘑菇種類標準校正 (自動修飾「色」與常見稱呼)
+// 🍄 全站蘑菇種類標準校正 (對應乾淨選項名稱)
 function normalizeMushroomType(typeStr) {
-    if (!typeStr) return '一般蘑菇';
+    if (!typeStr) return '黃蘑菇';
     let normalized = String(typeStr).trim();
 
-    // 🌟 優先判斷當月特殊與活動蘑菇
     if (
         normalized.includes("海泡泡") || 
         normalized.includes("特殊") || 
@@ -35,23 +34,20 @@ function normalizeMushroomType(typeStr) {
         return "每月特殊蘑菇";
     }
 
-    // 🌟 水晶蘑菇優先保留
-    if (normalized.includes("水晶")) {
-        return "水晶蘑菇";
-    }
+    if (normalized.includes("水晶")) return "水晶蘑菇";
 
-    // 🧹 自動去除「色」字與正規化名稱（例如：黃色蘑菇 -> 黃蘑菇）
-    return normalized
-        .replace(/巨型/g, '巨大')
-        .replace(/普通/g, '一般')
-        .replace(/小型/g, '小')
-        .replace(/大型/g, '大')
-        .replace(/黃色/g, '黃')
-        .replace(/紅色/g, '紅')
-        .replace(/藍色/g, '藍')
-        .replace(/紫色/g, '紫')
-        .replace(/白色/g, '白')
-        .replace(/粉紅色|粉色/g, '羽色');
+    // 🧹 移除多餘的「一般」與「色」字，精準對應
+    normalized = normalized.replace(/一般/g, '');
+
+    if (normalized.includes("黃")) return "黃蘑菇";
+    if (normalized.includes("紅")) return "紅蘑菇";
+    if (normalized.includes("藍")) return "藍蘑菇";
+    if (normalized.includes("紫")) return "紫蘑菇";
+    if (normalized.includes("白")) return "白蘑菇";
+    if (normalized.includes("羽") || normalized.includes("粉")) return "羽色蘑菇";
+    if (normalized.includes("岩") || normalized.includes("灰")) return "岩石蘑菇";
+
+    return normalized;
 }
 // 🍄 2. 圖示路徑精準解析 (水晶關鍵字必須最優先)
 function getIconPath(type) {
