@@ -26,5 +26,10 @@ window.fbPush = push;
 window.fbOnValue = onValue;
 window.fbUpdate = update;
 window.fbRemove = remove;
-
+// 在 firebase-config.js 中加入
+window.fbLimitToLast = function(limit) {
+    return window.fbQuery ? window.fbQuery : (ref) => ref.limitToLast(limit);
+};
+// 或者如果是 SDK 語法：
+// window.fbLimitToLast = firebase.database.ServerValue ... 或相關 Query 寫法
 console.log("🔥 皮克敏工具站：Firebase 雲端資料庫連線成功！");
