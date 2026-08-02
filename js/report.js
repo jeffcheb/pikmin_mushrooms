@@ -91,6 +91,31 @@ function calculateSimilarity(str1, str2) {
 
 // ⚡ 4. 格式碼解析 (8 欄位：#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
+    // 在 reportForm.addEventListener("submit", async (e) => { ... }) 內：
+
+e.preventDefault();
+if (!window.fbDB) return alert("Firebase 尚未連線！");
+
+// 1. 抓取使用者 IP
+const userIP = await getUserIP();
+const safeIpKey = userIP.replace(/\./g, "_"); // Firebase 鍵名不能有句點 "."，所以轉成底線 "_"
+
+// 2. 檢查黑名單
+const blacklistSnap = await window.fbGet(window.fbRef(window.fbDB, `blacklist/${safeIpKey}`));
+if (blacklistSnap.exists()) {
+    alert("⛔ 您的 IP 已被管理員列入黑名單，無法進行發佈或更新！");
+    return; // 攔截，不讓發佈
+}
+
+// 3. 正常寫入資料庫（可順便紀錄誰發佈的）
+const mushroomData = {
+    city, district: [district], locationName, type, size,
+    currentPlayers: players, maxPlayers: 30,
+    timeReported: { hours: h, minutes: m, seconds: s },
+    createdAt: nowTimestamp, updatedAt: nowTimestamp,
+    lat: latVal, lng: lngVal,
+    reporterIP: userIP // 🌟 紀錄發佈者的 IP
+};
     try {
         console.log("📥 執行捷徑自動解析，內容：", code);
 
