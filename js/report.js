@@ -62,27 +62,20 @@ function calculateSimilarity(str1, str2) {
  * ⚡ 格式碼解析 (尺寸與種類拆開格式：#菇,截圖時間,地點,尺寸,種類,剩餘時間)
  */
 /**
- * ⚡ 格式碼解析 (含行政區帶入：#菇,截圖時間,行政區,地點,尺寸,種類,剩餘時間)
+ * ⚡ 格式碼解析 (支援全形 〉 符號清洗 + 選單安全容錯機制)
  */
 function parseMushroomCode(code) {
     try {
         console.log("📥 執行捷徑自動解析，內容：", code);
 
-        if (!code || !code.startsWith('#菇')) {
-            alert('❌ 格式碼無效！格式應為：#菇,截圖時間,行政區,地點,尺寸,種類,剩餘時間');
-            return false;
-        }
+        if (!code || !code.startsWith('#菇')) return false;
 
         const parts = code.trim().split(',');
-        // 🌟 改為 7 個欄位
-        if (parts.length < 7) {
-            alert('❌ 格式碼欄位不足！請確認包含：#菇,截圖時間,行政區,地點,尺寸,種類,剩餘時間');
-            return false;
-        }
+        if (parts.length < 7) return false;
 
         let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawTime] = parts.map(p => p ? p.trim() : '');
 
-        // 1. 計算時間差 (秒)
+        // 1. 時間差計算
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -95,22 +88,30 @@ function parseMushroomCode(code) {
             }
         }
 
-        // 2. 清洗地點名稱與地點庫模糊比對
-        let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
+        // 🧹 2. 升級版地點清洗 (濾除 >、＞、〉、⟩、» 等符號)
+        let cleanLocation = rawLocation
+            .replace(/[>＞〉⟩»›]/g, '') // 濾除所有箭頭與角括號
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        let cleanDistrict = rawDistrict ? rawDistrict.replace(/\s+/g, '').trim() : null;
+
         let bestMatchedLocation = cleanLocation;
         let matchedCity = null;
-        let matchedDistrict = rawDistrict || null; // 優先採用傳入的行政區
+        let matchedDistrict = cleanDistrict;
         let highestScore = 0;
 
+        // 🔍 比對歷史據點
         if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
             Object.values(localMushroomsData).forEach(item => {
                 if (item && item.locationName) {
-                    const score = calculateSimilarity(cleanLocation, item.locationName);
+                    const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
+                    const score = calculateSimilarity(cleanLocation, targetName);
+                    
                     if (score > highestScore && score >= 0.55) {
                         highestScore = score;
                         bestMatchedLocation = item.locationName;
                         matchedCity = item.city;
-                        // 若捷徑沒傳行政區，就用資料庫歷史紀錄的行政區
                         if (!matchedDistrict) {
                             matchedDistrict = Array.isArray(item.district) ? item.district[0] : item.district;
                         }
@@ -119,28 +120,32 @@ function parseMushroomCode(code) {
             });
         }
 
-        // 3. 自動選擇「縣市」與「行政區」選單
+        // 3. 自動選擇「縣市」與「行政區」
         const citySelect = document.getElementById("city");
         const distSelect = document.getElementById("district");
 
         if (citySelect) {
-            citySelect.value = matchedCity || "高雄市"; // 預設縣市
+            citySelect.value = matchedCity || "高雄市";
             citySelect.dispatchEvent(new Event('change'));
         }
 
         if (distSelect) {
             setTimeout(() => {
-                // 比對傳入或匹配到的行政區
-                if (matchedDistrict && Array.from(distSelect.options).some(o => o.value === matchedDistrict)) {
-                    distSelect.value = matchedDistrict;
-                } else if (distSelect.options.length > 1) {
-                    distSelect.selectedIndex = 1; // 預設第 1 個有效行政區
+                let options = Array.from(distSelect.options);
+                let matchedOpt = options.find(o => 
+                    matchedDistrict && (o.value === matchedDistrict || o.text.includes(matchedDistrict))
+                );
+
+                if (matchedOpt) {
+                    distSelect.value = matchedOpt.value;
+                } else if (options.length > 1) {
+                    distSelect.selectedIndex = 1;
                 }
                 distSelect.dispatchEvent(new Event('change'));
-            }, 120);
+            }, 150);
         }
 
-        // 4. 自動選擇蘑菇尺寸與蘑菇種類
+        // 4. 自動選擇尺寸與種類
         let finalSize = normalizeMushroomType(rawSize);
         let finalType = normalizeMushroomType(rawType);
 
@@ -184,7 +189,7 @@ function parseMushroomCode(code) {
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
-        // 6. 填入地點與時間
+        // 6. 帶入地點名稱與時間
         const locationInput = document.getElementById('location-name');
         if (locationInput) locationInput.value = bestMatchedLocation;
 
@@ -200,12 +205,12 @@ function parseMushroomCode(code) {
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = 1;
 
-        // 7. 自動觸發送出 (延遲以確保選單連動)
+        // 7. 自動發佈
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
                 reportForm.requestSubmit();
-            }, 650);
+            }, 700);
         }
 
         return true;
