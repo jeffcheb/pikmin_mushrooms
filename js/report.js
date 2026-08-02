@@ -7,12 +7,12 @@ let userCurrentLat = null;
 let userCurrentLng = null;  
 let isNearbyFilterOn = false; 
 
-// 🍄 全站蘑菇種類標準校正 (明確區分 水晶 與 水)
+// 🍄 1. 全站蘑菇種類標準校正 (水晶 > 水)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '一般蘑菇';
     let normalized = String(typeStr).trim();
 
-    // 🌟 1. 特殊/活動蘑菇
+    // 🌟 優先判斷當月特殊與活動蘑菇
     if (
         normalized.includes("海泡泡") || 
         normalized.includes("特殊") || 
@@ -23,7 +23,7 @@ function normalizeMushroomType(typeStr) {
         return "每月特殊蘑菇";
     }
 
-    // 🌟 2. 優先保留「水晶蘑菇」，避免被拆字
+    // 🌟 關鍵修復：優先保留水晶蘑菇，防止被拆解
     if (normalized.includes("水晶")) {
         return "水晶蘑菇";
     }
@@ -35,19 +35,19 @@ function normalizeMushroomType(typeStr) {
         .replace(/大型/g, '大');
 }
 
-// 🍄 圖示路徑精準解析 (水晶 > 水)
+// 🍄 2. 圖示路徑精準解析 (水晶關鍵字必須最優先)
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
     const typeStr = String(type).trim();
 
-    // 🌟 關鍵修正：水晶優先於水！
+    // 🌟 關鍵修復：水晶圖示優先於水蘑菇，防止被 includes("水") 誤攔劫
     if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
     
     if (typeStr.includes("每月") || typeStr.includes("特殊") || typeStr.includes("海泡泡")) {
         return "picture/mushroom_monthly_special.png";
     }
     if (typeStr.includes("火")) return "picture/mushroom_fire.png";
-    if (typeStr.includes("水")) return "picture/mushroom_water.png"; // 水晶被上面的 if 擋住，這裡就不會誤抓了！
+    if (typeStr.includes("水")) return "picture/mushroom_water.png";
     if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
     if (typeStr.includes("電")) return "picture/mushroom_electric.png";
     if (typeStr.includes("冰")) return "picture/mushroom_ice.png";
@@ -60,7 +60,7 @@ function getIconPath(type) {
     return "picture/mushroom_monthly_special.png";
 }
 
-// 📊 字串相似度算法
+// 📊 3. 字串相似度算法
 function calculateSimilarity(str1, str2) {
     if (!str1 || !str2) return 0;
     const s1 = str1.trim().toLowerCase();
@@ -89,31 +89,7 @@ function calculateSimilarity(str1, str2) {
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
 }
 
-
-
-// 🍄 2. 蘑菇名稱標準化
-function normalizeMushroomType(typeStr) {
-    if (!typeStr) return '一般蘑菇';
-    let normalized = String(typeStr).trim();
-
-    if (
-        normalized.includes("海泡泡") || 
-        normalized.includes("特殊") || 
-        normalized.includes("活動") || 
-        normalized.includes("每月") ||
-        normalized.includes("神秘")
-    ) {
-        return "每月特殊蘑菇";
-    }
-
-    return normalized
-        .replace(/巨型/g, '巨大')
-        .replace(/普通/g, '一般')
-        .replace(/小型/g, '小')
-        .replace(/大型/g, '大');
-}
-
-// ⚡ 3. 格式碼解析 (支援 8 欄位：#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
+// ⚡ 4. 格式碼解析 (8 欄位：#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
     try {
         console.log("📥 執行捷徑自動解析，內容：", code);
@@ -121,20 +97,15 @@ function parseMushroomCode(code) {
         if (!code || !code.startsWith('#菇')) return false;
 
         const parts = code.trim().split(',');
-        // 🌟 升級為 8 個欄位
-        if (parts.length < 8) {
-            console.warn("⚠️ 格式碼欄位未滿 8 個，嘗試向下相容解析");
-        }
-
         let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawPlayers, rawTime] = parts.map(p => p ? p.trim() : '');
 
-        // 如果傳入的是舊版 7 欄位，自動彈性調整欄位對應
+        // 7 欄位向下相容機制
         if (parts.length === 7) {
             rawTime = rawPlayers;
             rawPlayers = "1";
         }
 
-        // 1. 嚴謹時間差計算 (防跨日、防超長延遲)
+        // ⏰ A. 嚴謹防跨日時間差計算
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -144,11 +115,10 @@ function parseMushroomCode(code) {
             if (photoTimeParts.length >= 2) {
                 photoDate.setHours(photoTimeParts[0], photoTimeParts[1], photoTimeParts[2] || 0, 0);
 
-                // 🌟 防跨日修正：如果截圖時間小於當前時間，且相差超過 12 小時，判定為昨天截圖
                 let diffMs = now.getTime() - photoDate.getTime();
                 
+                // 跨日修正：若截圖時間大於現在超過 12 小時，表示是昨天的截圖
                 if (diffMs < 0 && Math.abs(diffMs) > 12 * 3600 * 1000) {
-                    // 跨日情況： photoDate 應該是昨天的時間
                     photoDate.setDate(photoDate.getDate() - 1);
                     diffMs = now.getTime() - photoDate.getTime();
                 }
@@ -159,7 +129,7 @@ function parseMushroomCode(code) {
             }
         }
 
-        // 2. 解析截圖當下的剩餘時間
+        // ⏰ B. 解析截圖當下的剩餘時間並扣除時間差
         let h = 0, m = 0, s = 0;
         if (rawTime.includes('小時') || rawTime.includes('分')) {
             const hMatch = rawTime.match(/(\d+)\s*小時/);
@@ -174,15 +144,14 @@ function parseMushroomCode(code) {
             else if (timeParts.length === 2) { h = timeParts[0]; m = timeParts[1]; s = 0; }
         }
 
-        // 🌟 3. 扣除時間差，得到網頁當下真實剩餘秒數
         let totalLeftSec = (h * 3600) + (m * 60) + s - timeOffsetSec;
-        if (totalLeftSec < 0) totalLeftSec = 0; // 若時間已過，歸零
+        if (totalLeftSec < 0) totalLeftSec = 0;
 
         const finalH = Math.floor(totalLeftSec / 3600);
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
-        // 🧹 2. 升級版地點與符號清洗 (濾除 >、＞、〉、⟩、» 等所有符號)
+        // 🧹 C. 升級版地點名稱清洗
         let cleanLocation = rawLocation
             .replace(/[>＞〉⟩»›]/g, '')
             .replace(/\s+/g, ' ')
@@ -214,7 +183,7 @@ function parseMushroomCode(code) {
             });
         }
 
-        // 3. 自動選擇「縣市」與「行政區」
+        // D. 連動縣市與行政區選單
         const citySelect = document.getElementById("city");
         const distSelect = document.getElementById("district");
 
@@ -239,7 +208,7 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // 4. 自動選擇尺寸與種類
+        // E. 帶入尺寸與種類
         let finalSize = normalizeMushroomType(rawSize);
         let finalType = normalizeMushroomType(rawType);
 
@@ -258,37 +227,14 @@ function parseMushroomCode(code) {
                 opt.value === finalType || opt.text.includes(finalType)
             );
             if (matchedTypeOpt) typeSelect.value = matchedTypeOpt.value;
-            else typeSelect.value = "每月特殊蘑菇";
+            else typeSelect.value = finalType; // 找不到則帶入對齊名稱
         }
 
-        // 5. 解析參戰人數
+        // F. 帶入人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = parsedPlayers;
 
-        // 6. 解析剩餘時間並扣除時間差
-        let h = 0, m = 0, s = 0;
-        if (rawTime.includes('小時') || rawTime.includes('分')) {
-            const hMatch = rawTime.match(/(\d+)\s*小時/);
-            const mMatch = rawTime.match(/(\d+)\s*分/);
-            const sMatch = rawTime.match(/(\d+)\s*秒/);
-            if (hMatch) h = parseInt(hMatch[1], 10);
-            if (mMatch) m = parseInt(mMatch[1], 10);
-            if (sMatch) s = parseInt(sMatch[1], 10);
-        } else {
-            const timeParts = rawTime.split(':').map(t => parseInt(t, 10) || 0);
-            if (timeParts.length === 3) { h = timeParts[0]; m = timeParts[1]; s = timeParts[2]; }
-            else if (timeParts.length === 2) { h = timeParts[0]; m = timeParts[1]; s = 0; }
-        }
-
-        let totalLeftSec = (h * 3600) + (m * 60) + s - timeOffsetSec;
-        if (totalLeftSec < 0) totalLeftSec = 0;
-
-        const finalH = Math.floor(totalLeftSec / 3600);
-        const finalM = Math.floor((totalLeftSec % 3600) / 60);
-        const finalS = totalLeftSec % 60;
-
-        // 7. 帶入地點名稱與時間
         const locationInput = document.getElementById('location-name');
         if (locationInput) locationInput.value = bestMatchedLocation;
 
@@ -301,7 +247,7 @@ function parseMushroomCode(code) {
             sEl.value = finalS;
         }
 
-        // 8. 自動發佈
+        // G. 自動送出表單
         const reportForm = document.getElementById("report-form");
         if (reportForm) {
             setTimeout(() => {
@@ -315,7 +261,8 @@ function parseMushroomCode(code) {
         return false;
     }
 }
-// 🗺️ 地圖初始化
+
+// 🗺️ 5. 地圖初始化
 function initLeafletMap() {
     try {
         const mapContainer = document.getElementById('map');
@@ -345,7 +292,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let alertEnabledList = JSON.parse(localStorage.getItem("mushroom_alerts_enabled")) || [];
     let activePanels = {};
 
-    // 視圖切換
     window.setViewMode = function(mode) {
         if (!mushroomBoard) return;
         mushroomBoard.className = `board-container ${mode}-view`;
@@ -363,7 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedView = localStorage.getItem("board_view_pref") || "grid";
     window.setViewMode(savedView);
 
-    // 🌟 修正選單載入防爆：輪詢等待 taiwanData 載入完成
     function initFilterDistricts() {
         const availableData = window.taiwanData || (typeof taiwanData !== 'undefined' ? taiwanData : null);
         if (!filterCity || !filterDistrict || !availableData) return false;
@@ -400,7 +345,6 @@ document.addEventListener("DOMContentLoaded", () => {
         sortMethod?.addEventListener("change", renderBoard);
         searchKeyword?.addEventListener("input", renderBoard);
 
-        // 恢復上次選擇
         const savedCity = localStorage.getItem("mushroom_filter_city") || "all";
         const savedDist = localStorage.getItem("mushroom_filter_dist") || "all";
         if (savedCity !== "all" && filterCity) {
@@ -415,8 +359,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
-    // 定位按鈕
-   // 🎯 超精準 GPS 定位 + 自動填入縣市行政區
     if (btnAutoLocation) {
         btnAutoLocation.addEventListener("click", () => {
             if (!navigator.geolocation) {
@@ -431,12 +373,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     userCurrentLat = position.coords.latitude;
                     userCurrentLng = position.coords.longitude;
 
-                    // 🗺️ 1. 地圖平滑飛移至玩家位置
                     if (map) {
                         map.setView([userCurrentLat, userCurrentLng], 16);
                     }
 
-                    // 📡 2. 呼叫逆向地理編碼 API (將經緯度轉為縣市行政區)
                     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCurrentLat}&lon=${userCurrentLng}&accept-language=zh-TW`;
 
                     fetch(url, { headers: { 'User-Agent': 'PikminMushroomHubApp/1.0' } })
@@ -449,7 +389,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             return;
                         }
 
-                        // 🔍 3. 清洗與正規化縣市名稱
                         const addr = data.address;
                         let detectedCity = addr.city || addr.state || addr.town || "";
                         let detectedDistrict = addr.suburb || addr.district || addr.town || addr.city_district || "";
@@ -463,32 +402,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         detectedDistrict = detectedDistrict.replace(detectedCity, "").trim();
 
-                        // 💼 4. 強制將定位結果寫入「回報表單」與「看板篩選選單」
                         const reportCityEl = document.getElementById("city");
                         const reportDistrictEl = document.getElementById("district");
                         const filterCityEl = document.getElementById("filter-city");
                         const filterDistrictEl = document.getElementById("filter-district");
-                        const reportLatEl = document.getElementById("lat");
-                        const reportLngEl = document.getElementById("lng");
 
-                        // 帶入回報表單縣市並觸發 change
                         if (reportCityEl) {
                             reportCityEl.value = detectedCity;
                             reportCityEl.dispatchEvent(new Event("change"));
                         }
 
-                        // 帶入看板篩選縣市並觸發 change
                         if (filterCityEl) {
                             filterCityEl.value = detectedCity;
                             filterCityEl.dispatchEvent(new Event("change"));
                         }
 
-                        // 延遲 100ms 等待行政區下拉選單 DOM 生成完畢後寫入行政區與經緯度
                         setTimeout(() => {
                             if (reportDistrictEl) reportDistrictEl.value = detectedDistrict;
                             if (filterDistrictEl) filterDistrictEl.value = detectedDistrict;
-                            if (reportLatEl) reportLatEl.value = userCurrentLat.toFixed(5);
-                            if (reportLngEl) reportLngEl.value = userCurrentLng.toFixed(5);
 
                             localStorage.setItem("mushroom_filter_city", detectedCity);
                             localStorage.setItem("mushroom_filter_dist", detectedDistrict);
@@ -500,12 +431,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     .catch(err => {
                         console.error("逆向解析失敗:", err);
                         btnAutoLocation.textContent = "🎯 定位";
-                        alert("網路忙碌中，請稍後再試。");
                     });
                 },
                 () => {
                     btnAutoLocation.textContent = "🎯 定位";
-                    alert("GPS 定位失敗，請確認手機/瀏覽器是否開啟位置權限。");
+                    alert("GPS 定位失敗。");
                 },
                 { enableHighAccuracy: true, timeout: 6000 }
             );
@@ -522,7 +452,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 發佈情報表單監聽
     if (reportForm) {
         reportForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -571,23 +500,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function getIconPath(type) {
-        if (!type) return "picture/mushroom_monthly_special.png";
-        const typeStr = String(type);
-        if (typeStr.includes("每月") || typeStr.includes("特殊")) return "picture/mushroom_monthly_special.png";
-        if (typeStr.includes("火")) return "picture/mushroom_fire.png";
-        if (typeStr.includes("水")) return "picture/mushroom_water.png";
-        if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
-        if (typeStr.includes("電")) return "picture/mushroom_electric.png";
-        if (typeStr.includes("冰")) return "picture/mushroom_ice.png";
-        if (typeStr.includes("紅")) return "picture/mushroom_red.png";
-        if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
-        if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
-        if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
-        if (typeStr.includes("白")) return "picture/mushroom_white.png";
-        return "picture/mushroom_monthly_special.png";
-    }
-
     function startBoardSync() {
         if (!window.fbDB || !mushroomBoard) return;
         window.fbOnValue(window.fbRef(window.fbDB, "mushrooms"), (snapshot) => {
@@ -604,7 +516,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(updateTickCounters, 1000);
     }
 
-    // 🎨 完整畫板渲染 (包含全數舊版按鈕與完整相容的行政區標籤)
     function renderBoard() {
         const keys = Object.keys(localMushroomsData);
 
@@ -631,7 +542,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 排序邏輯
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
@@ -656,7 +566,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (cityFilter !== "all" && item.city !== cityFilter) return;
             
-            // 🌟 修正：完美相容陣列與單一字串的行政區篩選
             if (distFilter !== "all") {
                 if (!item.district) return;
                 if (Array.isArray(item.district)) {
@@ -687,7 +596,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 lng: item.lng || ""
             }));
 
-            // 🌟 處理行政區標籤顯示
             let districtBadgeHTML = "";
             if (Array.isArray(item.district) && item.district.length > 0) {
                 districtBadgeHTML = item.district.map(d => `<span class="dist-badge" style="background:#e2e8f0; color:#334155; padding:1px 5px; border-radius:4px; font-size:11px; margin-right:4px;">${d}</span>`).join('');
@@ -761,7 +669,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTickCounters();
     }
 
-    // ⏰ 計時器
     function updateTickCounters() {
         const keys = Object.keys(localMushroomsData);
         keys.forEach(id => {
@@ -785,7 +692,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 按鈕動作掛載
     window.togglePin = (id) => {
         const index = pinnedList.indexOf(id);
         if (index > -1) pinnedList.splice(index, 1);
@@ -842,7 +748,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) { console.error(e); }
     };
 
-    // 🌟 修正選單載入：安全重試機制
     function forceInitFilter() {
         if (!initFilterDistricts()) {
             const filterRetryInterval = setInterval(() => {
