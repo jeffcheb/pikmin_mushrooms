@@ -487,3 +487,107 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 150);
 });
+/**
+ * ⚡ 格式碼解析 (含模糊相似度比對)
+ */
+function parseMushroomCode(code) {
+    if (!code || !code.startsWith('#菇')) {
+        alert('❌ 格式碼無效！');
+        return false;
+    }
+
+    const parts = code.trim().split(',');
+    if (parts.length < 5) return false;
+
+    let [prefix, rawLocation, rawType, rawTime, rawPlayers] = parts.map(p => p.trim());
+
+    // 🧹 清洗地點名稱
+    let cleanLocation = rawLocation.replace(/[>＞]/g, '').trim();
+    let bestMatchedLocation = cleanLocation;
+    let highestScore = 0;
+
+    // 🔍 比對現有資料庫中是否存在相似地點
+    if (typeof localMushroomsData !== 'undefined') {
+        Object.values(localMushroomsData).forEach(item => {
+            if (item.locationName) {
+                const score = calculateSimilarity(cleanLocation, item.locationName);
+                // 門檻設定：只要相似度最高且大於 55% (0.55)
+                if (score > highestScore && score >= 0.55) {
+                    highestScore = score;
+                    bestMatchedLocation = item.locationName; // 自動套用完整全名！
+                }
+            }
+        });
+    }
+
+    const finalType = normalizeMushroomType(rawType.replace(/\s+/g, ''));
+
+    // 1. 帶入自動修正後的相似地點名稱
+    const locationInput = document.getElementById('location-name');
+    if (locationInput) {
+        locationInput.value = bestMatchedLocation;
+    }
+
+    // 2. 帶入種類
+    const typeSelect = document.getElementById('mushroom-type');
+    if (typeSelect) {
+        let matchedOption = Array.from(typeSelect.options).find(opt => 
+            opt.value === finalType || opt.text.includes(finalType)
+        );
+        if (matchedOption) typeSelect.value = matchedOption.value;
+        else typeSelect.value = finalType;
+    }
+
+    // 3. 時間解析與人數帶入 (保持原樣)
+    // ... (省略時間解析程式碼) ...
+
+    if (highestScore >= 0.55 && cleanLocation !== bestMatchedLocation) {
+        alert(`🎯 偵測到相似據點！\n辨識結果：${cleanLocation}\n自動對齊全名：${bestMatchedLocation}`);
+    } else {
+        alert(`✅ 已帶入地點：${bestMatchedLocation}`);
+    }
+
+    document.querySelector(".report-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return true;
+}
+/**
+ * 📊 計算兩個字串的相似度 (0 ~ 1)
+ * 支援短字串包含與錯別字容錯
+ */
+function calculateSimilarity(str1, str2) {
+    if (!str1 || !str2) return 0;
+    
+    const s1 = str1.trim().toLowerCase();
+    const s2 = str2.trim().toLowerCase();
+
+    // 1. 若其中一個字串完全包含另一個（處理名稱被截斷的情況）
+    if (s1.includes(s2) || s2.includes(s1)) {
+        const minLen = Math.min(s1.length, s2.length);
+        const maxLen = Math.max(s1.length, s2.length);
+        // 如果較短的字串長度大於 3 個字，直接給予高相似度分
+        if (minLen >= 3 && minLen / maxLen >= 0.5) {
+            return 0.85; 
+        }
+    }
+
+    // 2. 核心相似度演算法 (Levenshtein Distance)
+    const track = Array(s2.length + 1).fill(null).map(() =>
+        Array(s1.length + 1).fill(null));
+    for (let i = 0; i <= s1.length; i += 1) track[0][i] = i;
+    for (let j = 0; j <= s2.length; j += 1) track[j][0] = j;
+
+    for (let j = 1; j <= s2.length; j += 1) {
+        for (let i = 1; i <= s1.length; i += 1) {
+            const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+            track[j][i] = Math.min(
+                track[j][i - 1] + 1, // 刪除
+                track[j - 1][i] + 1, // 插入
+                track[j - 1][i - 1] + indicator // 替換
+            );
+        }
+    }
+
+    const distance = track[s2.length][s1.length];
+    const maxLength = Math.max(s1.length, s2.length);
+    return 1 - (distance / maxLength);
+}
