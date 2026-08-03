@@ -28,40 +28,51 @@ function normalizeMushroomSize(sizeStr) {
     return '一般';
 }
 
-// 🍄 2. 種類獨立標準校正 (關鍵修正：精準對齊帶有「色」字的 HTML value)
+// 🔍 1. 自動解析蘑菇名稱 (防抓空版)
+function parseMushroomTypeAndSize(rawInput) {
+    if (!rawInput) return { size: '一般', type: '' };
+
+    let text = String(rawInput).trim();
+    let detectedSize = '一般';
+
+    if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
+        detectedSize = '巨大';
+    } else if (text.includes('小型') || text.includes('小')) {
+        detectedSize = '小';
+    }
+
+    // 🎯 拿掉尺寸字眼，保留最原始的種類字串（例如 "小藍色蘑菇" -> "藍色蘑菇"）
+    let cleanType = text.replace(/\[|\]|\(|\)/g, '').replace(/巨大|巨型|小型|一般|普通/g, '').trim();
+    if (cleanType.startsWith('小') || cleanType.startsWith('大')) {
+        cleanType = cleanType.substring(1).trim();
+    }
+
+    return { size: detectedSize, type: cleanType };
+}
+
+// 🍄 2. 種類獨立標準校正 (關鍵直球防呆)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '黃色蘑菇';
     let normalized = String(typeStr).trim();
 
-    // 🌟 1. 當月特殊與活動蘑菇
-    if (
-        normalized.includes("海泡泡") || 
-        normalized.includes("特殊") || 
-        normalized.includes("活動") || 
-        normalized.includes("每月") ||
-        normalized.includes("本月") ||
-        normalized.includes("神秘")
-    ) {
-        return "每月特殊蘑菇";
-    }
-
-    // 🌟 2. 元素蘑菇
+    // 🎯 只要包含字眼就直球回傳，完全不給它跌落到最後一行的機會！
+    if (normalized.includes("藍")) return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
+    if (normalized.includes("灰") || normalized.includes("岩")) return "灰色蘑菇";
+    if (normalized.includes("紅")) return "紅色蘑菇";
+    if (normalized.includes("黃")) return "黃色蘑菇";
+    if (normalized.includes("紫")) return "紫色蘑菇";
+    if (normalized.includes("白")) return "白色蘑菇";
+    if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
     if (normalized.includes("水晶")) return "水晶蘑菇";
     if (normalized.includes("火")) return "火蘑菇";
     if (normalized.includes("水")) return "水蘑菇";
     if (normalized.includes("毒")) return "毒蘑菇";
     if (normalized.includes("電")) return "電蘑菇";
+    if (normalized.includes("海泡泡") || normalized.includes("特殊") || normalized.includes("活動") || normalized.includes("每月") || normalized.includes("本月")) {
+        return "每月特殊蘑菇";
+    }
 
-    // 🌟 3. 普通顏色蘑菇 (必須與 HTML <option value="..."> 100% 一樣)
-    if (normalized.includes("藍")) return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
-    if (normalized.includes("灰") || normalized.includes("岩")) return "灰色蘑菇";
-    if (normalized.includes("黃")) return "黃色蘑菇";
-    if (normalized.includes("紫")) return "紫色蘑菇";
-    if (normalized.includes("白")) return "白色蘑菇";
-    if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
-    if (normalized.includes("紅")) return "紅色蘑菇";
-
-    return "黃色蘑菇"; // 安全預設值，絕不用紅色當預設！
+    return normalized; // 保留原字串去匹配，絕對不自作聰明改成黃色！
 }
 
 // 🍄 3. 圖示路徑解析 (補上灰色蘑菇檔名)
@@ -114,33 +125,6 @@ function calculateSimilarity(str1, str2) {
         }
     }
     return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
-}
-
-// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
-function parseMushroomTypeAndSize(rawInput) {
-    if (!rawInput) return { size: '一般', type: '黃色蘑菇' };
-
-    let text = rawInput.trim();
-    let detectedSize = '一般';
-
-    if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
-        detectedSize = '巨大';
-    } else if (text.includes('小型') || text.includes('小')) {
-        detectedSize = '小';
-    }
-
-    let cleanType = text
-        .replace(/\[|\]|\(|\)/g, '')
-        .replace(/巨大|巨型|小型|一般|普通/g, '')
-        .trim();
-
-    if (cleanType.startsWith('小') || cleanType.startsWith('大')) {
-        cleanType = cleanType.substring(1).trim();
-    }
-
-    if (!cleanType) cleanType = '黃色蘑菇';
-
-    return { size: detectedSize, type: cleanType };
 }
 
 // ⚡ 5. 格式碼解析 (#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
