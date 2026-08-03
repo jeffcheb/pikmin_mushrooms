@@ -29,9 +29,9 @@ function normalizeMushroomSize(sizeStr) {
     return '一般';
 }
 
-// 🍄 2. 種類獨立標準校正 (包含「色」字，精準對齊 HTML 選項)
+// 🍄 2. 種類獨立標準校正 (修正藍色蘑菇誤判為紅色的問題)
 function normalizeMushroomType(typeStr) {
-    if (!typeStr) return '黃色蘑菇';
+    if (!typeStr) return '黃色蘑菇'; // 備用預設值（建議改黃色，避免預設是紅色）
     let normalized = String(typeStr).trim();
 
     // 🌟 1. 當月特殊與活動蘑菇
@@ -53,19 +53,19 @@ function normalizeMushroomType(typeStr) {
     if (normalized.includes("毒")) return "毒蘑菇";
     if (normalized.includes("電")) return "電蘑菇";
 
-    // 🌟 3. 普通顏色蘑菇
-    if (normalized.includes("紅")) return "紅色蘑菇";
-    if (normalized.includes("藍") && !normalized.includes("冰")) return "藍色蘑菇";
-    if (normalized.includes("冰")) return "冰藍蘑菇";
-    if (normalized.includes("黃")) return "黃色蘑菇";
-    if (normalized.includes("紫")) return "紫色蘑菇";
-    if (normalized.includes("白")) return "白色蘑菇";
+    // 🌟 3. 普通顏色蘑菇 (嚴格區分藍/冰藍/紅)
+    if (normalized.includes("藍") || normalized.includes("藍色")) {
+        return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
+    }
     if (normalized.includes("灰") || normalized.includes("岩")) return "灰色蘑菇";
+    if (normalized.includes("紅") || normalized.includes("紅色")) return "紅色蘑菇";
+    if (normalized.includes("黃") || normalized.includes("黃色")) return "黃色蘑菇";
+    if (normalized.includes("紫") || normalized.includes("紫色")) return "紫色蘑菇";
+    if (normalized.includes("白") || normalized.includes("白色")) return "白色蘑菇";
     if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
 
     return normalized;
 }
-
 // 🍄 3. 圖示路徑解析
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
