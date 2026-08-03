@@ -165,10 +165,16 @@ function parseMushroomCode(code) {
 
         const parts = code.trim().split(',');
         let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawPlayers, rawTime] = parts.map(p => p ? p.trim() : '');
-
+// 🎯 修正 7 欄位格式（處理捷徑將「尺寸與種類」合併傳入的情況）
         if (parts.length === 7) {
-            rawTime = rawPlayers;
-            rawPlayers = "1";
+            // 當 parts 長度為 7 時：
+            // parts[4] 是 "小紅色蘑菇" (合併的種類尺寸)
+            // parts[5] 是 人數 (例如 "1")
+            // parts[6] 是 剩餘時間 (例如 "01:30:00")
+            rawTime = parts[6] ? parts[6].trim() : '';
+            rawPlayers = parts[5] ? parts[5].trim() : '1';
+            rawType = parts[4] ? parts[4].trim() : ''; // 拿 "小紅色蘑菇" 當作種類
+            rawSize = ''; // 清空尺寸，交給後續 parseMushroomTypeAndSize 自動拆解
         }
 
         // A. 時間計算
