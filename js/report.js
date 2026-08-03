@@ -559,15 +559,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            const mushroomData = {
-                city, district: [district], locationName, type, size,
-                currentPlayers: players, maxPlayers: 30,
-                timeReported: { hours: h, minutes: m, seconds: s },
-                createdAt: nowTimestamp, updatedAt: nowTimestamp,
-                lat: latVal, lng: lngVal,
-                reporterIP: userIP,
-                status: "active"
-            };
+            // 📍 優先拿原有資料的經緯度，拿不到才用表單填的（避免被 null 蓋掉）
+let existingLat = null;
+let existingLng = null;
+
+if (existingId && localMushroomsData[existingId]) {
+    existingLat = localMushroomsData[existingId].lat;
+    existingLng = localMushroomsData[existingId].lng;
+}
+
+const mushroomData = {
+    city, district: [district], locationName, type, size,
+    currentPlayers: players, maxPlayers: 30,
+    timeReported: { hours: h, minutes: m, seconds: s },
+    createdAt: nowTimestamp, updatedAt: nowTimestamp,
+    lat: latVal || existingLat || null, // 👈 優先保留舊有經緯度！
+    lng: lngVal || existingLng || null, // 👈 優先保留舊有經緯度！
+    reporterIP: userIP,
+    status: "active"
+};
 
             if (existingId) {
                 window.fbUpdate(window.fbRef(window.fbDB, `mushrooms/${existingId}`), mushroomData)
