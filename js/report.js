@@ -28,32 +28,40 @@ function normalizeMushroomSize(sizeStr) {
     return '一般';
 }
 
-// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」
+// 🔍 自動解析蘑菇名稱，切出「尺寸」與「種類」（絕對不誤傷種類文字）
 function parseMushroomTypeAndSize(rawInput) {
     if (!rawInput) return { size: '一般', type: '黃色蘑菇' };
 
-    let text = String(rawInput).trim();
+    let text = String(rawInput).trim().replace(/\[|\]|\(|\)/g, ''); // 只清理括號
     let detectedSize = '一般';
+    let cleanType = text;
 
-    // 1. 先判定尺寸
-    if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
+    // 🎯 1. 先匹配雙字尺寸（巨大、巨型、小型、普通）
+    if (text.startsWith('巨大') || text.startsWith('巨型')) {
         detectedSize = '巨大';
-    } else if (text.includes('小型') || text.includes('小')) {
+        cleanType = text.substring(2); // 精準砍掉前2個字
+    } else if (text.startsWith('小型')) {
         detectedSize = '小';
+        cleanType = text.substring(2); // 精準砍掉前2個字
+    } else if (text.startsWith('一般') || text.startsWith('普通')) {
+        detectedSize = '一般';
+        cleanType = text.substring(2); // 精準砍掉前2個字
+    } 
+    // 🎯 2. 再匹配單字尺寸（大、小、巨、中）
+    else if (text.startsWith('大') || text.startsWith('巨')) {
+        detectedSize = '巨大';
+        cleanType = text.substring(1); // 精準砍掉第1個字
+    } else if (text.startsWith('小')) {
+        detectedSize = '小';
+        cleanType = text.substring(1); // 精準砍掉第1個字 ("小紅色蘑菇" -> 完美留下 "紅色蘑菇")
     }
 
-    // 2. 🎯 精準去除尺寸前綴/括號（只拿掉「小/大/巨大/小型/一般/普通」）
-    // 使用 replace 只替換「第一個出現的尺寸關鍵字」，絕不誤傷內文的字！
-    let cleanType = text
-        .replace(/\[|\]|\(|\)/g, '')
-        .replace(/^(巨大|巨型|小型|一般|普通|大|小)/, '') 
-        .trim();
-
-    if (!cleanType) cleanType = text;
+    cleanType = cleanType.trim();
+    if (!cleanType) cleanType = '黃色蘑菇';
 
     return {
         size: detectedSize,
-        type: cleanType // 這裡會乾乾淨淨地傳出 "黃色蘑菇"
+        type: cleanType // 100% 乾淨輸出 "紅色蘑菇"、"黃色蘑菇"、"紫色蘑菇"
     };
 }
 // 🍄 2. 種類獨立標準校正 (先抹除尺寸，再直球比對顏色)
@@ -272,37 +280,44 @@ function parseMushroomCode(code) {
         }
 
         // 🎯 E. 帶入尺寸與種類
-        let finalSize = normalizeMushroomSize(rawSize || rawType);
-        let finalType = normalizeMushroomType(rawType);
+        let parsedSize = rawSize;
+        let parsedType = rawType;
 
-        // 帶入尺寸選單
+        // 只要 rawType 裡面含有尺寸字眼（如 "小紅色蘑菇"）
+        if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
+            const parsed = parseMushroomTypeAndSize(rawType);
+            if (!parsedSize) parsedSize = parsed.size;
+            parsedType = parsed.type; // 這時候 parsedType 就是乾淨的 "紅色蘑菇"
+        }
+
+        let finalSize = normalizeMushroomSize(parsedSize);
+        let finalType = normalizeMushroomType(parsedType);
+
+        // 帶入尺寸
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
             sizeSelect.value = finalSize;
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 帶入種類選單 (直球強行賦值)
+        // 🎯 帶入種類 (直球寫入)
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            typeSelect.value = finalType; // 這裡拿到的是乾乾淨淨的 "黃色蘑菇"
+            let matchedOpt = Array.from(typeSelect.options).find(opt => 
+                opt.value === finalType || opt.text.includes(finalType)
+            );
+
+            if (matchedOpt) {
+                typeSelect.value = matchedOpt.value;
+            } else {
+                // 防呆比對：拿顏色字眼（紅、藍、黃、紫、灰、白、粉、冰）去匹配
+                const colorChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
+                let fallbackOpt = Array.from(typeSelect.options).find(opt => 
+                    colorChar && (opt.value.includes(colorChar) || opt.text.includes(colorChar))
+                );
+                if (fallbackOpt) typeSelect.value = fallbackOpt.value;
+            }
             typeSelect.dispatchEvent(new Event('change'));
-        }
-        // F. 人數、地點與時間
-        let parsedPlayers = parseInt(rawPlayers, 10) || 1;
-        const playerInput = document.getElementById('current-players');
-        if (playerInput) playerInput.value = parsedPlayers;
-
-        const locationInput = document.getElementById('location-name');
-        if (locationInput) locationInput.value = bestMatchedLocation;
-
-        const hEl = document.getElementById('time-hours');
-        const mEl = document.getElementById('time-minutes');
-        const sEl = document.getElementById('time-seconds');
-        if (hEl && mEl && sEl) {
-            hEl.value = finalH;
-            mEl.value = finalM;
-            sEl.value = finalS;
         }
 
         // G. 自動送出
