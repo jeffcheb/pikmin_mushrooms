@@ -56,31 +56,46 @@ function parseMushroomTypeAndSize(rawInput) {
         type: cleanType // 這裡會乾乾淨淨地傳出 "黃色蘑菇"
     };
 }
-// 🍄 2. 種類獨立標準校正 (關鍵直球防呆)
+// 🍄 2. 種類獨立標準校正 (先抹除尺寸，再直球比對顏色)
 function normalizeMushroomType(typeStr) {
     if (!typeStr) return '黃色蘑菇';
-    let normalized = String(typeStr).trim();
+    
+    // 🎯 第一步：強制把所有尺寸關鍵字拔掉 (例如 "小黃色蘑菇" -> "黃色蘑菇")
+    let normalized = String(typeStr)
+        .replace(/\[|\]|\(|\)/g, '')
+        .replace(/巨大|巨型|小型|一般|普通|大|小/g, '')
+        .trim();
 
-    // 🎯 只要包含字眼就直球回傳，完全不給它跌落到最後一行的機會！
-    if (normalized.includes("藍")) return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
-    if (normalized.includes("灰") || normalized.includes("岩")) return "灰色蘑菇";
-    if (normalized.includes("紅")) return "紅色蘑菇";
-    if (normalized.includes("黃")) return "黃色蘑菇";
-    if (normalized.includes("紫")) return "紫色蘑菇";
-    if (normalized.includes("白")) return "白色蘑菇";
-    if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
+    // 🌟 1. 當月特殊與活動蘑菇
+    if (
+        normalized.includes("海泡泡") || 
+        normalized.includes("特殊") || 
+        normalized.includes("活動") || 
+        normalized.includes("每月") ||
+        normalized.includes("本月") ||
+        normalized.includes("神秘")
+    ) {
+        return "每月特殊蘑菇";
+    }
+
+    // 🌟 2. 元素蘑菇
     if (normalized.includes("水晶")) return "水晶蘑菇";
     if (normalized.includes("火")) return "火蘑菇";
     if (normalized.includes("水")) return "水蘑菇";
     if (normalized.includes("毒")) return "毒蘑菇";
     if (normalized.includes("電")) return "電蘑菇";
-    if (normalized.includes("海泡泡") || normalized.includes("特殊") || normalized.includes("活動") || normalized.includes("每月") || normalized.includes("本月")) {
-        return "每月特殊蘑菇";
-    }
 
-    return normalized; // 保留原字串去匹配，絕對不自作聰明改成黃色！
+    // 🌟 3. 普通顏色蘑菇 (核心字精準攔截)
+    if (normalized.includes("黃")) return "黃色蘑菇";
+    if (normalized.includes("藍")) return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
+    if (normalized.includes("灰") || normalized.includes("岩")) return "灰色蘑菇";
+    if (normalized.includes("紫")) return "紫色蘑菇";
+    if (normalized.includes("白")) return "白色蘑菇";
+    if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
+    if (normalized.includes("紅")) return "紅色蘑菇";
+
+    return "黃色蘑菇"; // 預設值鎖死黃色，絕不給它機會變紅色！
 }
-
 // 🍄 3. 圖示路徑解析 (補上灰色蘑菇檔名)
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
