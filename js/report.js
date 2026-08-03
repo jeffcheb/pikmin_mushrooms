@@ -250,29 +250,42 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // 🎯 E. 帶入種類選單 (直球比對 value，不管顯示文字)
+        // 🎯 E. 帶入尺寸與種類 (加強 Log 紀錄與寫入)
+        let parsedSize = rawSize;
+        let parsedType = rawType;
+
+        if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
+            const parsed = parseMushroomTypeAndSize(rawType);
+            if (!parsedSize) parsedSize = parsed.size;
+            parsedType = parsed.type;
+        }
+
+        let finalSize = normalizeMushroomSize(parsedSize);
+        let finalType = normalizeMushroomType(parsedType);
+
+        console.log(`🔎 捷徑原始資料: [rawSize=${rawSize}, rawType=${rawType}] -> 解析結果: [size=${finalSize}, type=${finalType}]`);
+
+        // 帶入尺寸
+        const sizeSelect = document.getElementById('mushroom-size');
+        if (sizeSelect) {
+            sizeSelect.value = finalSize;
+            sizeSelect.dispatchEvent(new Event('change'));
+        }
+
+        // 🎯 帶入種類 (強制匹配 value 或內文)
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            // 從傳入的種類抓出顏色關鍵字 (例如 "小藍色蘑菇" -> 抓出 "藍")
-            const coreChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
+            let matchedOpt = Array.from(typeSelect.options).find(opt => 
+                opt.value === finalType || 
+                opt.value.includes(finalType) || 
+                opt.text.includes(finalType)
+            );
 
-            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => {
-                const val = opt.value; // 選單的 value (例如 "藍色蘑菇")
-                
-                // 1. 完全一模一樣 (例如 "藍色蘑菇" === "藍色蘑菇")
-                if (val === finalType) return true;
-                
-                // 2. 特殊判斷：冰藍
-                if (finalType.includes("冰") && val.includes("冰")) return true;
-
-                // 3. 核心字比對 (例如選單 value 包含 "藍"，傳入也包含 "藍")
-                if (coreChar && val.includes(coreChar) && !val.includes("冰")) return true;
-
-                return false;
-            });
-
-            if (matchedTypeOpt) {
-                typeSelect.value = matchedTypeOpt.value; // 精準寫入！
+            if (matchedOpt) {
+                typeSelect.value = matchedOpt.value;
+                console.log(`✅ 成功選中選單選項: ${matchedOpt.value}`);
+            } else {
+                console.warn(`⚠️ 找不到對應選項！finalType 是: "${finalType}"`);
             }
             typeSelect.dispatchEvent(new Event('change'));
         }
