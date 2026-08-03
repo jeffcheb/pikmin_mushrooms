@@ -272,40 +272,20 @@ function parseMushroomCode(code) {
         }
 
         // 🎯 E. 帶入尺寸與種類
-        let parsedSize = rawSize;
-        let parsedType = rawType;
+        let finalSize = normalizeMushroomSize(rawSize || rawType);
+        let finalType = normalizeMushroomType(rawType);
 
-        if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
-            const parsed = parseMushroomTypeAndSize(rawType);
-            if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type; // 這時候 parsedType 就是完整的 "黃色蘑菇"
-        }
-
-        let finalSize = normalizeMushroomSize(parsedSize);
-        let finalType = normalizeMushroomType(parsedType);
-
-        // 設定尺寸
+        // 帶入尺寸選單
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
             sizeSelect.value = finalSize;
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 設定種類 (直球帶入)
+        // 帶入種類選單 (直球強行賦值)
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            // 直接去找 value 完全等於 "黃色蘑菇" 的選項
-            let targetOpt = Array.from(typeSelect.options).find(opt => opt.value === finalType);
-            
-            if (targetOpt) {
-                typeSelect.value = targetOpt.value;
-            } else {
-                // 備用：尋找 value 含有 "黃" 的選項
-                let fallbackOpt = Array.from(typeSelect.options).find(opt => opt.value.includes("黃"));
-                if (fallbackOpt && finalType.includes("黃")) {
-                    typeSelect.value = fallbackOpt.value;
-                }
-            }
+            typeSelect.value = finalType; // 這裡拿到的是乾乾淨淨的 "黃色蘑菇"
             typeSelect.dispatchEvent(new Event('change'));
         }
         // F. 人數、地點與時間
