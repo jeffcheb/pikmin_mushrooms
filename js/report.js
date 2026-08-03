@@ -15,7 +15,7 @@ async function getUserIP() {
         return data.ip;
     } catch (error) {
         console.error("無法取得 IP:", error);
-        return "0.0.0.0"; // 抓取失敗時的備用值
+        return "0.0.0.0";
     }
 }
 
@@ -25,13 +25,12 @@ function normalizeMushroomSize(sizeStr) {
     let s = String(sizeStr).trim();
     if (s.includes('巨') || s.includes('大')) return '巨大';
     if (s.includes('小')) return '小';
-    if (s.includes('普') || s.includes('般') || s.includes('中')) return '一般';
     return '一般';
 }
 
-// 🍄 2. 種類獨立標準校正 (修正藍色蘑菇誤判為紅色的問題)
+// 🍄 2. 種類獨立標準校正 (關鍵修正：精準對齊帶有「色」字的 HTML value)
 function normalizeMushroomType(typeStr) {
-    if (!typeStr) return '黃色蘑菇'; // 備用預設值（建議改黃色，避免預設是紅色）
+    if (!typeStr) return '黃色蘑菇';
     let normalized = String(typeStr).trim();
 
     // 🌟 1. 當月特殊與活動蘑菇
@@ -53,19 +52,18 @@ function normalizeMushroomType(typeStr) {
     if (normalized.includes("毒")) return "毒蘑菇";
     if (normalized.includes("電")) return "電蘑菇";
 
-    // 🌟 3. 普通顏色蘑菇 (嚴格區分藍/冰藍/紅)
-    if (normalized.includes("藍") || normalized.includes("藍色")) {
-        return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
-    }
+    // 🌟 3. 普通顏色蘑菇 (必須與 HTML <option value="..."> 100% 一樣)
+    if (normalized.includes("藍")) return normalized.includes("冰") ? "冰藍蘑菇" : "藍色蘑菇";
     if (normalized.includes("灰") || normalized.includes("岩")) return "灰色蘑菇";
-    if (normalized.includes("紅") || normalized.includes("紅色")) return "紅色蘑菇";
-    if (normalized.includes("黃") || normalized.includes("黃色")) return "黃色蘑菇";
-    if (normalized.includes("紫") || normalized.includes("紫色")) return "紫色蘑菇";
-    if (normalized.includes("白") || normalized.includes("白色")) return "白色蘑菇";
+    if (normalized.includes("黃")) return "黃色蘑菇";
+    if (normalized.includes("紫")) return "紫色蘑菇";
+    if (normalized.includes("白")) return "白色蘑菇";
     if (normalized.includes("粉") || normalized.includes("羽")) return "粉紅蘑菇";
+    if (normalized.includes("紅")) return "紅色蘑菇";
 
-    return normalized;
+    return "黃色蘑菇"; // 安全預設值，絕不用紅色當預設！
 }
+
 // 🍄 3. 圖示路徑解析
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
@@ -85,7 +83,6 @@ function getIconPath(type) {
     if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
     if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
     if (typeStr.includes("白")) return "picture/mushroom_white.png";
-    if (typeStr.includes("灰")) return "picture/mushroom_gray.png";
 
     return "picture/mushroom_monthly_special.png";
 }
@@ -126,33 +123,26 @@ function parseMushroomTypeAndSize(rawInput) {
     let text = rawInput.trim();
     let detectedSize = '一般';
 
-    // 1. 抓取尺寸關鍵字
     if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
         detectedSize = '巨大';
     } else if (text.includes('小型') || text.includes('小')) {
         detectedSize = '小';
-    } else if (text.includes('一般') || text.includes('普通') || text.includes('中')) {
-        detectedSize = '一般';
     }
 
-    // 2. 🎯 精準匹配種類核心字（直接拿掉尺寸詞，不使用危險的正則清理）
     let cleanType = text
-        .replace(/\[|\]|\(|\)/g, '') // 僅清理括號
-        .replace(/巨大|巨型|小型|一般|普通/g, '') // 拿掉長尺寸詞
+        .replace(/\[|\]|\(|\)/g, '')
+        .replace(/巨大|巨型|小型|一般|普通/g, '')
         .trim();
 
-    // 如果開頭單獨留有 "大" 或 "小"，拔掉它（例如 "小灰色蘑菇" -> "灰色蘑菇"）
     if (cleanType.startsWith('小') || cleanType.startsWith('大')) {
         cleanType = cleanType.substring(1).trim();
     }
 
     if (!cleanType) cleanType = '黃色蘑菇';
 
-    return {
-        size: detectedSize,
-        type: cleanType // 這時候會乾乾淨淨地輸出 "灰色蘑菇"
-    };
+    return { size: detectedSize, type: cleanType };
 }
+
 // ⚡ 5. 格式碼解析 (#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
     try {
@@ -213,7 +203,12 @@ function parseMushroomCode(code) {
         const finalS = totalLeftSec % 60;
 
         // C. 地點清洗與匹配
-        let cleanLocation = rawLocation.replace(/[>＞〉⟩»›]/g, '').replace(/\s+/g, ' ').trim();
+        let cleanLocation = rawLocation
+            .replace(/[>＞〉⟩»›]/g, '')
+            .replace(/\.{2,}/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
         let cleanDistrict = rawDistrict ? rawDistrict.replace(/\s+/g, '').trim() : null;
 
         let bestMatchedLocation = cleanLocation;
@@ -225,9 +220,16 @@ function parseMushroomCode(code) {
             Object.values(localMushroomsData).forEach(item => {
                 if (item && item.locationName) {
                     const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
-                    const score = calculateSimilarity(cleanLocation, targetName);
-                    
-                    if (score > highestScore && score >= 0.55) {
+                    const cleanChineseInput = cleanLocation.split(' LRT')[0].split(' Station')[0].trim();
+                    const cleanChineseTarget = targetName.split(' LRT')[0].split(' Station')[0].trim();
+
+                    let score = calculateSimilarity(cleanLocation, targetName);
+
+                    if (cleanChineseTarget.includes(cleanChineseInput) || cleanChineseInput.includes(cleanChineseTarget)) {
+                        score = Math.max(score, 0.9);
+                    }
+
+                    if (score > highestScore && score >= 0.5) {
                         highestScore = score;
                         bestMatchedLocation = item.locationName;
                         matchedCity = item.city;
@@ -264,15 +266,14 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // E. 帶入尺寸與種類
+        // 🎯 E. 帶入尺寸與種類 (終極強制比對，絕對不讓選單被重置為第一個選項！)
         let parsedSize = rawSize;
         let parsedType = rawType;
 
-        // 如果種類欄位包含尺寸（例如 "小灰色蘑菇"）
         if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
             const parsed = parseMushroomTypeAndSize(rawType);
             if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type; // 拿到了 "灰色蘑菇"
+            parsedType = parsed.type;
         }
 
         let finalSize = normalizeMushroomSize(parsedSize);
@@ -281,22 +282,31 @@ function parseMushroomCode(code) {
         // 帶入尺寸
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
-            sizeSelect.value = finalSize;
+            let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
+                opt.value === finalSize || opt.text.includes(finalSize)
+            );
+            if (matchedSizeOpt) sizeSelect.value = matchedSizeOpt.value;
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 🎯 帶入種類 (用最笨但也最有效的方式直接配對)
+        // 帶入種類 (關鍵修正：強制對應選單，抓不到就精準匹配關鍵字)
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            // 直接尋找 value 或 text 包含 finalType (例如 "灰色蘑菇") 的選項
-            let targetOpt = Array.from(typeSelect.options).find(opt => 
+            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
                 opt.value === finalType || 
-                opt.text.includes(finalType) || 
-                (finalType.includes("灰") && (opt.value.includes("灰") || opt.text.includes("灰")))
+                opt.text.includes(finalType)
             );
 
-            if (targetOpt) {
-                typeSelect.value = targetOpt.value; // 強制寫入選單！
+            // 如果直接比對不到，用核心字比對（例如從 "藍色蘑菇" 抓 "藍"）
+            if (!matchedTypeOpt) {
+                const coreChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
+                matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
+                    coreChar && (opt.value.includes(coreChar) || opt.text.includes(coreChar))
+                );
+            }
+
+            if (matchedTypeOpt) {
+                typeSelect.value = matchedTypeOpt.value; // 強制填入對應值！
             }
             typeSelect.dispatchEvent(new Event('change'));
         }
@@ -620,7 +630,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 🎯 蘑菇卡牌完整排序修復邏輯
         keys.sort((a, b) => {
             const aPinned = pinnedList.includes(a) ? 1 : 0;
             const bPinned = pinnedList.includes(b) ? 1 : 0;
