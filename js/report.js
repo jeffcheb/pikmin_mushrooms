@@ -854,12 +854,38 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.toggleAlert = (id) => {
-        const index = alertEnabledList.indexOf(id);
-        if (index > -1) alertEnabledList.splice(index, 1);
-        else alertEnabledList.push(id);
+    // 1. 檢查瀏覽器是否支援 Notification API
+    if (!("Notification" in window)) {
+        alert("您的瀏覽器不支援桌面通知功能！");
+        return;
+    }
+
+    const index = alertEnabledList.indexOf(id);
+    if (index > -1) {
+        // 關閉提醒
+        alertEnabledList.splice(index, 1);
         localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
         renderBoard();
-    };
+    } else {
+        // 2. 請求通知權限
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                alertEnabledList.push(id);
+                localStorage.setItem("mushroom_alerts_enabled", JSON.stringify(alertEnabledList));
+                
+                // 測試發送一次通知
+                new Notification("🔔 蘑菇倒數提醒已開啟", {
+                    body: "當此蘑菇即將重生時，系統會發送通知提醒您！",
+                    icon: "picture/mushroom_monthly_special.png"
+                });
+
+                renderBoard();
+            } else {
+                alert("請在瀏覽器設定中「允許」本網站發送通知，才能正常開啟提醒功能喔！");
+            }
+        });
+    }
+};
 
     window.handleFastFill = (encodedData) => {
         try {
