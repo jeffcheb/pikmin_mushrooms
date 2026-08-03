@@ -266,51 +266,32 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // 🎯 E. 帶入尺寸與種類 (終極強制比對，絕對不讓選單被重置為第一個選項！)
-        let parsedSize = rawSize;
-        let parsedType = rawType;
-
-        if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
-            const parsed = parseMushroomTypeAndSize(rawType);
-            if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type;
-        }
-
-        let finalSize = normalizeMushroomSize(parsedSize);
-        let finalType = normalizeMushroomType(parsedType);
-
-        // 帶入尺寸
-        const sizeSelect = document.getElementById('mushroom-size');
-        if (sizeSelect) {
-            let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
-                opt.value === finalSize || opt.text.includes(finalSize)
-            );
-            if (matchedSizeOpt) sizeSelect.value = matchedSizeOpt.value;
-            sizeSelect.dispatchEvent(new Event('change'));
-        }
-
-        // 帶入種類 (關鍵修正：強制對應選單，抓不到就精準匹配關鍵字)
+        // 🎯 E. 帶入種類選單 (直球比對 value，不管顯示文字)
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
-                opt.value === finalType || 
-                opt.text.includes(finalType)
-            );
+            // 從傳入的種類抓出顏色關鍵字 (例如 "小藍色蘑菇" -> 抓出 "藍")
+            const coreChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
 
-            // 如果直接比對不到，用核心字比對（例如從 "藍色蘑菇" 抓 "藍"）
-            if (!matchedTypeOpt) {
-                const coreChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
-                matchedTypeOpt = Array.from(typeSelect.options).find(opt => 
-                    coreChar && (opt.value.includes(coreChar) || opt.text.includes(coreChar))
-                );
-            }
+            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => {
+                const val = opt.value; // 選單的 value (例如 "藍色蘑菇")
+                
+                // 1. 完全一模一樣 (例如 "藍色蘑菇" === "藍色蘑菇")
+                if (val === finalType) return true;
+                
+                // 2. 特殊判斷：冰藍
+                if (finalType.includes("冰") && val.includes("冰")) return true;
+
+                // 3. 核心字比對 (例如選單 value 包含 "藍"，傳入也包含 "藍")
+                if (coreChar && val.includes(coreChar) && !val.includes("冰")) return true;
+
+                return false;
+            });
 
             if (matchedTypeOpt) {
-                typeSelect.value = matchedTypeOpt.value; // 強制填入對應值！
+                typeSelect.value = matchedTypeOpt.value; // 精準寫入！
             }
             typeSelect.dispatchEvent(new Event('change'));
         }
-
         // F. 人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
         const playerInput = document.getElementById('current-players');
