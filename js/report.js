@@ -125,26 +125,33 @@ function parseMushroomTypeAndSize(rawInput) {
     let text = rawInput.trim();
     let detectedSize = '一般';
 
+    // 1. 抓取尺寸關鍵字
     if (text.includes('巨大') || text.includes('巨型') || text.includes('大')) {
         detectedSize = '巨大';
-        text = text.replace(/\[?(巨大|巨型|大)\]?/g, '');
     } else if (text.includes('小型') || text.includes('小')) {
         detectedSize = '小';
-        text = text.replace(/\[?(小型|小)\]?/g, '');
     } else if (text.includes('一般') || text.includes('普通') || text.includes('中')) {
         detectedSize = '一般';
-        text = text.replace(/\[?(一般|普通|中)\]?/g, '');
     }
 
-    let detectedType = text.replace(/[\[\]\(\)\s]/g, '');
-    if (!detectedType) detectedType = '黃色蘑菇';
+    // 2. 🎯 精準匹配種類核心字（直接拿掉尺寸詞，不使用危險的正則清理）
+    let cleanType = text
+        .replace(/\[|\]|\(|\)/g, '') // 僅清理括號
+        .replace(/巨大|巨型|小型|一般|普通/g, '') // 拿掉長尺寸詞
+        .trim();
+
+    // 如果開頭單獨留有 "大" 或 "小"，拔掉它（例如 "小灰色蘑菇" -> "灰色蘑菇"）
+    if (cleanType.startsWith('小') || cleanType.startsWith('大')) {
+        cleanType = cleanType.substring(1).trim();
+    }
+
+    if (!cleanType) cleanType = '黃色蘑菇';
 
     return {
         size: detectedSize,
-        type: detectedType
+        type: cleanType // 這時候會乾乾淨淨地輸出 "灰色蘑菇"
     };
 }
-
 // ⚡ 5. 格式碼解析 (#菇,截圖時間,行政區,地點,尺寸,種類,人數,剩餘時間)
 function parseMushroomCode(code) {
     try {
@@ -256,47 +263,39 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // E. 帶入尺寸與種類 (強效動態選單匹配)
+        // E. 帶入尺寸與種類
         let parsedSize = rawSize;
         let parsedType = rawType;
 
+        // 如果種類欄位包含尺寸（例如 "小灰色蘑菇"）
         if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
             const parsed = parseMushroomTypeAndSize(rawType);
             if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type;
+            parsedType = parsed.type; // 拿到了 "灰色蘑菇"
         }
 
         let finalSize = normalizeMushroomSize(parsedSize);
         let finalType = normalizeMushroomType(parsedType);
 
-        // 帶入尺寸選單
+        // 帶入尺寸
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
-            let matchedSizeOpt = Array.from(sizeSelect.options).find(opt => 
-                opt.value === finalSize || opt.text.includes(finalSize) || finalSize.includes(opt.value)
-            );
-            if (matchedSizeOpt) sizeSelect.value = matchedSizeOpt.value;
+            sizeSelect.value = finalSize;
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 帶入種類選單
+        // 🎯 帶入種類 (用最笨但也最有效的方式直接配對)
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
-            const coreKey = finalType.replace(/蘑菇|一般|普通/g, '');
-            let matchedTypeOpt = Array.from(typeSelect.options).find(opt => {
-                const val = opt.value;
-                const txt = opt.text;
-                return (
-                    val === finalType || 
-                    txt === finalType ||
-                    (coreKey && (val.includes(coreKey) || txt.includes(coreKey)))
-                );
-            });
+            // 直接尋找 value 或 text 包含 finalType (例如 "灰色蘑菇") 的選項
+            let targetOpt = Array.from(typeSelect.options).find(opt => 
+                opt.value === finalType || 
+                opt.text.includes(finalType) || 
+                (finalType.includes("灰") && (opt.value.includes("灰") || opt.text.includes("灰")))
+            );
 
-            if (matchedTypeOpt) {
-                typeSelect.value = matchedTypeOpt.value;
-            } else if (typeSelect.options.length > 0) {
-                typeSelect.selectedIndex = 0;
+            if (targetOpt) {
+                typeSelect.value = targetOpt.value; // 強制寫入選單！
             }
             typeSelect.dispatchEvent(new Event('change'));
         }
