@@ -64,7 +64,7 @@ function normalizeMushroomType(typeStr) {
     return "黃色蘑菇"; // 安全預設值，絕不用紅色當預設！
 }
 
-// 🍄 3. 圖示路徑解析
+// 🍄 3. 圖示路徑解析 (補上灰色蘑菇檔名)
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
     const typeStr = String(type).trim();
@@ -78,6 +78,7 @@ function getIconPath(type) {
     if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
     if (typeStr.includes("電")) return "picture/mushroom_electric.png";
     if (typeStr.includes("冰")) return "picture/mushroom_ice.png";
+    if (typeStr.includes("灰") || typeStr.includes("岩")) return "picture/mushroom_gray.png"; // 👈 🎯 就是漏了這行！
     if (typeStr.includes("紅")) return "picture/mushroom_red.png";
     if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
     if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
@@ -86,7 +87,6 @@ function getIconPath(type) {
 
     return "picture/mushroom_monthly_special.png";
 }
-
 // 📊 4. 字串相似度算法
 function calculateSimilarity(str1, str2) {
     if (!str1 || !str2) return 0;
