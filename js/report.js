@@ -937,24 +937,34 @@ const mushroomData = {
         }
     }, 150);
 });
-// 📜 免責同意書控制邏輯
-    const disclaimerModal = document.getElementById("disclaimer-modal");
-    const btnAcceptDisclaimer = document.getElementById("btn-accept-disclaimer");
+// 📜 免責同意書多重 ID 抓取防呆
+    const disclaimerModal = document.getElementById("disclaimer-modal") 
+                         || document.getElementById("terms-modal") 
+                         || document.getElementById("agreement-modal")
+                         || document.querySelector(".modal-overlay");
 
-    // 檢查 LocalStorage 是否已經同意過
+    const btnAcceptDisclaimer = document.getElementById("btn-accept-disclaimer") 
+                             || document.getElementById("btn-agree") 
+                             || document.getElementById("accept-btn");
+
+    // 讀取同意紀錄
     const hasAgreed = localStorage.getItem("has_agreed_disclaimer");
 
     if (!hasAgreed && disclaimerModal) {
-        // 若尚未同意，顯示 Modal 彈窗
-        disclaimerModal.style.display = "flex";
+        disclaimerModal.style.display = "flex"; // 找到了就強制跳出
     }
 
     if (btnAcceptDisclaimer) {
         btnAcceptDisclaimer.addEventListener("click", () => {
-            // 點擊同意後，存入 LocalStorage 並隱藏 Modal
             localStorage.setItem("has_agreed_disclaimer", "true");
             if (disclaimerModal) {
                 disclaimerModal.style.display = "none";
+            }
+            
+            // 如果是捷徑自動帶入，點同意後補補送出
+            const reportForm = document.getElementById("report-form");
+            if (reportForm && window.location.hash.includes('#菇')) {
+                reportForm.requestSubmit();
             }
         });
     }
