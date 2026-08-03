@@ -165,16 +165,13 @@ function parseMushroomCode(code) {
 
         const parts = code.trim().split(',');
         let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawPlayers, rawTime] = parts.map(p => p ? p.trim() : '');
-// 🎯 修正 7 欄位格式（處理捷徑將「尺寸與種類」合併傳入的情況）
+
+        // 🎯 修正 7 欄位格式（處理捷徑將「尺寸與種類」合併傳入的情況）
         if (parts.length === 7) {
-            // 當 parts 長度為 7 時：
-            // parts[4] 是 "小紅色蘑菇" (合併的種類尺寸)
-            // parts[5] 是 人數 (例如 "1")
-            // parts[6] 是 剩餘時間 (例如 "01:30:00")
             rawTime = parts[6] ? parts[6].trim() : '';
             rawPlayers = parts[5] ? parts[5].trim() : '1';
-            rawType = parts[4] ? parts[4].trim() : ''; // 拿 "小紅色蘑菇" 當作種類
-            rawSize = ''; // 清空尺寸，交給後續 parseMushroomTypeAndSize 自動拆解
+            rawType = parts[4] ? parts[4].trim() : '';
+            rawSize = '';
         }
 
         // A. 時間計算
@@ -289,11 +286,10 @@ function parseMushroomCode(code) {
         let parsedSize = rawSize;
         let parsedType = rawType;
 
-        // 只要 rawType 裡面含有尺寸字眼（如 "小紅色蘑菇"）
         if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
             const parsed = parseMushroomTypeAndSize(rawType);
             if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type; // 這時候 parsedType 就是乾淨的 "紅色蘑菇"
+            parsedType = parsed.type;
         }
 
         let finalSize = normalizeMushroomSize(parsedSize);
@@ -306,7 +302,7 @@ function parseMushroomCode(code) {
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 🎯 帶入種類 (直球寫入)
+        // 帶入種類
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
             let matchedOpt = Array.from(typeSelect.options).find(opt => 
@@ -316,7 +312,6 @@ function parseMushroomCode(code) {
             if (matchedOpt) {
                 typeSelect.value = matchedOpt.value;
             } else {
-                // 防呆比對：拿顏色字眼（紅、藍、黃、紫、灰、白、粉、冰）去匹配
                 const colorChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
                 let fallbackOpt = Array.from(typeSelect.options).find(opt => 
                     colorChar && (opt.value.includes(colorChar) || opt.text.includes(colorChar))
@@ -324,6 +319,25 @@ function parseMushroomCode(code) {
                 if (fallbackOpt) typeSelect.value = fallbackOpt.value;
             }
             typeSelect.dispatchEvent(new Event('change'));
+        }
+
+        // 🎯 F. 人數、地點與時間 (補回此處)
+        let parsedPlayers = parseInt(rawPlayers, 10) || 1;
+        const playerInput = document.getElementById('current-players');
+        if (playerInput) playerInput.value = parsedPlayers;
+
+        const locationInput = document.getElementById('location-name');
+        if (locationInput) {
+            locationInput.value = bestMatchedLocation;
+        }
+
+        const hEl = document.getElementById('time-hours');
+        const mEl = document.getElementById('time-minutes');
+        const sEl = document.getElementById('time-seconds');
+        if (hEl && mEl && sEl) {
+            hEl.value = finalH;
+            mEl.value = finalM;
+            sEl.value = finalS;
         }
 
         // G. 自動送出
@@ -340,7 +354,6 @@ function parseMushroomCode(code) {
         return false;
     }
 }
-
 // 🗺️ 6. 地圖初始化
 function initLeafletMap() {
     try {
