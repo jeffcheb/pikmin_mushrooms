@@ -85,6 +85,7 @@ function getIconPath(type) {
     if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
     if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
     if (typeStr.includes("白")) return "picture/mushroom_white.png";
+    if (typeStr.includes("灰")) return "picture/mushroom_gray.png";
 
     return "picture/mushroom_monthly_special.png";
 }
