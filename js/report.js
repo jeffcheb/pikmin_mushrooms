@@ -937,3 +937,24 @@ const mushroomData = {
         }
     }, 150);
 });
+// 📜 免責同意書控制邏輯
+    const disclaimerModal = document.getElementById("disclaimer-modal");
+    const btnAcceptDisclaimer = document.getElementById("btn-accept-disclaimer");
+
+    // 檢查 LocalStorage 是否已經同意過
+    const hasAgreed = localStorage.getItem("has_agreed_disclaimer");
+
+    if (!hasAgreed && disclaimerModal) {
+        // 若尚未同意，顯示 Modal 彈窗
+        disclaimerModal.style.display = "flex";
+    }
+
+    if (btnAcceptDisclaimer) {
+        btnAcceptDisclaimer.addEventListener("click", () => {
+            // 點擊同意後，存入 LocalStorage 並隱藏 Modal
+            localStorage.setItem("has_agreed_disclaimer", "true");
+            if (disclaimerModal) {
+                disclaimerModal.style.display = "none";
+            }
+        });
+    }
