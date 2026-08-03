@@ -166,15 +166,15 @@ function parseMushroomCode(code) {
         const parts = code.trim().split(',');
         let [prefix, rawPhotoTime, rawDistrict, rawLocation, rawSize, rawType, rawPlayers, rawTime] = parts.map(p => p ? p.trim() : '');
 
-        // 🎯 修正 7 欄位格式（處理捷徑將「尺寸與種類」合併傳入的情況）
+        // 🎯 處理 7 欄位格式 (若捷徑傳入 7 欄位)
         if (parts.length === 7) {
             rawTime = parts[6] ? parts[6].trim() : '';
             rawPlayers = parts[5] ? parts[5].trim() : '1';
             rawType = parts[4] ? parts[4].trim() : '';
-            rawSize = '';
+            rawSize = '一般';
         }
 
-        // A. 時間計算
+        // A. 時間計算 (截圖時間校正)
         let timeOffsetSec = 0;
         if (rawPhotoTime) {
             const now = new Date();
@@ -218,14 +218,9 @@ function parseMushroomCode(code) {
         const finalM = Math.floor((totalLeftSec % 3600) / 60);
         const finalS = totalLeftSec % 60;
 
-        // C. 地點清洗與匹配
-        let cleanLocation = rawLocation
-            .replace(/[>＞〉⟩»›]/g, '')
-            .replace(/\.{2,}/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        let cleanDistrict = rawDistrict ? rawDistrict.replace(/\s+/g, '').trim() : null;
+        // C. 地點比對 (捷徑已完全清除箭頭，直接進行歷史據點比對)
+        let cleanLocation = rawLocation.trim();
+        let cleanDistrict = rawDistrict ? rawDistrict.trim() : null;
 
         let bestMatchedLocation = cleanLocation;
         let matchedCity = null;
@@ -235,15 +230,8 @@ function parseMushroomCode(code) {
         if (typeof localMushroomsData !== 'undefined' && localMushroomsData) {
             Object.values(localMushroomsData).forEach(item => {
                 if (item && item.locationName) {
-                    const targetName = item.locationName.replace(/[>＞〉⟩»›]/g, '').trim();
-                    const cleanChineseInput = cleanLocation.split(' LRT')[0].split(' Station')[0].trim();
-                    const cleanChineseTarget = targetName.split(' LRT')[0].split(' Station')[0].trim();
-
+                    const targetName = item.locationName.trim();
                     let score = calculateSimilarity(cleanLocation, targetName);
-
-                    if (cleanChineseTarget.includes(cleanChineseInput) || cleanChineseInput.includes(cleanChineseTarget)) {
-                        score = Math.max(score, 0.9);
-                    }
 
                     if (score > highestScore && score >= 0.5) {
                         highestScore = score;
@@ -282,27 +270,18 @@ function parseMushroomCode(code) {
             }, 150);
         }
 
-        // 🎯 E. 帶入尺寸與種類
-        let parsedSize = rawSize;
-        let parsedType = rawType;
+        // 🎯 E. 直球帶入尺寸與種類 (無需拆解，100% 精準寫入)
+        let finalSize = normalizeMushroomSize(rawSize);
+        let finalType = normalizeMushroomType(rawType);
 
-        if (rawType && (rawType.includes("大") || rawType.includes("巨") || rawType.includes("小") || rawType.includes("普") || rawType.includes("般"))) {
-            const parsed = parseMushroomTypeAndSize(rawType);
-            if (!parsedSize) parsedSize = parsed.size;
-            parsedType = parsed.type;
-        }
-
-        let finalSize = normalizeMushroomSize(parsedSize);
-        let finalType = normalizeMushroomType(parsedType);
-
-        // 帶入尺寸
+        // 帶入尺寸選單
         const sizeSelect = document.getElementById('mushroom-size');
         if (sizeSelect) {
             sizeSelect.value = finalSize;
             sizeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 帶入種類
+        // 帶入種類選單
         const typeSelect = document.getElementById('mushroom-type');
         if (typeSelect) {
             let matchedOpt = Array.from(typeSelect.options).find(opt => 
@@ -312,6 +291,7 @@ function parseMushroomCode(code) {
             if (matchedOpt) {
                 typeSelect.value = matchedOpt.value;
             } else {
+                // 防呆：用顏色字眼對應
                 const colorChar = finalType.replace(/蘑菇|色|一般|普通/g, '');
                 let fallbackOpt = Array.from(typeSelect.options).find(opt => 
                     colorChar && (opt.value.includes(colorChar) || opt.text.includes(colorChar))
@@ -321,7 +301,7 @@ function parseMushroomCode(code) {
             typeSelect.dispatchEvent(new Event('change'));
         }
 
-        // 🎯 F. 人數、地點與時間 (補回此處)
+        // 🎯 F. 帶入人數、地點與時間
         let parsedPlayers = parseInt(rawPlayers, 10) || 1;
         const playerInput = document.getElementById('current-players');
         if (playerInput) playerInput.value = parsedPlayers;
