@@ -832,33 +832,36 @@
     }
 }
 /* ========================================================
-   🛠️ 蘑菇卡片標題與右上角按鈕防跑位精準修復
+   🛡️ 防擠壓修復：確保「⚡ 更新」與右側按鈕絕對不消失
    ======================================================== */
 
-/* 1. 限制標題資訊區塊 */
+/* 1. 確保卡片頂部容器不會溢出 */
+.card-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 2. 中間文字區域：自動縮放，允許截斷地點名稱 */
 .shroom-info {
-    flex: 1;
-    min-width: 0 !important;
-    overflow: hidden;
-}
-
-/* 2. 蘑菇名稱（[一般] 紅色蘑菇）：強制完整顯示，不被截斷 */
-.shroom-info h4 {
-    white-space: nowrap !important;
-    flex-shrink: 0 !important; /* 確保蘑菇名字不被壓縮變成 ... */
-}
-
-/* 3. 只有地點名稱區域過長時，才自動截斷顯示 ... */
-.shroom-info div:last-child,
-.shroom-info div:last-child span {
-    white-space: nowrap !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important; /* 關鍵：允許子元素在空間不夠時縮小，不把按鈕推開 */
     overflow: hidden !important;
-    text-overflow: ellipsis !important; /* 超出長度時只有地點變 ... */
 }
 
-/* 4. 防跑位與鎖定按鈕大小 */
-.btn-fast-fill-trigger,
+/* 3. ⚡ 更新按鈕：強制禁止壓縮（絕對不消失！） */
+.btn-fast-fill-trigger {
+    flex: 0 0 auto !important; /* 關鍵：禁止 shrink 變小 */
+    white-space: nowrap !important;
+    z-index: 2 !important;
+}
+
+/* 4. 右側圖示按鈕組（📌釘選/歷史）：強制固定靠右，禁止壓縮 */
 .header-controls-group {
-    flex-shrink: 0 !important;
+    flex: 0 0 auto !important;
     margin-left: auto !important;
+    display: flex !important;
+    gap: 4px !important;
 }
