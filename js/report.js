@@ -819,7 +819,7 @@ const mushroomData = {
                 }
 
             } else if (msLeft <= 0 && msLeft > -300000) {
-                const cooldownMsLeft = 300000 + msLeft;
+                const cooldownMsLeft = 300000 + msLeft; // 新菇 5 分鐘倒數剩餘毫秒
                 const totalCoolSec = Math.floor(cooldownMsLeft / 1000);
                 const coolM = Math.floor(totalCoolSec / 60);
                 const coolS = totalCoolSec % 60;
@@ -829,8 +829,21 @@ const mushroomData = {
 
                 textElement.innerHTML = `💥 蘑菇已被摧毀！新菇倒數：<strong style="color:#e11d48;">${formattedM}分${formattedS}秒</strong>`;
 
-                // 🔔 【新菇出生（0秒）提醒】
-                if (alertEnabledList.includes(id) && !notifiedMushrooms.includes(`${id}_born`)) {
+                // 🔔 【1. 新菇倒數剩 60 秒（1分鐘）提醒】
+                if (cooldownMsLeft <= 60000 && alertEnabledList.includes(id) && !notifiedMushrooms.includes(`${id}_born_1m`)) {
+                    notifiedMushrooms.push(`${id}_born_1m`); // 標記已發送 60 秒提醒
+                    
+                    if (Notification.permission === "granted") {
+                        new Notification(`⏳ 新蘑菇即將出生！倒數 1 分鐘`, {
+                            body: `📍 ${item.locationName} 的新蘑菇倒數剩 60 秒，準備搶位置囉！`,
+                            icon: getIconPath(displayType),
+                            requireInteraction: true
+                        });
+                    }
+                }
+
+                // 🔔 【2. 0 秒新菇剛出生提醒】
+                if (cooldownMsLeft <= 0 && alertEnabledList.includes(id) && !notifiedMushrooms.includes(`${id}_born`)) {
                     notifiedMushrooms.push(`${id}_born`); // 標記已發送出生提醒
                     
                     if (Notification.permission === "granted") {
