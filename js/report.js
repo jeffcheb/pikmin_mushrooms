@@ -106,11 +106,12 @@ function normalizeMushroomType(typeStr) {
 
     return "黃色蘑菇"; // 預設值鎖死黃色，絕不給它機會變紅色！
 }
-// 🍄 3. 圖示路徑解析 (補上灰色蘑菇檔名)
+// 🍄 3. 圖示路徑解析
 function getIconPath(type) {
     if (!type) return "picture/mushroom_monthly_special.png";
     const typeStr = String(type).trim();
 
+    // 🌟 特殊/元素蘑菇
     if (typeStr.includes("水晶")) return "picture/mushroom_crystal.png";
     if (typeStr.includes("每月") || typeStr.includes("特殊") || typeStr.includes("海泡泡") || typeStr.includes("本月")) {
         return "picture/mushroom_monthly_special.png";
@@ -120,8 +121,14 @@ function getIconPath(type) {
     if (typeStr.includes("毒")) return "picture/mushroom_poison.png";
     if (typeStr.includes("電")) return "picture/mushroom_electric.png";
     if (typeStr.includes("冰")) return "picture/mushroom_ice.png";
-    if (typeStr.includes("灰") || typeStr.includes("岩")) return "picture/mushroom_gray.png"; // 👈 🎯 就是漏了這行！
-    if (typeStr.includes("紅")) return "picture/mushroom_red.png";
+
+    // 🎯 優先攔截「雙字顏色」（粉紅、冰藍），避免被下面的「紅、藍」搶先抓走！
+    if (typeStr.includes("粉") || typeStr.includes("羽")) return "picture/mushroom_pink.png"; // 👈 搬到「紅」的前面！
+    if (typeStr.includes("冰藍")) return "picture/mushroom_ice_blue.png";
+
+    // 🌟 單字顏色
+    if (typeStr.includes("灰") || typeStr.includes("岩")) return "picture/mushroom_gray.png";
+    if (typeStr.includes("紅")) return "picture/mushroom_red.png"; // 👈 現在粉紅色不會跑到這裡了！
     if (typeStr.includes("藍")) return "picture/mushroom_blue.png";
     if (typeStr.includes("黃")) return "picture/mushroom_yellow.png";
     if (typeStr.includes("紫")) return "picture/mushroom_purple.png";
