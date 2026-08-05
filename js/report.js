@@ -805,15 +805,15 @@ const mushroomData = {
                 textElement.innerHTML = `⏳ 剩餘時間：<strong>${h}時${m}分${s}秒</strong>`;
                 textElement.style.color = "#0284c7";
 
-                // 🔔 提醒功能【關鍵修正】：當倒數少於 3 分鐘 (180000ms)，且有開啟提醒時發出通知
-                if (msLeft <= 180000 && alertEnabledList.includes(id) && !notifiedMushrooms.includes(id)) {
-                    notifiedMushrooms.push(id); // 標記為已發送
+                // 🔔 【改為剩餘 1 分鐘（60000ms）提醒】
+                if (msLeft <= 60000 && alertEnabledList.includes(id) && !notifiedMushrooms.includes(`${id}_1m`)) {
+                    notifiedMushrooms.push(`${id}_1m`); // 標記已發送 1 分鐘提醒
                     
                     if (Notification.permission === "granted") {
-                        new Notification(`🍄 蘑菇討伐即將結束！`, {
-                            body: `【${displaySize}${displayType}】剩餘時間不到 3 分鐘，快準備更新新菇！`,
+                        new Notification(`⏰ 蘑菇即將結束！倒數 1 分鐘`, {
+                            body: `📍 ${item.locationName} 的【${displaySize}${displayType}】只剩 1 分鐘，準備迎接新菇！`,
                             icon: getIconPath(displayType),
-                            requireInteraction: true // 通知會持續停留在螢幕上直到點擊
+                            requireInteraction: true
                         });
                     }
                 }
@@ -829,9 +829,9 @@ const mushroomData = {
 
                 textElement.innerHTML = `💥 蘑菇已被摧毀！新菇倒數：<strong style="color:#e11d48;">${formattedM}分${formattedS}秒</strong>`;
 
-                // 🔔 提醒功能【關鍵修正】：當新菇剛倒數出生時發出通知
+                // 🔔 【新菇出生（0秒）提醒】
                 if (alertEnabledList.includes(id) && !notifiedMushrooms.includes(`${id}_born`)) {
-                    notifiedMushrooms.push(`${id}_born`);
+                    notifiedMushrooms.push(`${id}_born`); // 標記已發送出生提醒
                     
                     if (Notification.permission === "granted") {
                         new Notification(`✨ 新蘑菇已出生！`, {
