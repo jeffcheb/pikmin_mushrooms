@@ -832,33 +832,33 @@
     }
 }
 /* ========================================================
-   🛠️ 蘑菇卡片標題與右上角按鈕防跑位修復
+   🛠️ 蘑菇卡片標題與右上角按鈕防跑位精準修復
    ======================================================== */
 
-/* 1. 限制標題資訊區塊，允許其在彈性佈局中縮小 */
+/* 1. 限制標題資訊區塊 */
 .shroom-info {
     flex: 1;
-    min-width: 0 !important; /* 關鍵！允許內文縮小，不被長文字硬撐大 */
+    min-width: 0 !important;
     overflow: hidden;
 }
 
-/* 2. 標題與地點名稱過長時，自動截斷顯示 ... */
-.shroom-info h4, 
-.shroom-info div,
-.shroom-info p {
+/* 2. 蘑菇名稱（[一般] 紅色蘑菇）：強制完整顯示，不被截斷 */
+.shroom-info h4 {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important; /* 確保蘑菇名字不被壓縮變成 ... */
+}
+
+/* 3. 只有地點名稱區域過長時，才自動截斷顯示 ... */
+.shroom-info div:last-child,
+.shroom-info div:last-child span {
     white-space: nowrap !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important; /* 超出長度時自動變成 ... */
+    text-overflow: ellipsis !important; /* 超出長度時只有地點變 ... */
 }
 
-/* 3. 防止「⚡ 更新」按鈕被擠壓變形 */
-.btn-fast-fill-trigger {
-    flex-shrink: 0 !important; /* 禁止按鈕被壓扁 */
-    margin-left: 4px;
-}
-
-/* 4. 強制右側圖示按鈕組（釘選、歷史按鈕）固定靠右，絕不跑位 */
+/* 4. 防跑位與鎖定按鈕大小 */
+.btn-fast-fill-trigger,
 .header-controls-group {
-    flex-shrink: 0 !important; /* 禁止按鈕組被擠壓 */
-    margin-left: auto !important; /* 自動推至最右側 */
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
 }
