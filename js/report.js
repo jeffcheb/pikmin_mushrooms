@@ -6,6 +6,8 @@ let markerGroup;
 let userCurrentLat = null;  
 let userCurrentLng = null;  
 let isNearbyFilterOn = false; 
+// 🌟 追蹤已觸發通知的蘑菇 ID，避免重複洗版通知
+let notifiedMushrooms = [];
 
 // 🌐 取得使用者 IP 位址
 async function getUserIP() {
@@ -785,6 +787,9 @@ const mushroomData = {
             const expireTime = (item.createdAt || Date.now()) + totalReportedMs;
             const msLeft = expireTime - Date.now();
 
+            const displayType = normalizeMushroomType(item.type);
+            const displaySize = normalizeMushroomSize(item.size);
+
             if (msLeft > 0) {
                 const totalSec = Math.floor(msLeft / 1000);
                 const h = Math.floor(totalSec / 3600);
@@ -792,6 +797,20 @@ const mushroomData = {
                 const s = totalSec % 60;
                 textElement.innerHTML = `⏳ 剩餘時間：<strong>${h}時${m}分${s}秒</strong>`;
                 textElement.style.color = "#0284c7";
+
+                // 🔔 提醒功能【關鍵修正】：當倒數少於 3 分鐘 (180000ms)，且有開啟提醒時發出通知
+                if (msLeft <= 180000 && alertEnabledList.includes(id) && !notifiedMushrooms.includes(id)) {
+                    notifiedMushrooms.push(id); // 標記為已發送
+                    
+                    if (Notification.permission === "granted") {
+                        new Notification(`🍄 蘑菇討伐即將結束！`, {
+                            body: `【${displaySize}${displayType}】剩餘時間不到 3 分鐘，快準備更新新菇！`,
+                            icon: getIconPath(displayType),
+                            requireInteraction: true // 通知會持續停留在螢幕上直到點擊
+                        });
+                    }
+                }
+
             } else if (msLeft <= 0 && msLeft > -300000) {
                 const cooldownMsLeft = 300000 + msLeft;
                 const totalCoolSec = Math.floor(cooldownMsLeft / 1000);
@@ -802,6 +821,19 @@ const mushroomData = {
                 const formattedS = coolS.toString().padStart(2, '0');
 
                 textElement.innerHTML = `💥 蘑菇已被摧毀！新菇倒數：<strong style="color:#e11d48;">${formattedM}分${formattedS}秒</strong>`;
+
+                // 🔔 提醒功能【關鍵修正】：當新菇剛倒數出生時發出通知
+                if (alertEnabledList.includes(id) && !notifiedMushrooms.includes(`${id}_born`)) {
+                    notifiedMushrooms.push(`${id}_born`);
+                    
+                    if (Notification.permission === "granted") {
+                        new Notification(`✨ 新蘑菇已出生！`, {
+                            body: `📍 ${item.locationName} 的新蘑菇已出生，請現場玩家協助回報！`,
+                            icon: getIconPath(displayType)
+                        });
+                    }
+                }
+
             } else {
                 textElement.innerHTML = `✨ 新蘑菇已出生！待現場玩家更新`;
                 textElement.style.color = "#059669";
