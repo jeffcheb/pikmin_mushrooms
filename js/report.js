@@ -963,14 +963,54 @@ const mushroomData = {
 };
 
     window.handleFastFill = (encodedData) => {
-        try {
-            const data = JSON.parse(decodeURIComponent(encodedData));
-            document.getElementById("city").value = data.city;
-            document.getElementById("location-name").value = data.locationName;
-            document.querySelector(".report-section")?.scrollIntoView({ behavior: "smooth" });
-        } catch (e) { console.error(e); }
-    };
+    try {
+        const data = JSON.parse(decodeURIComponent(encodedData));
+        
+        const citySelect = document.getElementById("city");
+        const distSelect = document.getElementById("district");
+        const locInput = document.getElementById("location-name");
+        const latInput = document.getElementById("lat");
+        const lngInput = document.getElementById("lng");
 
+        // 1. 帶入地點名稱
+        if (locInput) locInput.value = data.locationName || "";
+
+        // 2. 帶入經緯度（若有）
+        if (latInput) latInput.value = data.lat || "";
+        if (lngInput) lngInput.value = data.lng || "";
+
+        // 3. 帶入縣市並觸發 change 事件以更新行政區清單
+        if (citySelect && data.city) {
+            citySelect.value = data.city;
+            citySelect.dispatchEvent(new Event("change"));
+        }
+
+        // 4. 等待行政區下拉選單生成完畢後帶入行政區
+        setTimeout(() => {
+            if (distSelect && data.district) {
+                distSelect.disabled = false;
+                
+                // 尋找匹配的行政區 option
+                let matchedOpt = Array.from(distSelect.options).find(o => 
+                    o.value === data.district || o.text.includes(data.district)
+                );
+                
+                if (matchedOpt) {
+                    distSelect.value = matchedOpt.value;
+                } else if (distSelect.options.length > 1) {
+                    distSelect.value = data.district;
+                }
+                distSelect.dispatchEvent(new Event("change"));
+            }
+        }, 120);
+
+        // 5. 滑動至上方表單區塊
+        document.querySelector(".report-section")?.scrollIntoView({ behavior: "smooth" });
+
+    } catch (e) { 
+        console.error("快速帶入失敗:", e); 
+    }
+};
     function forceInitFilter() {
         if (!initFilterDistricts()) {
             const filterRetryInterval = setInterval(() => {
