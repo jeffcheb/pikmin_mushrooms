@@ -526,6 +526,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (reportForm) {
         reportForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+
+            // 🛑 [新增] 前端防洗板頻率限制（冷卻 5 秒）
+            const COOLDOWN_MS = 5000;
+            const lastReportTime = parseInt(localStorage.getItem("last_report_timestamp") || "0", 10);
+            const now = Date.now();
+
+            if (now - lastReportTime < COOLDOWN_MS) {
+                const waitSec = Math.ceil((COOLDOWN_MS - (now - lastReportTime)) / 1000);
+                alert(`⛔ 回報過於頻繁！請等待 ${waitSec} 秒後再試。`);
+                return;
+            }
+
             if (!window.fbDB) return alert("Firebase 尚未連線！");
 
             const userIP = await getUserIP();
